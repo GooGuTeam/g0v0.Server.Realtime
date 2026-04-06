@@ -1,6 +1,8 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Common.Configuration;
+using g0v0.Server.Common.Database.MySQL;
+using g0v0.Server.Common.Database.PostgreSQL;
 using g0v0.Server.Common.Extensions;
 using g0v0.Server.Realtime.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -34,14 +36,14 @@ public static class Program
         builder.Services.AddRepositories(generalConfig.UseLegacyDatabase);
         if (generalConfig.UseLegacyDatabase)
         {
-            builder.Services.AddDbContext<Common.Database.MySQL.AppDbContext>(options =>
+            builder.Services.AddDbContext<MysqlDbContext>(options =>
                 options.UseMySql(
                     generalConfig.MySqlConnectionString,
                     ServerVersion.AutoDetect(generalConfig.MySqlConnectionString)));
         }
         else
         {
-            builder.Services.AddDbContext<Common.Database.PostgreSQL.AppDbContext>(options =>
+            builder.Services.AddDbContext<PostgreSqlDbContext>(options =>
                 options.UseNpgsql(generalConfig.PostgresqlConnectionString));
         }
 
