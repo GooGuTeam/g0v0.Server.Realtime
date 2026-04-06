@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  code-style:
+    name: Code Style & Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: g0v0.Server.Realtime
+
+      - name: Checkout CommonLib
+        uses: actions/checkout@v4
+        with:
+          repository: GooGuTeam/g0v0.Server.Common
+          path: g0v0.Server.Common
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Check code formatting
+        run: |
+          cd g0v0.Server.Realtime
+          dotnet format --verify-no-changes --verbosity diagnostic
+
+      - name: Build with analyzers
+        run: |
+          cd g0v0.Server.Realtime
+          dotnet build --no-restore --configuration Release /warnaserror
