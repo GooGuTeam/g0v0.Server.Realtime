@@ -1,9 +1,9 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Authentication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace g0v0.Server.Realtime.Controller;
@@ -13,7 +13,7 @@ namespace g0v0.Server.Realtime.Controller;
 public class OAuthTokenController : ControllerBase
 {
     [HttpGet]
-    [Authorize(Policy = "ClientOnly")]
+    [ClientOnly]
     [Produces("application/json")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

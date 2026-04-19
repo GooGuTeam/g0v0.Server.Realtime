@@ -4,9 +4,6 @@ using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.MySQL;
 using g0v0.Server.Common.Database.PostgreSQL;
 using g0v0.Server.Common.Extensions;
-using g0v0.Server.Realtime.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 namespace g0v0.Server.Realtime;
@@ -47,34 +44,7 @@ public static class Program
                 options.UseNpgsql(generalConfig.PostgresqlConnectionString));
         }
 
-        builder.Services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer();
-        builder.Services.ConfigureOptions<ConfigureJwtBearerOptions>();
-
-        builder.Services.AddAuthorization(options =>
-        {
-            options.AddPolicy("ClientOnly", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(
-                    OAuthClaimTypes.ClientId,
-                    generalConfig.OsuClientId.ToString(),
-                    generalConfig.OsuWebClientId.ToString());
-            });
-
-            options.AddPolicy("RequireUserId", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim("sub");
-            });
-        });
-
-        builder.Services.AddSingleton<IAuthorizationPolicyProvider, ScopePolicyProvider>();
-        builder.Services.AddSingleton<IAuthorizationHandler, ScopeAuthorizationHandler>();
+        builder.Services.AddOAuthAuthentication();
 
         var app = builder.Build();
 
