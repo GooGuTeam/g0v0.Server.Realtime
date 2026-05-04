@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "g0v0.Server.Realtime", "g0v0.Server.Realtime\g0v0.Server.Realtime.csproj", "{689E62F9-B17B-4BB8-8641-265ECB7784A2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "g0v0.Server.Realtime.Tests", "g0v0.Server.Realtime.Tests\g0v0.Server.Realtime.Tests.csproj", "{DCE582C3-7BEA-4D4A-95F2-D3E5E0258E76}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{689E62F9-B17B-4BB8-8641-265ECB7784A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{689E62F9-B17B-4BB8-8641-265ECB7784A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{689E62F9-B17B-4BB8-8641-265ECB7784A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCE582C3-7BEA-4D4A-95F2-D3E5E0258E76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCE582C3-7BEA-4D4A-95F2-D3E5E0258E76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCE582C3-7BEA-4D4A-95F2-D3E5E0258E76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCE582C3-7BEA-4D4A-95F2-D3E5E0258E76}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

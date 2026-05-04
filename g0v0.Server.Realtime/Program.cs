@@ -4,7 +4,12 @@ using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.MySQL;
 using g0v0.Server.Common.Database.PostgreSQL;
 using g0v0.Server.Common.Extensions;
+using g0v0.Server.Realtime.Hubs;
+using g0v0.Server.Realtime.Manager;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using osu.Game.Online;
+using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime;
 
@@ -13,6 +18,13 @@ namespace g0v0.Server.Realtime;
 /// </summary>
 public static class Program
 {
+    private static readonly Action<HubOptions> ConfigureClientHubOptions = options =>
+    {
+        // JSON hub protocol is enabled by default, but we use MessagePack.
+        // Some models are not compatible with the JSON protocol, so we should never negotiate it.
+        options.SupportedProtocols?.Remove("json");
+    };
+
     /// <summary>
     /// Configures and runs the web host.
     /// </summary>
@@ -24,11 +36,11 @@ public static class Program
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
-        builder.Services.AddSingleton<IConfigPathProvider, WebConfigPathProvider>();
+        builder.Services.AddSingleton<IPathProvider, WebPathProvider>();
 
-        var generalConfigManager = new ConfigurationManager<GeneralConfiguration>(builder.Environment.ContentRootPath);
-        var generalConfig = generalConfigManager.Value;
-        builder.Services.AddSingleton(generalConfigManager);
+        var configManager = new ConfigurationManager(builder.Environment.ContentRootPath);
+        var generalConfig = configManager.Get<GeneralConfiguration>();
+        builder.Services.AddSingleton(configManager);
 
         builder.Services.AddRepositories(generalConfig.UseLegacyDatabase);
         if (generalConfig.UseLegacyDatabase)
@@ -45,6 +57,26 @@ public static class Program
         }
 
         builder.Services.AddOAuthAuthentication();
+        builder.Services.AddRedis("realtime");
+        builder.Services.AddSingleton<PlayerManager>();
+
+        // Copy from osu-server-spectator
+        builder.Services.AddSignalR()
+            .AddMessagePackProtocol(options =>
+            {
+                // This is required for match type states/events, which are regularly sent as derived implementations where that type is not conveyed in the invocation signature itself.
+                //
+                // Some references:
+                // https://github.com/neuecc/MessagePack-CSharp/issues/1171 ("it's not messagepack's issue")
+                // https://github.com/dotnet/aspnetcore/issues/30096 ("it's definitely broken")
+                // https://github.com/dotnet/aspnetcore/issues/7298 (current tracking issue, though weirdly described as a javascript client issue)
+                options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS;
+            })
+            .AddHubOptions<MetadataHub>(ConfigureClientHubOptions);
+
+        // .AddHubOptions<MultiplayerHub>(_configureClientHubOptions)
+        // .AddHubOptions<SpectatorHub>(_configureClientHubOptions);
+        builder.Services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
 
         var app = builder.Build();
 
@@ -60,6 +92,7 @@ public static class Program
         app.UseAuthorization();
 
         app.MapControllers();
+        app.MapHub<MetadataHub>("/signalr/metadata");
 
         app.Run();
     }
