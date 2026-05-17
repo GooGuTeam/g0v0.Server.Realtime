@@ -1,25 +1,29 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.States.Activity;
 using osu.Game.Users;
+using StackExchange.Redis;
 
 namespace g0v0.Server.Realtime.Manager;
 
 /// <summary>
 /// Tracks connected players and broadcasts their state changes.
 /// </summary>
-public class PlayerManager(ILogger<PlayerManager> logger)
+public class PlayerManager(ILogger<PlayerManager> logger, InterProcessCommunicationClient ipcClient)
 {
-    private static readonly Action<ILogger, int, string, Exception?> LogPlayerConnected = LoggerMessage.Define<int, string>(
-        LogLevel.Information,
-        new EventId(1, nameof(AddPlayer)),
-        "Player {UserId} ({Server}) connected to server.");
+    private static readonly Action<ILogger, int, string, Exception?> LogPlayerConnected =
+        LoggerMessage.Define<int, string>(
+            LogLevel.Information,
+            new EventId(1, nameof(AddPlayer)),
+            "Player {UserId} ({Server}) connected to server.");
 
-    private static readonly Action<ILogger, int, string, Exception?> LogPlayerDisconnected = LoggerMessage.Define<int, string>(
-        LogLevel.Information,
-        new EventId(2, nameof(RemovePlayer)),
-        "Player {UserId} ({Server}) disconnected from server.");
+    private static readonly Action<ILogger, int, string, Exception?> LogPlayerDisconnected =
+        LoggerMessage.Define<int, string>(
+            LogLevel.Information,
+            new EventId(2, nameof(RemovePlayer)),
+            "Player {UserId} ({Server}) disconnected from server.");
 
     private readonly Dictionary<(int, string), IPlayer> _players = new();
 
@@ -132,6 +136,8 @@ public class PlayerManager(ILogger<PlayerManager> logger)
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOnline(IPlayer player)
     {
+        await ipcClient.SendNoticeAsync("lazer", "user_online_status_changed", new { user_id = player.PlayerId });
+
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
         {
@@ -151,6 +157,8 @@ public class PlayerManager(ILogger<PlayerManager> logger)
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOffline(IPlayer player, bool isKicked = false)
     {
+        await ipcClient.SendNoticeAsync("lazer", "user_online_status_changed", new { user_id = player.PlayerId });
+        
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
         {
@@ -194,7 +202,8 @@ public class PlayerManager(ILogger<PlayerManager> logger)
                 .Select(p => p.OnPlayerChangeStatus(player, status)));
     }
 
-    private static (int PlayerId, string PlayerServer) PlayerIdentity(IPlayer player) => (player.PlayerId, player.Server);
+    private static (int PlayerId, string PlayerServer) PlayerIdentity(IPlayer player) =>
+        (player.PlayerId, player.Server);
 
     #endregion
 }

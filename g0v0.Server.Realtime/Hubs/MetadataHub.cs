@@ -1,6 +1,5 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Manager;
@@ -15,25 +14,13 @@ namespace g0v0.Server.Realtime.Hubs;
 /// <summary>
 /// Handles lazer metadata presence updates and friend presence subscriptions.
 /// </summary>
-public class MetadataHub : LazerRealtimeHub<IMetadataClient>, IMetadataServer
+public class MetadataHub(
+    PlayerManager playerManager,
+    IRelationshipRepository relationshipRepository,
+    IHubContext<MetadataHub, IMetadataClient> hubContext)
+    : LazerRealtimeHub<IMetadataClient>(playerManager), IMetadataServer
 {
     internal const string OnlinePresenceWatchersGroup = "metadata:online-presence-watchers";
-
-    private readonly IHubContext<MetadataHub, IMetadataClient> _hubContext;
-    private readonly IRelationshipRepository _relationshipRepository;
-    private readonly InterProcessCommunicationClient _ipcClient;
-
-    public MetadataHub(
-        PlayerManager playerManager,
-        IRelationshipRepository relationshipRepository,
-        IHubContext<MetadataHub, IMetadataClient> hubContext,
-        InterProcessCommunicationClient ipcClient)
-        : base(playerManager)
-    {
-        _hubContext = hubContext;
-        _relationshipRepository = relationshipRepository;
-        _ipcClient = ipcClient;
-    }
 
     /// <inheritdoc />
     public async override Task OnConnectedAsync()
@@ -45,14 +32,13 @@ public class MetadataHub : LazerRealtimeHub<IMetadataClient>, IMetadataServer
 
         player.HubConnected(nameof(MetadataHub));
 
-        player.OnPlayerOnlineForMetadataHub = p => BroadcastUserPresenceUpdate(_hubContext, connectionId, p);
-        player.OnPlayerOfflineForMetadataHub = (p, _) => BroadcastUserPresenceUpdate(_hubContext, connectionId, p);
+        player.OnPlayerOnlineForMetadataHub = p => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
+        player.OnPlayerOfflineForMetadataHub = (p, _) => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
         player.OnPlayerChangeActivityForMetadataHub =
-            (p, _) => BroadcastUserPresenceUpdate(_hubContext, connectionId, p);
-        player.OnPlayerChangeStatusForMetadataHub = (p, _) => BroadcastUserPresenceUpdate(_hubContext, connectionId, p);
+            (p, _) => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
+        player.OnPlayerChangeStatusForMetadataHub = (p, _) => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
 
         await player.Online();
-        await _ipcClient.SendNoticeAsync("lazer", "user_online_status_changed", new { user_id = player.PlayerId });
 
         await RefreshFriendsAsync(player);
     }
@@ -69,7 +55,6 @@ public class MetadataHub : LazerRealtimeHub<IMetadataClient>, IMetadataServer
         player.OnPlayerChangeStatusForMetadataHub = null;
 
         await player.HubDisconnected(nameof(MetadataHub));
-        await _ipcClient.SendNoticeAsync("lazer", "user_online_status_changed", new { user_id = player.PlayerId });
     }
 
     /// <inheritdoc />
@@ -184,7 +169,7 @@ public class MetadataHub : LazerRealtimeHub<IMetadataClient>, IMetadataServer
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, FriendPresenceWatchersGroup(friendId));
         }
 
-        int[] newFriendIds = await _relationshipRepository.GetAllFriendIds(player.PlayerId);
+        int[] newFriendIds = await relationshipRepository.GetAllFriendIds(player.PlayerId);
 
         // Add the caller to the friend tracking groups.
         foreach (int friendId in newFriendIds)
