@@ -4,8 +4,10 @@ using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.MySQL;
 using g0v0.Server.Common.Database.PostgreSQL;
 using g0v0.Server.Common.Extensions;
+using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using osu.Game.Online;
@@ -58,7 +60,14 @@ public static class Program
 
         builder.Services.AddOAuthAuthentication();
         builder.Services.AddRedis("realtime");
+        builder.Services.AddStorage();
+        builder.Services.AddMemoryCache();
+        builder.Services.AddBackgroundTaskRunner();
+        builder.Services.AddSingleton<RulesetManager>();
         builder.Services.AddSingleton<PlayerManager>();
+        builder.Services.AddSingleton<ScoreBuffer>();
+        builder.Services.AddSingleton<ScoreUploader>();
+        builder.Services.AddSingleton<ScoreProcessedNotificationService>();
 
         // Copy from osu-server-spectator
         builder.Services.AddSignalR()
@@ -72,9 +81,9 @@ public static class Program
                 // https://github.com/dotnet/aspnetcore/issues/7298 (current tracking issue, though weirdly described as a javascript client issue)
                 options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS;
             })
-            .AddHubOptions<MetadataHub>(ConfigureClientHubOptions);
+            .AddHubOptions<MetadataHub>(ConfigureClientHubOptions)
+            .AddHubOptions<SpectatorHub>(ConfigureClientHubOptions);
 
-        // .AddHubOptions<MultiplayerHub>(_configureClientHubOptions)
         // .AddHubOptions<SpectatorHub>(_configureClientHubOptions);
         builder.Services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
 
@@ -93,6 +102,7 @@ public static class Program
 
         app.MapControllers();
         app.MapHub<MetadataHub>("/signalr/metadata");
+        app.MapHub<SpectatorHub>("/signalr/spectator");
 
         app.Run();
     }
