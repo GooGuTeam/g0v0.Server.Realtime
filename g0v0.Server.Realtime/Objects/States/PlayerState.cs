@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Realtime.Objects.States.Activity;
+using osu.Game.Online.Spectator;
 using osu.Game.Users;
 
 namespace g0v0.Server.Realtime.Objects.States;
@@ -20,6 +21,16 @@ public class PlayerState(IUserActivity userActivity)
     /// Gets or sets the current user status.
     /// </summary>
     public UserStatus? UserStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current spectator state, when the player is in a play session.
+    /// </summary>
+    public SpectatorState? SpectatorState { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current score token, when the player is in a score-tracked play session.
+    /// </summary>
+    public long? ScoreToken { get; set; }
 
     /// <summary>
     /// Converts the current state into lazer presence payload format.

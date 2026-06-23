@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR;
 
@@ -7,6 +8,8 @@ namespace g0v0.Server.Realtime;
 
 /// <summary>
 /// Resolves the SignalR user identifier from JWT claims.
+/// Falls back to reading the Authorization header directly when the
+/// ASP.NET Core authentication pipeline does not populate claims.
 /// </summary>
 public class JwtUserIdProvider(ILoggerFactory loggerFactory) : IUserIdProvider
 {
@@ -23,11 +26,44 @@ public class JwtUserIdProvider(ILoggerFactory loggerFactory) : IUserIdProvider
             (claim.Type is ClaimTypes.NameIdentifier or "sub")
             && !string.IsNullOrWhiteSpace(claim.Value));
 
-        var userId = claim?.Value;
-
-        if (userId != null)
+        if (claim?.Value != null)
         {
-            return userId;
+            return claim.Value;
+        }
+
+        // Fallback: parse the Authorization header manually (same logic as HubCallerContextExtensions.GetUserId).
+        var httpContext = connection.GetHttpContext();
+
+        if (httpContext != null &&
+            httpContext.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
+            !string.IsNullOrEmpty(authHeader))
+        {
+            const string bearerPrefix = "Bearer ";
+            var headerValue = authHeader.ToString();
+
+            if (headerValue.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                var token = headerValue.Substring(bearerPrefix.Length).Trim();
+
+                try
+                {
+                    var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
+                    var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub");
+                    var subValue = subClaim?.Value;
+
+                    if (!string.IsNullOrEmpty(subValue))
+                    {
+                        return subValue;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "JwtUserIdProvider: failed to parse JWT from Authorization header. Connection {ConnectionId}.",
+                        connection.ConnectionId);
+                }
+            }
         }
 
         var claimTypes = string.Join(", ", connection.User.Claims.Select(c => $"{c.Type}={c.Value}"));
