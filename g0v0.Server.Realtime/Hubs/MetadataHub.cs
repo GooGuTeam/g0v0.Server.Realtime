@@ -27,18 +27,16 @@ public class MetadataHub(
     {
         await base.OnConnectedAsync();
 
-        LazerPlayer player = new(Context.GetUserId(), PlayerManager);
+        var player = GetOrCreatePlayer(new PlayerFacade(PlayerManager));
         string connectionId = Context.ConnectionId;
 
-        player.HubConnected(nameof(MetadataHub));
+        await player.HubConnected(nameof(MetadataHub));
 
         player.OnPlayerOnlineForMetadataHub = p => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
         player.OnPlayerOfflineForMetadataHub = (p, _) => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
         player.OnPlayerChangeActivityForMetadataHub =
             (p, _) => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
         player.OnPlayerChangeStatusForMetadataHub = (p, _) => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
-
-        await player.Online();
 
         await RefreshFriendsAsync(player);
     }

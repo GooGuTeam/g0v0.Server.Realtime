@@ -30,6 +30,22 @@ public class LazerRealtimeHub<T>(PlayerManager playerManager) : Hub<T>
         var player = playerManager.GetPlayer<LazerPlayer>(Context.GetUserId());
 
         Debug.Assert(player != null, "player != null");
-        return player ?? throw new InvalidOperationException("The current connection is not associated with an active lazer player.");
+        return player ??
+               throw new InvalidOperationException(
+                   "The current connection is not associated with an active lazer player.");
+    }
+
+    /// <summary>
+    /// Gets the current lazer player or creates it with the supplied facade.
+    /// </summary>
+    /// <param name="facade">The facade to use when creating or updating the player.</param>
+    /// <returns>The current lazer player.</returns>
+    protected LazerPlayer GetOrCreatePlayer(IPlayerFacade facade)
+    {
+        return playerManager.GetOrCreatePlayer(
+            Context.GetUserId(),
+            "Lazer",
+            () => new LazerPlayer(Context.GetUserId(), facade),
+            player => player.Facade.ApplyNonNullDependenciesFrom(facade));
     }
 }

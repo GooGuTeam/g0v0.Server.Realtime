@@ -1,7 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.States.Activity;
+using osu.Game.Online.Spectator;
 using osu.Game.Users;
 
 namespace g0v0.Server.Realtime.Objects.Players;
@@ -10,9 +10,11 @@ namespace g0v0.Server.Realtime.Objects.Players;
 /// Represents a lazer client connected to the realtime server.
 /// </summary>
 /// <param name="playerId">The player ID.</param>
-/// <param name="manager">The player manager.</param>
-public class LazerPlayer(int playerId, PlayerManager manager) : PlayerBase(playerId, manager)
+/// <param name="facade">The player dependency facade.</param>
+public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(playerId, facade)
 {
+    private readonly object _hubConnectionLock = new();
+
     private bool _metadataConnected;
     private bool _spectatorConnected;
     private bool _multiplayerConnected;
@@ -48,6 +50,42 @@ public class LazerPlayer(int playerId, PlayerManager manager) : PlayerBase(playe
     public Func<IPlayer, UserStatus?, Task>? OnPlayerChangeStatusForMetadataHub { get; set; }
 
     #endregion
+
+    #region SpectatorHub
+
+    /// <summary>
+    /// Gets or sets the spectator hub begin-play callback.
+    /// </summary>
+    public Func<IPlayer, Task>? OnUserBeganPlayingForSpectatorHub { get; set; }
+
+    /// <summary>
+    /// Gets or sets the spectator hub finish-play callback.
+    /// </summary>
+    public Func<IPlayer, Task>? OnUserFinishedPlayingForSpectatorHub { get; set; }
+
+    /// <summary>
+    /// Gets or sets the spectator hub frame callback.
+    /// </summary>
+    public Func<IPlayer, FrameDataBundle, Task>? OnUserSentFramesForSpectatorHub { get; set; }
+
+    /// <summary>
+    /// Gets or sets the spectator hub watcher-added callback.
+    /// </summary>
+    public Func<IPlayer, Task>? OnWatchedForSpectatorHub { get; set; }
+
+    /// <summary>
+    /// Gets or sets the spectator hub watcher-removed callback.
+    /// </summary>
+    public Func<IPlayer, Task>? OnWatchedStoppedForSpectatorHub { get; set; }
+
+    /// <summary>
+    /// Gets or sets the spectator hub score-processed callback.
+    /// </summary>
+    public Func<long, Task>? OnScoreProcessedForSpectatorHub { get; set; }
+
+    #endregion
+
+    private bool IsConnectedToAnyHub => _metadataConnected || _spectatorConnected || _multiplayerConnected;
 
     /// <inheritdoc />
     public override Task OnPlayerOnline(IPlayer player)
@@ -93,23 +131,101 @@ public class LazerPlayer(int playerId, PlayerManager manager) : PlayerBase(playe
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
+    public override Task OnUserBeganPlaying(IPlayer player)
+    {
+        if (OnUserBeganPlayingForSpectatorHub != null)
+        {
+            return OnUserBeganPlayingForSpectatorHub(player);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override Task OnUserFinishedPlaying(IPlayer player)
+    {
+        if (OnUserFinishedPlayingForSpectatorHub != null)
+        {
+            return OnUserFinishedPlayingForSpectatorHub(player);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override Task OnUserSentFrames(IPlayer player, FrameDataBundle frame)
+    {
+        if (OnUserSentFramesForSpectatorHub != null)
+        {
+            return OnUserSentFramesForSpectatorHub(player, frame);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override Task OnWatched(IPlayer source)
+    {
+        if (OnWatchedForSpectatorHub != null)
+        {
+            return OnWatchedForSpectatorHub(source);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public override Task OnWatchedStopped(IPlayer source)
+    {
+        if (OnWatchedStoppedForSpectatorHub != null)
+        {
+            return OnWatchedStoppedForSpectatorHub(source);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override Task OnScoreProcessed(long scoreId)
+    {
+        if (OnScoreProcessedForSpectatorHub != null)
+        {
+            return OnScoreProcessedForSpectatorHub(scoreId);
+        }
+
+        return Task.CompletedTask;
+    }
+
     /// <summary>
     /// Marks a specific hub as connected for this player.
     /// </summary>
     /// <param name="hubName">The connected hub name.</param>
-    public void HubConnected(string hubName)
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task HubConnected(string hubName)
     {
-        switch (hubName)
+        bool shouldGoOnline;
+        lock (_hubConnectionLock)
         {
-            case "MetadataHub":
-                _metadataConnected = true;
-                break;
-            case "SpectatorHub":
-                _spectatorConnected = true;
-                break;
-            case "MultiplayerHub":
-                _multiplayerConnected = true;
-                break;
+            shouldGoOnline = !IsConnectedToAnyHub;
+
+            switch (hubName)
+            {
+                case "MetadataHub":
+                    _metadataConnected = true;
+                    break;
+                case "SpectatorHub":
+                    _spectatorConnected = true;
+                    break;
+                case "MultiplayerHub":
+                    _multiplayerConnected = true;
+                    break;
+            }
+        }
+
+        if (shouldGoOnline)
+        {
+            await Online();
         }
     }
 
@@ -120,20 +236,26 @@ public class LazerPlayer(int playerId, PlayerManager manager) : PlayerBase(playe
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task HubDisconnected(string hubName)
     {
-        switch (hubName)
+        bool shouldGoOffline;
+        lock (_hubConnectionLock)
         {
-            case "MetadataHub":
-                _metadataConnected = false;
-                break;
-            case "SpectatorHub":
-                _spectatorConnected = false;
-                break;
-            case "MultiplayerHub":
-                _multiplayerConnected = false;
-                break;
+            switch (hubName)
+            {
+                case "MetadataHub":
+                    _metadataConnected = false;
+                    break;
+                case "SpectatorHub":
+                    _spectatorConnected = false;
+                    break;
+                case "MultiplayerHub":
+                    _multiplayerConnected = false;
+                    break;
+            }
+
+            shouldGoOffline = !IsConnectedToAnyHub;
         }
 
-        if (!_metadataConnected && !_spectatorConnected && !_multiplayerConnected)
+        if (shouldGoOffline)
         {
             await Offline(isKicked: false);
         }
