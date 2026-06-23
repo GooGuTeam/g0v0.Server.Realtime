@@ -116,7 +116,7 @@ public class MetadataHubTests
         environment.Router.AddToGroup("watcher", MetadataHub.OnlinePresenceWatchersGroup);
         environment.Router.AddToGroup("friend-watcher", MetadataHub.FriendPresenceWatchersGroup(42));
 
-        var player = new LazerPlayer(42, environment.PlayerManager);
+        var player = new LazerPlayer(42, new PlayerFacade(environment.PlayerManager));
         player.State.UserStatus = UserStatus.Online;
 
         await InvokeBroadcastUserPresenceUpdateAsync(environment.HubContext, "caller", player);
@@ -141,7 +141,7 @@ public class MetadataHubTests
         environment.Router.AddToGroup("watcher", MetadataHub.OnlinePresenceWatchersGroup);
         environment.Router.AddToGroup("friend-watcher", MetadataHub.FriendPresenceWatchersGroup(42));
 
-        var player = new LazerPlayer(42, environment.PlayerManager);
+        var player = new LazerPlayer(42, new PlayerFacade(environment.PlayerManager));
         player.State.UserStatus = UserStatus.Offline;
 
         await InvokeBroadcastUserPresenceUpdateAsync(environment.HubContext, "caller", player);
@@ -210,11 +210,11 @@ public class MetadataHubTests
     {
         public MetadataHubTestEnvironment()
         {
-            PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance);
+            IpcClient = new InterProcessCommunicationClient(new RecordingTransport(), "realtime-tests");
+            PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, IpcClient);
             Router = new MetadataClientRouter();
             RelationshipRepository = new FakeRelationshipRepository();
             HubContext = new FakeHubContext(Router);
-            IpcClient = new InterProcessCommunicationClient(new RecordingTransport(), "realtime");
         }
 
         public FakeHubContext HubContext { get; }
@@ -232,7 +232,7 @@ public class MetadataHubTests
             Router.EnsureConnection(connectionId);
 
             var groupManager = new FakeGroupManager(Router);
-            var hub = new MetadataHub(PlayerManager, RelationshipRepository, HubContext, IpcClient)
+            var hub = new MetadataHub(PlayerManager, RelationshipRepository, HubContext)
             {
                 Context = new TestHubCallerContext(connectionId, userId.ToString()),
                 Clients = new FakeHubCallerClients(Router, connectionId),
