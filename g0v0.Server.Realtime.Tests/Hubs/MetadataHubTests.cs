@@ -460,6 +460,9 @@ public class MetadataHubTests
             public Task DisconnectRequested()
                 => Task.WhenAll(Targets().Select(static target => target.DisconnectRequested()));
 
+            public Task ServerShuttingDown()
+                => Task.WhenAll(Targets().Select(static target => target.ServerShuttingDown()));
+
             public Task DailyChallengeUpdated(DailyChallengeInfo? dailyChallengeInfo)
                 => Task.WhenAll(Targets().Select(target => target.DailyChallengeUpdated(dailyChallengeInfo)));
 
@@ -492,6 +495,8 @@ public class MetadataHubTests
         }
 
         public Task DisconnectRequested() => Task.CompletedTask;
+
+        public Task ServerShuttingDown() => Task.CompletedTask;
 
         public Task DailyChallengeUpdated(DailyChallengeInfo? dailyChallengeInfo) => Task.CompletedTask;
 

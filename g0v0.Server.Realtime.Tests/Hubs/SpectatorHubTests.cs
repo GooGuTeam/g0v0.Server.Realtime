@@ -411,6 +411,9 @@ public class SpectatorHubTests
             public Task DisconnectRequested() =>
                 Task.WhenAll(Targets().Select(static target => target.DisconnectRequested()));
 
+            public Task ServerShuttingDown() =>
+                Task.WhenAll(Targets().Select(static target => target.ServerShuttingDown()));
+
             public Task UserBeganPlaying(int userId, SpectatorState state) =>
                 Task.WhenAll(Targets().Select(target => target.UserBeganPlaying(userId, state)));
 
@@ -455,6 +458,8 @@ public class SpectatorHubTests
             DisconnectRequestCount++;
             return Task.CompletedTask;
         }
+
+        public Task ServerShuttingDown() => Task.CompletedTask;
 
         public Task UserBeganPlaying(int userId, SpectatorState state)
         {
