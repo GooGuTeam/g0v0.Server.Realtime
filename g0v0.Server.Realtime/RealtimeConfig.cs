@@ -11,10 +11,21 @@ namespace g0v0.Server.Realtime;
 public class RealtimeConfig
 {
     /// <summary>
+    /// The default maximum number of scores that can be started at the same time per spectator play session.
+    /// </summary>
+    public const int DefaultMaxStartedScores = 2;
+
+    /// <summary>
     /// Gets or sets a value indicating whether spectator replays should be persisted.
     /// </summary>
     [Reloadable]
     public bool SaveReplays { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the maximum number of scores that can be started at the same time per spectator play session.
+    /// </summary>
+    [Reloadable]
+    public int MaxStartedScores { get; set; } = DefaultMaxStartedScores;
 
     /// <summary>
     /// Gets or sets the number of concurrent replay uploader workers.

@@ -26,4 +26,7 @@ public class PlayerFacade(PlayerManager manager) : IPlayerFacade
 
     /// <inheritdoc />
     public ScoreProcessedNotificationService? _scoreProcessedNotificationService { get; set; }
+
+    /// <inheritdoc />
+    public ILogger? _logger { get; set; }
 }

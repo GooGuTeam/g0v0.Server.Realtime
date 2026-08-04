@@ -7,7 +7,7 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <NoWarn>SA0001;CS1591</NoWarn>
+        <NoWarn>SA0001;CS1591;CS0618</NoWarn> <!-- CS0618: tests deliberately cover the legacy V1 spectator API pathway. -->
     </PropertyGroup>
 
     <ItemGroup>

@@ -38,6 +38,11 @@ public interface IPlayerFacade
     ScoreProcessedNotificationService? _scoreProcessedNotificationService { get; set; }
 
     /// <summary>
+    /// Gets or sets the logger used for player lifecycle events.
+    /// </summary>
+    ILogger? _logger { get; set; }
+
+    /// <summary>
     /// Copies non-null optional dependencies from another facade.
     /// </summary>
     /// <param name="facade">The facade to copy dependencies from.</param>
@@ -49,5 +54,6 @@ public interface IPlayerFacade
         _scoreBuffer = facade._scoreBuffer ?? _scoreBuffer;
         _scoreUploader = facade._scoreUploader ?? _scoreUploader;
         _scoreProcessedNotificationService = facade._scoreProcessedNotificationService ?? _scoreProcessedNotificationService;
+        _logger = facade._logger ?? _logger;
     }
 }

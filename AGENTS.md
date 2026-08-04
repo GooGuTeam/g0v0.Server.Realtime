@@ -38,7 +38,7 @@ CI runs only the `code-style` job: `dotnet format --verify-no-changes` then `dot
 
 - `general.json` — DB + JWT + Redis (`UseLegacyDatabase: true` → MySQL v1 schema, `false` → PostgreSQL v2). Loaded from `Common`.
 - `game.json` — feature flags.
-- `realtime.json` — `SaveReplays` (`[Reloadable]`), `ReplayUploaderConcurrency` (read once at startup; see `Services/ScoreUploader.cs`).
+- `realtime.json` — `SaveReplays` (`[Reloadable]`), `ReplayUploaderConcurrency` (read once at startup; see `Services/ScoreUploader.cs`), `MaxStartedScores` (`[Reloadable]`; read per begin-play call in `PlayerBase.BeingPlaying`).
 - `storage.json` — `Local`/`S3`/`R2`.
 
 Config classes use **Newtonsoft.Json**; default file name is the snake_case of the class name (override with `[ConfigurationFile("...")]`). Only properties annotated `[Reloadable]` are refreshed by `Reload<T>()`. See README for full schema and v1→v2 env-var mapping.
@@ -62,6 +62,7 @@ SignalR specifics:
 - `SignalRUnionWorkaroundResolver.OPTIONS` (from `Common`) is required for derived match-state messages.
 - `IUserIdProvider` is replaced by `JwtUserIdProvider` (`JwtUserIdProvider.cs`). It reads `sub`/`NameIdentifier` from claims, and **manually parses the JWT from the `Authorization: Bearer ...` header** when the auth middleware hasn't populated claims (which happens in some hub-negotiation paths). `Extensions/HubCallerContextExtensions.GetUserId()` duplicates the same fallback for use inside hubs; mirror changes between the two.
 - Endpoints: `/signalr/spectator` (`SpectatorHub`) and `/signalr/metadata` (`MetadataHub`). Both inherit `LazerRealtimeHub<TClient>`.
+- `SpectatorHub` exposes both the legacy V1 API (`BeginPlaySession`, `SendFrameData`, `EndPlaySession` — marked `[Obsolete]`, removal date 20270102) and the V2 API (`BeginPlaySessionV2`, `SendFrameDataV2`, `EndPlaySessionV2`) with explicit per-score tokens. Both routes share one player-side implementation (`IPlayer.BeingPlaying`/`SendFrames`/`FinishPlaying`): `PlayerState.ScoreTokens` tracks up to the configured `RealtimeConfig.MaxStartedScores` concurrent started scores (oldest is evicted and processed on overflow), the ambient `ScoreToken` mirrors the most recently started score, and only ending the latest score (or with a null token) broadcasts `UserFinishedPlaying`. V1 hub methods pass the ambient token; V2 methods pass the explicit one.
 
 Player model:
 - `PlayerManager` is a singleton registry keyed by `(playerId, server)`. A player may have multiple `IPlayer` instances per `PlayerId` (one per source server). `GetPlayer<T>(int)` returns the first match across servers; `GetPlayerAllInstances(int)` returns all.

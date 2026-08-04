@@ -102,14 +102,16 @@ Properties marked with `[Reloadable]` support hot-reload at runtime.
 ```json
 {
   "SaveReplays": true,
-  "ReplayUploaderConcurrency": 4
+  "ReplayUploaderConcurrency": 4,
+  "MaxStartedScores": 2
 }
 ```
 
-| Key                         | Type | Default | Description                                           |
-|-----------------------------|------|---------|-------------------------------------------------------|
-| `SaveReplays`               | bool | `true`  | Whether to persist spectator replays (hot-reloadable) |
-| `ReplayUploaderConcurrency` | int  | `4`     | Number of concurrent replay upload workers            |
+| Key                         | Type | Default | Description                                                                  |
+|-----------------------------|------|---------|------------------------------------------------------------------------------|
+| `SaveReplays`               | bool | `true`  | Whether to persist spectator replays (hot-reloadable)                        |
+| `ReplayUploaderConcurrency` | int  | `4`     | Number of concurrent replay upload workers                                   |
+| `MaxStartedScores`          | int  | `2`     | Max concurrent started scores per spectator play session (hot-reloadable)    |
 
 #### `config/storage.json` — Storage Backend
 

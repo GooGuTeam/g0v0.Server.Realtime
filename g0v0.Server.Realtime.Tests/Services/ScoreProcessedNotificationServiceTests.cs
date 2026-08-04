@@ -201,9 +201,9 @@ public class ScoreProcessedNotificationServiceTests
 
         public Task BeingPlaying(long? scoreToken, osuScore score, SpectatorState spectatorState) => Task.CompletedTask;
 
-        public Task FinishPlaying(SpectatorState spectatorState) => Task.CompletedTask;
+        public Task FinishPlaying(long? scoreToken, SpectatedUserState finalState) => Task.CompletedTask;
 
-        public Task SendFrames(FrameDataBundle data) => Task.CompletedTask;
+        public Task SendFrames(long? scoreToken, FrameDataBundle data) => Task.CompletedTask;
 
         public Task WatchPlayer(IPlayer target) => Task.CompletedTask;
 

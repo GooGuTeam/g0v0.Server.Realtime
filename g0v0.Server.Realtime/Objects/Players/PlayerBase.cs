@@ -114,57 +114,111 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
             return;
         }
 
-        State.ScoreToken = scoreToken;
         State.SpectatorState = spectatorState;
 
-        await facade._manager.BroadcastUserBeganPlaying(this);
-
-        if (scoreToken != null && facade._scoreBuffer != null)
+        if (scoreToken != null)
         {
-            await facade._scoreBuffer.TryAddAsync(scoreToken.Value, score);
+            if (!State.ScoreTokens.Contains(scoreToken.Value))
+            {
+                // Read per call so hot-reloaded configuration takes effect without a restart.
+                int maxStartedScores = Math.Max(
+                    1,
+                    facade._configManager?.Get<RealtimeConfig>().MaxStartedScores ?? RealtimeConfig.DefaultMaxStartedScores);
+
+                while (State.ScoreTokens.Count >= maxStartedScores)
+                {
+                    long expiredToken = State.ScoreTokens[0];
+                    State.ScoreTokens.RemoveAt(0);
+                    if (facade._scoreBuffer != null)
+                    {
+                        Score? expiredScore = await facade._scoreBuffer.DequeueAsync(expiredToken);
+                        if (expiredScore != null)
+                        {
+                            await ProcessScore(expiredToken, expiredScore);
+                        }
+                    }
+
+                    facade._logger?.LogWarning(
+                        "Score for token {ScoreToken} was dropped from buffer due to exceeding limit.",
+                        expiredToken);
+                }
+
+                State.ScoreTokens.Add(scoreToken.Value);
+            }
+
+            if (facade._scoreBuffer != null)
+            {
+                await facade._scoreBuffer.TryAddAsync(scoreToken.Value, score);
+            }
         }
+
+        // The ambient score token is kept in sync with the most recently started score.
+        State.ScoreToken = scoreToken;
+
+        await facade._manager.BroadcastUserBeganPlaying(this);
     }
 
     /// <inheritdoc />
-    public async Task SendFrames(FrameDataBundle data)
+    public async Task SendFrames(long? scoreToken, FrameDataBundle data)
     {
-        if (State.ScoreToken != null && facade._scoreBuffer != null)
+        if (scoreToken != null)
         {
-            await facade._scoreBuffer.UpdateAsync(State.ScoreToken.Value, data);
+            if (!State.ScoreTokens.Contains(scoreToken.Value))
+            {
+                throw new InvalidOperationException("Incorrect score token supplied.");
+            }
+
+            if (facade._scoreBuffer != null)
+            {
+                await facade._scoreBuffer.UpdateAsync(scoreToken.Value, data);
+            }
         }
 
         await facade._manager.BroadcastUserSentFrames(this, data);
     }
 
     /// <inheritdoc />
-    public async Task FinishPlaying(SpectatorState spectatorState)
+    public async Task FinishPlaying(long? scoreToken, SpectatedUserState finalState)
     {
-        long? scoreToken = State.ScoreToken;
-        if (scoreToken == null)
-        {
-            return;
-        }
+        bool shouldBroadcastEnd = false;
 
         try
         {
-            if (facade._scoreBuffer == null)
+            shouldBroadcastEnd = scoreToken == null || scoreToken == State.ScoreTokens.LastOrDefault();
+
+            if (scoreToken != null)
             {
-                return;
+                if (!State.ScoreTokens.Remove(scoreToken.Value))
+                {
+                    throw new InvalidOperationException("Incorrect score token supplied.");
+                }
+
+                if (facade._scoreBuffer != null)
+                {
+                    Score? score = await facade._scoreBuffer.DequeueAsync(scoreToken.Value);
+                    if (score == null)
+                    {
+                        return;
+                    }
+
+                    await ProcessScore(scoreToken.Value, score);
+                }
             }
 
-            var score = await facade._scoreBuffer.DequeueAsync(scoreToken.Value);
-            if (score != null)
+            if (State.SpectatorState != null && shouldBroadcastEnd)
             {
-                await ProcessScore(score);
+                State.SpectatorState.State = finalState;
+                await EndPlaySession();
             }
         }
         finally
         {
-            State.SpectatorState = spectatorState;
-            State.ScoreToken = null;
+            if (shouldBroadcastEnd)
+            {
+                State.SpectatorState = null;
+                State.ScoreToken = null;
+            }
         }
-
-        await EndPlaySession();
     }
 
     /// <inheritdoc />
@@ -189,11 +243,9 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         return other != null && (other.PlayerId == PlayerId && other.Server == Server);
     }
 
-    private async Task ProcessScore(Score score)
+    private async Task ProcessScore(long scoreToken, Score score)
     {
-        Debug.Assert(score != null && State.ScoreToken != null, "score != null && State.ScoreToken != null");
-
-        long scoreToken = State.ScoreToken.Value;
+        Debug.Assert(score != null, "score != null");
 
         // Do nothing with scores on unranked beatmaps.
         var status = score.ScoreInfo.BeatmapInfo!.Status;

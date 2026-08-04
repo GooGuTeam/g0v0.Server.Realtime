@@ -62,6 +62,7 @@ public class SpectatorHub(
                     _scoreUploader = scoreUploader,
                     _configManager = configManager,
                     _scoreProcessedNotificationService = scoreProcessedNotificationService,
+                    _logger = logger,
                 });
 
         await player.HubConnected(nameof(SpectatorHub));
@@ -256,7 +257,7 @@ public class SpectatorHub(
         await player.HubDisconnected(nameof(SpectatorHub));
     }
 
-    /// <inheritdoc />
+    [Obsolete("New clients should use BeginPlaySessionV2.")] // can remove method 20270102
     public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
     {
         var playerId = Context.GetUserId();
@@ -268,64 +269,55 @@ public class SpectatorHub(
             state.BeatmapID,
             state.State);
 
-        if (state.RulesetID == null)
+        Score? score = await TryCreateScoreAsync(scoreToken, state);
+        if (score == null)
         {
-            logger.LogWarning(
-                "Ignoring spectator begin-play request from player {UserId} because RulesetId is missing. ScoreToken: {ScoreToken}.",
-                playerId,
-                scoreToken);
             return;
         }
 
-        if (state.BeatmapID == null)
-        {
-            logger.LogWarning(
-                "Ignoring spectator begin-play request from player {UserId} because BeatmapId is missing. ScoreToken: {ScoreToken}.",
-                playerId,
-                scoreToken);
-            return;
-        }
-
-        var beatmap = await beatmapRepository.GetByIdAsync(state.BeatmapID.Value);
-        if (beatmap == null)
-        {
-            logger.LogWarning(
-                "Ignoring spectator begin-play request from player {UserId} because beatmap {BeatmapId} was not found. ScoreToken: {ScoreToken}.",
-                playerId,
-                state.BeatmapID.Value,
-                scoreToken);
-            return;
-        }
-
-        var score = new Score()
-        {
-            ScoreInfo = new ScoreInfo
-            {
-                APIMods = state.Mods.ToArray(),
-                User =
-                    new APIUser { Id = playerId, Username = (await userRepository.GetUsernameByIdAsync(playerId))!, },
-                Ruleset = rulesetManager.GetRuleset(state.RulesetID.Value).RulesetInfo,
-                BeatmapInfo = new BeatmapInfo
-                {
-                    OnlineID = state.BeatmapID.Value,
-                    MD5Hash = beatmap.Checksum!,
-                    Status = configManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard
-                        ? BeatmapOnlineStatus.Approved
-                        : beatmap.Status,
-                },
-                MaximumStatistics = state.MaximumStatistics
-            }
-        };
         await GetPlayer().BeingPlaying(scoreToken, score, state);
         logger.LogInformation(
             "Spectator play session started for player {UserId}. ScoreToken: {ScoreToken}, BeatmapId: {BeatmapId}, RulesetId: {RulesetId}.",
             playerId,
             scoreToken,
-            state.BeatmapID.Value,
-            state.RulesetID.Value);
+            score.ScoreInfo.BeatmapInfo!.OnlineID,
+            score.ScoreInfo.Ruleset.OnlineID);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Begins a play session using the V2 spectator API, which supports multiple concurrent started scores
+    /// identified by explicit score tokens.
+    /// </summary>
+    /// <param name="scoreToken">The score token associated with the started score, if any.</param>
+    /// <param name="state">The state of gameplay.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task BeginPlaySessionV2(long? scoreToken, SpectatorState state)
+    {
+        var playerId = Context.GetUserId();
+        logger.LogInformation(
+            "Begin spectator V2 play session requested by player {UserId}. ScoreToken: {ScoreToken}, RulesetId: {RulesetId}, BeatmapId: {BeatmapId}, State: {SpectatorState}.",
+            playerId,
+            scoreToken,
+            state.RulesetID,
+            state.BeatmapID,
+            state.State);
+
+        Score? score = await TryCreateScoreAsync(scoreToken, state);
+        if (score == null)
+        {
+            return;
+        }
+
+        await GetPlayer().BeingPlaying(scoreToken, score, state);
+        logger.LogInformation(
+            "Spectator V2 play session started for player {UserId}. ScoreToken: {ScoreToken}, BeatmapId: {BeatmapId}, RulesetId: {RulesetId}.",
+            playerId,
+            scoreToken,
+            score.ScoreInfo.BeatmapInfo!.OnlineID,
+            score.ScoreInfo.Ruleset.OnlineID);
+    }
+
+    [Obsolete("New clients should use SendFrameDataV2.")] // can remove method 20270102
     public async Task SendFrameData(FrameDataBundle data)
     {
         var player = GetPlayer();
@@ -339,10 +331,32 @@ public class SpectatorHub(
                 data.Frames.Count);
         }
 
-        await player.SendFrames(data);
+        await player.SendFrames(player.State.ScoreToken, data);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Sends frame data for a specific started score using the V2 spectator API.
+    /// </summary>
+    /// <param name="scoreToken">The score token of the started score the data belongs to, if any.</param>
+    /// <param name="data">The frame data bundle.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task SendFrameDataV2(long? scoreToken, FrameDataBundle data)
+    {
+        var player = GetPlayer();
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug(
+                "Spectator V2 frame data received from player {UserId} ({Server}). ScoreToken: {ScoreToken}, FrameCount: {FrameCount}.",
+                player.PlayerId,
+                player.Server,
+                scoreToken,
+                data.Frames.Count);
+        }
+
+        await player.SendFrames(scoreToken, data);
+    }
+
+    [Obsolete("New clients should use EndPlaySessionV2.")] // can remove method 20270102
     public async Task EndPlaySession(SpectatorState state)
     {
         var player = GetPlayer();
@@ -353,7 +367,26 @@ public class SpectatorHub(
             player.State.ScoreToken,
             state.State);
 
-        await player.FinishPlaying(state);
+        await player.FinishPlaying(player.State.ScoreToken, state.State);
+    }
+
+    /// <summary>
+    /// Finishes a started score and potentially the play session using the V2 spectator API.
+    /// </summary>
+    /// <param name="scoreToken">The score token of the finished score, if any.</param>
+    /// <param name="finalState">The final state of gameplay.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task EndPlaySessionV2(long? scoreToken, SpectatedUserState finalState)
+    {
+        var player = GetPlayer();
+        logger.LogInformation(
+            "End spectator V2 play session requested by player {UserId} ({Server}). ScoreToken: {ScoreToken}, FinalState: {FinalState}.",
+            player.PlayerId,
+            player.Server,
+            scoreToken,
+            finalState);
+
+        await player.FinishPlaying(scoreToken, finalState);
     }
 
     /// <inheritdoc />
@@ -407,5 +440,65 @@ public class SpectatorHub(
         using var scope = scopeFactory.CreateScope();
         var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         return await userRepository.GetUsernameByIdAsync(userId);
+    }
+
+    /// <summary>
+    /// Validates a spectator begin-play request and creates the initial score object to buffer.
+    /// </summary>
+    /// <param name="scoreToken">The score token associated with the request, if any.</param>
+    /// <param name="state">The state of gameplay.</param>
+    /// <returns>The created score, or <see langword="null"/> when the request is invalid.</returns>
+    private async Task<Score?> TryCreateScoreAsync(long? scoreToken, SpectatorState state)
+    {
+        var playerId = Context.GetUserId();
+
+        if (state.RulesetID == null)
+        {
+            logger.LogWarning(
+                "Ignoring spectator begin-play request from player {UserId} because RulesetId is missing. ScoreToken: {ScoreToken}.",
+                playerId,
+                scoreToken);
+            return null;
+        }
+
+        if (state.BeatmapID == null)
+        {
+            logger.LogWarning(
+                "Ignoring spectator begin-play request from player {UserId} because BeatmapId is missing. ScoreToken: {ScoreToken}.",
+                playerId,
+                scoreToken);
+            return null;
+        }
+
+        var beatmap = await beatmapRepository.GetByIdAsync(state.BeatmapID.Value);
+        if (beatmap == null)
+        {
+            logger.LogWarning(
+                "Ignoring spectator begin-play request from player {UserId} because beatmap {BeatmapId} was not found. ScoreToken: {ScoreToken}.",
+                playerId,
+                state.BeatmapID.Value,
+                scoreToken);
+            return null;
+        }
+
+        return new Score()
+        {
+            ScoreInfo = new ScoreInfo
+            {
+                APIMods = state.Mods.ToArray(),
+                User =
+                    new APIUser { Id = playerId, Username = (await userRepository.GetUsernameByIdAsync(playerId))!, },
+                Ruleset = rulesetManager.GetRuleset(state.RulesetID.Value).RulesetInfo,
+                BeatmapInfo = new BeatmapInfo
+                {
+                    OnlineID = state.BeatmapID.Value,
+                    MD5Hash = beatmap.Checksum!,
+                    Status = configManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard
+                        ? BeatmapOnlineStatus.Approved
+                        : beatmap.Status,
+                },
+                MaximumStatistics = state.MaximumStatistics
+            }
+        };
     }
 }

@@ -136,27 +136,32 @@ public interface IPlayer
     Task OnScoreProcessed(long scoreId);
 
     /// <summary>
-    /// Begins the player's spectator play session.
+    /// Begins a started score and the player's spectator play session. Supports multiple concurrent
+    /// started scores identified by explicit score tokens.
     /// </summary>
-    /// <param name="scoreToken">The score token associated with the session, if any.</param>
+    /// <param name="scoreToken">The score token associated with the started score, if any.</param>
     /// <param name="score">The initial score object to buffer.</param>
     /// <param name="spectatorState">The spectator state describing the session.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task BeingPlaying(long? scoreToken, Score score, SpectatorState spectatorState);
 
     /// <summary>
-    /// Finishes the player's spectator play session.
+    /// Finishes a started score and potentially the player's spectator play session.
     /// </summary>
-    /// <param name="spectatorState">The final spectator state.</param>
+    /// <param name="scoreToken">The score token of the finished score, if any.</param>
+    /// <param name="finalState">The final state of gameplay.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task FinishPlaying(SpectatorState spectatorState);
+    /// <exception cref="InvalidOperationException">Thrown when the supplied score token was not started.</exception>
+    Task FinishPlaying(long? scoreToken, SpectatedUserState finalState);
 
     /// <summary>
-    /// Sends spectator frame data for the current play session.
+    /// Sends spectator frame data for a specific started score.
     /// </summary>
+    /// <param name="scoreToken">The score token of the started score the data belongs to, if any.</param>
     /// <param name="data">The frame data bundle.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task SendFrames(FrameDataBundle data);
+    /// <exception cref="InvalidOperationException">Thrown when the supplied score token was not started.</exception>
+    Task SendFrames(long? scoreToken, FrameDataBundle data);
 
     /// <summary>
     /// Starts watching another player.
