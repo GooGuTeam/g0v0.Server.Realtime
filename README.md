@@ -11,10 +11,11 @@ each feature.
 
 - [ ] Lazer
     - [x] Online status (MetadataHub)
-    - [x] Spectating (SpectateHub)
-    - [ ] Multiplay (MultiplayHub)
-        - [ ] Standard Play
+    - [x] Spectating (SpectatorHub)
+    - [ ] Multiplay (MultiplayerHub)
+        - [x] Standard Play
         - [ ] Ranked Play
+    - [ ] RefereeHub
 - [ ] Chatting (NotificationServer)
 - [ ] g0v0 Hub for other servers
 

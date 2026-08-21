@@ -61,8 +61,36 @@ SignalR specifics:
 - MessagePack protocol only. JSON is explicitly removed in `Program.cs`'s `ConfigureClientHubOptions` because some union types don't round-trip through JSON.
 - `SignalRUnionWorkaroundResolver.OPTIONS` (from `Common`) is required for derived match-state messages.
 - `IUserIdProvider` is replaced by `JwtUserIdProvider` (`JwtUserIdProvider.cs`). It reads `sub`/`NameIdentifier` from claims, and **manually parses the JWT from the `Authorization: Bearer ...` header** when the auth middleware hasn't populated claims (which happens in some hub-negotiation paths). `Extensions/HubCallerContextExtensions.GetUserId()` duplicates the same fallback for use inside hubs; mirror changes between the two.
-- Endpoints: `/signalr/spectator` (`SpectatorHub`) and `/signalr/metadata` (`MetadataHub`). Both inherit `LazerRealtimeHub<TClient>`.
+- Endpoints: `/signalr/spectator` (`SpectatorHub`), `/signalr/metadata` (`MetadataHub`) and `/signalr/multiplayer`
+  (`MultiplayerHub`). All inherit `LazerRealtimeHub<TClient>`.
 - `SpectatorHub` exposes both the legacy V1 API (`BeginPlaySession`, `SendFrameData`, `EndPlaySession` — marked `[Obsolete]`, removal date 20270102) and the V2 API (`BeginPlaySessionV2`, `SendFrameDataV2`, `EndPlaySessionV2`) with explicit per-score tokens. Both routes share one player-side implementation (`IPlayer.BeingPlaying`/`SendFrames`/`FinishPlaying`): `PlayerState.ScoreTokens` tracks up to the configured `RealtimeConfig.MaxStartedScores` concurrent started scores (oldest is evicted and processed on overflow), the ambient `ScoreToken` mirrors the most recently started score, and only ending the latest score (or with a null token) broadcasts `UserFinishedPlaying`. V1 hub methods pass the ambient token; V2 methods pass the explicit one.
+
+### Multiplayer (rooms & match flow)
+
+- `MultiplayerHub` implements `IMultiplayerServer` (lounge + room server). Every command validates the caller against
+  server-side room state, then runs inside the room's `IRoom.RoomLock` (`SemaphoreSlim`) so concurrent hub calls are
+  serialised. `PlayerState.CurrentRoom` tracks which room a player is in; joining/leaving updates it and the room's
+  participant table through `IRoomRepository`.
+- Room model: `RoomBase` (abstract) holds the state machine, persistence and event broadcasting; `StandardRoom` adds
+  the current-playlist-item resolution and capacity checks; `HeadToHeadRoom` and `TeamVersusRoom` implement the two
+  supported match types. `MatchType.Playlists`, `Matchmaking` and `RankedPlay` are explicitly rejected at creation and
+  settings change.
+- State machine (server-authoritative): `Idle -> Ready`, server sets `WaitingForLoad` on start, clients send
+  `Loaded -> ReadyForGameplay`, server sets `Playing`, clients send `FinishedPlay`, server sets `Results` then returns
+  the room to `Open`. Client attempts to set server-managed states (`WaitingForLoad`, `Playing`, `Results`) throw
+  `InvalidStateChangeException`; late/racing `Idle`/`Loaded`/`ReadyForGameplay` messages are silently ignored.
+- `IsReadyForGameplay()` (in `Extensions/MultiplayerUserStateExtensions.cs`) requires
+  `BeatmapAvailability.State == DownloadState.LocallyAvailable` and `Ready`/`Idle` — clients must call
+  `ChangeBeatmapAvailability` before `StartMatch` succeeds.
+- `MultiplayerEventDispatcher` is the sole broadcaster. Room-wide events go to the SignalR group
+  `multiplayer:room:{roomId}` (joined on connect, left on leave/kick); per-user events (`LoadRequested`,
+  `GameplayStarted`, `GameplayAborted`, `ResultsReady`, `Invited`, kicked unicast) go to `Clients.User(userId)`.
+  `Program.ConfigureServices` registers `MultiplayerEventDispatcher`, `IRoomFacade`/`RoomFacade` and `RoomManager`.
+- `RoomManager` owns the in-memory room registry (`ConcurrentDictionary<long, IRoom>`) and the match-type factory;
+  `GetOrLoadRoom` hydrates an existing DB room (head-to-head/team-versus only, rejects ended rooms). Rooms persist
+  through Common's `IRoomRepository` (both MySQL and PostgreSQL backends); there is **no LegacyIO / osu-web interop**
+  call — the lazer API's `/app/router/lio.py` semantics (participant dedup, empty-room end) are implemented directly in
+  the repository layer.
 
 Player model:
 - `PlayerManager` is a singleton registry keyed by `(playerId, server)`. A player may have multiple `IPlayer` instances per `PlayerId` (one per source server). `GetPlayer<T>(int)` returns the first match across servers; `GetPlayerAllInstances(int)` returns all.
@@ -80,6 +108,7 @@ Background services (`Services/`):
 NUnit 4 + `Microsoft.NET.Test.Sdk` 17. No real DB/Redis/S3 — tests construct everything in-process:
 
 - `SpectatorHubTests` and `MetadataHubTests` each define a nested `*TestEnvironment` plus fake `IHubContext`, `IHubCallerClients`, `HubCallerContext`, `IGroupManager`, repositories (`Fake*Repository`), `IStorageService`, and IPC transport. When adding a hub test, extend the existing environment rather than instantiating a real `SignalR` pipeline.
+- `MultiplayerHubTests` mirrors this pattern with `MultiplayerHubTestInfrastructure` (router + `RecordingMultiplayerClient` + `FakeRoomRepository` + `FakeScopeFactory`). The router aliases a user id to its connection id recorder so unicast (`Clients.User`) and group events land on the same recorder. `MultiplayerIntegrationTests` spins up a real `TestServer` + `HubConnection` with the MessagePack protocol for genuine multi-client collaboration tests (head-to-head full lifecycle, team-versus teams, kick, wrong password); the test host registers `FakeRoomRepository` as `IRoomRepository` and a no-op IPC transport, and the client URL carries `?userId=` for `IUserIdProvider`.
 - Each environment writes a throwaway `config/` tree under `Path.GetTempPath()` and points a new `ConfigurationManager` at it. Honor this pattern — `ConfigurationManager` requires real files on disk.
 - `ScoreProcessedNotificationService.ScoreLookupTimeout` / `ScoreLookupRetryDelay` are deliberately exposed so tests can shrink them to milliseconds; keep them settable.
 - Tests in the test project have `<NoWarn>SA0001;CS1591</NoWarn>` — do not "fix" missing doc comments there by adding them.
