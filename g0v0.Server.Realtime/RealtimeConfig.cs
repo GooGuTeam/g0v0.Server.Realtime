@@ -16,6 +16,16 @@ public class RealtimeConfig
     public const int DefaultMaxStartedScores = 2;
 
     /// <summary>
+    /// The default maximum number of playlist items a host may enqueue.
+    /// </summary>
+    public const int DefaultHostPlaylistLimit = 50;
+
+    /// <summary>
+    /// The default maximum number of playlist items a guest may enqueue.
+    /// </summary>
+    public const int DefaultGuestPlaylistLimit = 3;
+
+    /// <summary>
     /// Gets or sets a value indicating whether spectator replays should be persisted.
     /// </summary>
     [Reloadable]
@@ -31,4 +41,28 @@ public class RealtimeConfig
     /// Gets or sets the number of concurrent replay uploader workers.
     /// </summary>
     public int ReplayUploaderConcurrency { get; set; } = 4;
+
+    /// <summary>
+    /// Gets or sets the limit of playlist items of the host.
+    /// </summary>
+    public int HostPlaylistLimit { get; set; } = DefaultHostPlaylistLimit;
+
+    /// <summary>
+    /// Gets or sets the limit of playlist items of the guest.
+    /// </summary>
+    public int GuestPlaylistLimit { get; set; } = DefaultGuestPlaylistLimit;
+
+    /// <summary>
+    /// Gets or sets the grace period during which a disconnected user is kept in
+    /// their room before being removed, allowing a brief reconnect.
+    /// </summary>
+    [Reloadable]
+    public TimeSpan MultiplayerDisconnectGracePeriod { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gets or sets the period for which an empty tournament room is retained
+    /// before being destroyed.
+    /// </summary>
+    [Reloadable]
+    public TimeSpan TournamentRoomRetentionPeriod { get; set; } = TimeSpan.FromMinutes(30);
 }

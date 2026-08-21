@@ -7,6 +7,7 @@ using g0v0.Server.Common.Extensions;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Objects.Rooms;
 using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -34,7 +35,16 @@ public static class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        ConfigureServices(builder);
+        ConfigureApp(builder.Build()).Run();
+    }
 
+    /// <summary>
+    /// Registers all services required by the realtime server.
+    /// </summary>
+    /// <param name="builder">The web application builder.</param>
+    public static void ConfigureServices(WebApplicationBuilder builder)
+    {
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
@@ -68,6 +78,15 @@ public static class Program
         builder.Services.AddSingleton<ScoreBuffer>();
         builder.Services.AddSingleton<ScoreUploader>();
         builder.Services.AddSingleton<ScoreProcessedNotificationService>();
+        builder.Services.AddSingleton<MultiplayerEventDispatcher>();
+        builder.Services.AddSingleton<IRoomFacade>(serviceProvider => new RoomFacade(
+            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            serviceProvider.GetRequiredService<MultiplayerEventDispatcher>(),
+            serviceProvider.GetService<ILogger<RoomFacade>>())
+        {
+            RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
+        });
+        builder.Services.AddSingleton<RoomManager>();
 
         // Copy from osu-server-spectator
         builder.Services.AddSignalR()
@@ -82,13 +101,18 @@ public static class Program
                 options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS;
             })
             .AddHubOptions<MetadataHub>(ConfigureClientHubOptions)
-            .AddHubOptions<SpectatorHub>(ConfigureClientHubOptions);
-
-        // .AddHubOptions<SpectatorHub>(_configureClientHubOptions);
+            .AddHubOptions<SpectatorHub>(ConfigureClientHubOptions)
+            .AddHubOptions<MultiplayerHub>(ConfigureClientHubOptions);
         builder.Services.AddSingleton<IUserIdProvider, JwtUserIdProvider>();
+    }
 
-        var app = builder.Build();
-
+    /// <summary>
+    /// Configures the web application pipeline.
+    /// </summary>
+    /// <param name="app">The application.</param>
+    /// <returns>The configured application.</returns>
+    public static WebApplication ConfigureApp(WebApplication app)
+    {
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
@@ -103,7 +127,8 @@ public static class Program
         app.MapControllers();
         app.MapHub<MetadataHub>("/signalr/metadata");
         app.MapHub<SpectatorHub>("/signalr/spectator");
+        app.MapHub<MultiplayerHub>("/signalr/multiplayer");
 
-        app.Run();
+        return app;
     }
 }
