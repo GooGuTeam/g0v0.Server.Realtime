@@ -17,6 +17,11 @@ public interface IPlayerFacade
     PlayerManager _manager { get; set; }
 
     /// <summary>
+    /// Gets or sets the room manager, when multiplayer room operations are available.
+    /// </summary>
+    RoomManager? _roomManager { get; set; }
+
+    /// <summary>
     /// Gets or sets the configuration manager, when needed by player operations.
     /// </summary>
     ConfigurationManager? _configManager { get; set; }
@@ -50,6 +55,7 @@ public interface IPlayerFacade
     {
         ArgumentNullException.ThrowIfNull(facade);
 
+        _roomManager = facade._roomManager ?? _roomManager;
         _configManager = facade._configManager ?? _configManager;
         _scoreBuffer = facade._scoreBuffer ?? _scoreBuffer;
         _scoreUploader = facade._scoreUploader ?? _scoreUploader;

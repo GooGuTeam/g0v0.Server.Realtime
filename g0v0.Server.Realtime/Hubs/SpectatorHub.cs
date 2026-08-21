@@ -435,7 +435,7 @@ public class SpectatorHub(
         }
     }
 
-    private static async Task<string?> GetUsernameByIdAsync(IServiceScopeFactory scopeFactory, long userId)
+    private static async Task<string?> GetUsernameByIdAsync(IServiceScopeFactory scopeFactory, int userId)
     {
         using var scope = scopeFactory.CreateScope();
         var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();

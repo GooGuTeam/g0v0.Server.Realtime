@@ -178,4 +178,12 @@ public interface IPlayer
     Task StopWatchPlayer(IPlayer target);
 
     #endregion
+
+    #region Multiplayer
+
+    Task JoinRoom(long roomId);
+
+    Task LeaveRoom(long roomId);
+
+    #endregion
 }

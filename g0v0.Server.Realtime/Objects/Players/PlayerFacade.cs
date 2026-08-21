@@ -16,6 +16,9 @@ public class PlayerFacade(PlayerManager manager) : IPlayerFacade
     public PlayerManager _manager { get; set; } = manager;
 
     /// <inheritdoc />
+    public RoomManager? _roomManager { get; set; }
+
+    /// <inheritdoc />
     public ConfigurationManager? _configManager { get; set; }
 
     /// <inheritdoc />

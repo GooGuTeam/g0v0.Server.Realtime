@@ -4,6 +4,7 @@ using g0v0.Server.Common.Communication;
 using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.States.Activity;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Users;
 
@@ -12,7 +13,9 @@ namespace g0v0.Server.Realtime.Manager;
 /// <summary>
 /// Tracks connected players and broadcasts their state changes.
 /// </summary>
-public class PlayerManager(ILogger<PlayerManager> logger, InterProcessCommunicationClient ipcClient)
+public class PlayerManager(
+    ILogger<PlayerManager> logger,
+    InterProcessCommunicationClient ipcClient)
 {
     private static readonly Action<ILogger, int, string, Exception?> LogPlayerConnected =
         LoggerMessage.Define<int, string>(
@@ -34,6 +37,91 @@ public class PlayerManager(ILogger<PlayerManager> logger, InterProcessCommunicat
 
     // source (watcher) -> target (watched)
     private readonly Dictionary<IPlayer, HashSet<IPlayer>> _playerWatching = new();
+
+    // user id -> disconnect grace timer (multiplayer room membership).
+    private readonly Dictionary<int, CancellationTokenSource> _disconnectGraceTimers = new();
+
+    /// <summary>
+    /// Gets or sets the grace period during which a disconnected user is kept in
+    /// their room before being removed (defaults to 30 seconds; tests may shrink it).
+    /// </summary>
+    public TimeSpan MultiplayerDisconnectGracePeriod { get; set; } = TimeSpan.FromSeconds(30);
+
+    #region Multiplayer disconnect grace
+
+    /// <summary>
+    /// Starts a grace timer which removes the given user from their room after
+    /// the specified period unless cancelled by a reconnect. Used to keep users
+    /// in a room across brief connection drops.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="roomId">The room ID the user is currently in.</param>
+    /// <param name="gracePeriod">The grace period.</param>
+    /// <param name="roomManager">The room manager used to resolve the room.</param>
+    public void StartMultiplayerDisconnectGrace(int userId, long roomId, TimeSpan gracePeriod, RoomManager roomManager)
+    {
+        CancelMultiplayerDisconnectGrace(userId);
+
+        var cancellationSource = new CancellationTokenSource();
+        _disconnectGraceTimers[userId] = cancellationSource;
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(gracePeriod, cancellationSource.Token).ConfigureAwait(false);
+
+                var room = roomManager.GetRoom(roomId);
+                if (room == null)
+                {
+                    return;
+                }
+
+                await room.RoomLock.WaitAsync(cancellationSource.Token).ConfigureAwait(false);
+                try
+                {
+                    await room.LeaveRoom(userId);
+                }
+                finally
+                {
+                    room.RoomLock.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Reconnected before the grace period elapsed.
+            }
+            finally
+            {
+                lock (_lock)
+                {
+                    if (_disconnectGraceTimers.TryGetValue(userId, out var current)
+                        && ReferenceEquals(current, cancellationSource))
+                    {
+                        _disconnectGraceTimers.Remove(userId);
+                    }
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Cancels any pending multiplayer disconnect grace timer for the user.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    public void CancelMultiplayerDisconnectGrace(int userId)
+    {
+        lock (_lock)
+        {
+            if (_disconnectGraceTimers.TryGetValue(userId, out var cancellationSource))
+            {
+                _disconnectGraceTimers.Remove(userId);
+                cancellationSource.Cancel();
+            }
+        }
+    }
+
+    #endregion
 
     #region Player Storage
 
@@ -94,7 +182,8 @@ public class PlayerManager(ILogger<PlayerManager> logger, InterProcessCommunicat
                 _players.Remove(identity);
             }
 
-            if (_pendingPlayers.TryGetValue(identity, out IPlayer? pendingPlayer) && ReferenceEquals(pendingPlayer, player))
+            if (_pendingPlayers.TryGetValue(identity, out IPlayer? pendingPlayer) &&
+                ReferenceEquals(pendingPlayer, player))
             {
                 _pendingPlayers.Remove(identity);
             }
@@ -463,8 +552,6 @@ public class PlayerManager(ILogger<PlayerManager> logger, InterProcessCommunicat
         }
     }
 
-    #endregion
-
     /// <summary>
     /// Gets all players currently watching the specified target.
     /// </summary>
@@ -483,6 +570,74 @@ public class PlayerManager(ILogger<PlayerManager> logger, InterProcessCommunicat
 
         return watchers;
     }
+
+    #endregion
+
+    #region Multiplayer
+
+    /// <summary>
+    /// Joins a player into a room, updating the player's current-room state.
+    /// </summary>
+    /// <param name="roomManager">The room manager.</param>
+    /// <param name="player">The joining player.</param>
+    /// <param name="roomId">The room ID.</param>
+    /// <param name="role">The role to join with.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task UserJoinRoom(
+        RoomManager roomManager,
+        IPlayer player,
+        long roomId,
+        MultiplayerRoomUserRole role = MultiplayerRoomUserRole.Player)
+    {
+        var room = roomManager.GetRoom(roomId);
+        if (room != null)
+        {
+            if (player.State.CurrentRoom != null)
+            {
+                throw new InvalidStateException("Player is already in a room.");
+            }
+
+            var userCanJoin = await room.UserCanJoin(player.PlayerId);
+            if (!userCanJoin)
+            {
+                throw new InvalidStateException("Player is not eligible to join this room.");
+            }
+
+            await room.JoinRoom(player.PlayerId, role);
+            player.State.CurrentRoom = roomId;
+        }
+        else
+        {
+            throw new InvalidStateException("Room not found.");
+        }
+    }
+
+    /// <summary>
+    /// Leaves the room the player is currently in, clearing the player's current-room state.
+    /// </summary>
+    /// <param name="roomManager">The room manager.</param>
+    /// <param name="player">The leaving player.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task UserLeaveRoom(RoomManager roomManager, IPlayer player)
+    {
+        long? roomId = player.State.CurrentRoom;
+        if (roomId == null)
+        {
+            return;
+        }
+
+        var room = roomManager.GetRoom(roomId.Value);
+        if (room == null)
+        {
+            player.State.CurrentRoom = null;
+            return;
+        }
+
+        await room.LeaveRoom(player.PlayerId);
+        player.State.CurrentRoom = null;
+    }
+
+    #endregion
 
     private static (int PlayerId, string PlayerServer) PlayerIdentity(IPlayer player) =>
         (player.PlayerId, player.Server);

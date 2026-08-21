@@ -233,6 +233,28 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         await facade._manager.UserStoppedWatchingPlayer(this, target);
     }
 
+    /// <inheritdoc />
+    public async Task JoinRoom(long roomId)
+    {
+        if (facade._roomManager == null)
+        {
+            throw new InvalidOperationException("Room manager is not available on this player facade.");
+        }
+
+        await facade._manager.UserJoinRoom(facade._roomManager, this, roomId);
+    }
+
+    /// <inheritdoc />
+    public async Task LeaveRoom(long roomId)
+    {
+        if (facade._roomManager == null)
+        {
+            throw new InvalidOperationException("Room manager is not available on this player facade.");
+        }
+
+        await facade._manager.UserLeaveRoom(facade._roomManager, this);
+    }
+
     /// <summary>
     /// Determines whether another player has the same identity.
     /// </summary>

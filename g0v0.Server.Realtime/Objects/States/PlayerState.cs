@@ -44,6 +44,12 @@ public class PlayerState(IUserActivity userActivity)
     public IList<long> ScoreTokens { get; } = new List<long>();
 
     /// <summary>
+    /// Gets or sets the ID of the multiplayer room the player is currently in,
+    /// or <see langword="null"/> when the player is not in a room.
+    /// </summary>
+    public long? CurrentRoom { get; set; }
+
+    /// <summary>
     /// Converts the current state into lazer presence payload format.
     /// </summary>
     /// <returns>The lazer presence payload, or <see langword="null"/> when the player should appear offline.</returns>
