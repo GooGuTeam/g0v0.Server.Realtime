@@ -22,67 +22,67 @@ public static class LazerUserActivityExtension
         {
             null => new IdleActivity(),
             UserActivity.ChoosingBeatmap => new ChoosingBeatmapActivity(),
-            UserActivity.InSoloGame solo => new SoloActivity()
+            UserActivity.InSoloGame solo => new SoloActivity
             {
                 BeatmapId = solo.BeatmapID,
                 BeatmapDisplayTitle = solo.BeatmapDisplayTitle,
                 RulesetId = solo.RulesetID,
                 RulesetPlayingVerb = solo.RulesetPlayingVerb,
             },
-            UserActivity.SpectatingUser spectator => new SpectatingUserActivity()
+            UserActivity.SpectatingUser spectator => new SpectatingUserActivity
             {
-                ScoreID = spectator.ScoreID,
+                ScoreId = spectator.ScoreID,
                 PlayerName = spectator.PlayerName,
-                BeatmapID = spectator.BeatmapID,
+                BeatmapId = spectator.BeatmapID,
                 BeatmapDisplayTitle = spectator.BeatmapDisplayTitle ?? string.Empty,
             },
-            UserActivity.WatchingReplay replay => new WatchingReplayActivity()
+            UserActivity.WatchingReplay replay => new WatchingReplayActivity
             {
-                ScoreID = replay.ScoreID,
+                ScoreId = replay.ScoreID,
                 PlayerName = replay.PlayerName,
-                BeatmapID = replay.BeatmapID,
+                BeatmapId = replay.BeatmapID,
                 BeatmapDisplayTitle = replay.BeatmapDisplayTitle ?? string.Empty,
             },
             UserActivity.SearchingForLobby => new SearchingForLobbyActivity(),
-            UserActivity.InLobby lobby => new InLobbyActivity() { RoomID = lobby.RoomID, RoomName = lobby.RoomName, },
-            UserActivity.InMultiplayerGame mpGame => new InMultiplayerGameActivity()
+            UserActivity.InLobby lobby => new InLobbyActivity { RoomId = lobby.RoomID, RoomName = lobby.RoomName, },
+            UserActivity.InMultiplayerGame mpGame => new InMultiplayerGameActivity
             {
                 BeatmapId = mpGame.BeatmapID,
                 BeatmapDisplayTitle = mpGame.BeatmapDisplayTitle,
                 RulesetId = mpGame.RulesetID,
                 RulesetPlayingVerb = mpGame.RulesetPlayingVerb,
             },
-            UserActivity.SpectatingMultiplayerGame specMp => new SpectatingMultiplayerGameActivity()
+            UserActivity.SpectatingMultiplayerGame specMp => new SpectatingMultiplayerGameActivity
             {
                 BeatmapId = specMp.BeatmapID,
                 BeatmapDisplayTitle = specMp.BeatmapDisplayTitle,
                 RulesetId = specMp.RulesetID,
                 RulesetPlayingVerb = specMp.RulesetPlayingVerb,
             },
-            UserActivity.InPlaylistGame playlist => new InPlaylistGameActivity()
+            UserActivity.InPlaylistGame playlist => new InPlaylistGameActivity
             {
                 BeatmapId = playlist.BeatmapID,
                 BeatmapDisplayTitle = playlist.BeatmapDisplayTitle,
                 RulesetId = playlist.RulesetID,
                 RulesetPlayingVerb = playlist.RulesetPlayingVerb,
             },
-            UserActivity.ModdingBeatmap modding => new ModdingBeatmapActivity()
+            UserActivity.ModdingBeatmap modding => new ModdingBeatmapActivity
             {
                 BeatmapId = modding.BeatmapID,
                 BeatmapDisplayTitle = modding.BeatmapDisplayTitle,
             },
-            UserActivity.TestingBeatmap testing => new TestingBeatmapActivity()
+            UserActivity.TestingBeatmap testing => new TestingBeatmapActivity
             {
                 BeatmapId = testing.BeatmapID,
                 BeatmapDisplayTitle = testing.BeatmapDisplayTitle,
             },
-            UserActivity.EditingBeatmap editing => new EditingBeatmapActivity()
+            UserActivity.EditingBeatmap editing => new EditingBeatmapActivity
             {
                 BeatmapId = editing.BeatmapID,
                 BeatmapDisplayTitle = editing.BeatmapDisplayTitle,
             },
             UserActivity.InDailyChallengeLobby => new InDailyChallengeLobbyActivity(),
-            UserActivity.PlayingDailyChallenge dailyChallenge => new PlayingDailyChallengeActivity()
+            UserActivity.PlayingDailyChallenge dailyChallenge => new PlayingDailyChallengeActivity
             {
                 BeatmapId = dailyChallenge.BeatmapID,
                 BeatmapDisplayTitle = dailyChallenge.BeatmapDisplayTitle,

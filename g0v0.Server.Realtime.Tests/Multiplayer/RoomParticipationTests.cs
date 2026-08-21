@@ -18,102 +18,102 @@ public class RoomParticipationTests : MultiplayerTestBase
     public async Task UserCanJoinWithPasswordEvenWhenNotRequired()
     {
         // Create a room with no password; any password is accepted when none is required.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoomWithPassword(ROOMID, "password");
+        await Hub.JoinRoomWithPassword(RoomId, "password");
     }
 
     [Test]
     public async Task UserCanJoinWithCorrectPassword()
     {
-        await Hub.JoinRoomWithPassword(ROOMID, "password");
+        await Hub.JoinRoomWithPassword(RoomId, "password");
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoomWithPassword(ROOMID, "password");
+        await Hub.JoinRoomWithPassword(RoomId, "password");
     }
 
     [Test]
     public async Task UserCantJoinWithIncorrectPassword()
     {
-        await Hub.JoinRoomWithPassword(ROOMID, "password");
+        await Hub.JoinRoomWithPassword(RoomId, "password");
 
         SetUserContext(ContextUser2);
-        Assert.That(async () => await Hub.JoinRoom(ROOMID), Throws.TypeOf<InvalidPasswordException>());
+        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.TypeOf<InvalidPasswordException>());
     }
 
     [Test]
     public async Task UserCantJoinAlreadyEnded()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Mark the persisted room record as ended, then leave so the in-memory
         // room is disbanded and removed from the manager's registry (the fake
         // repository record remains, mirroring an ended room still present in the DB).
-        RoomRepository.Rooms.First(r => r.Id == ROOMID).EndsAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+        RoomRepository.Rooms.First(r => r.Id == RoomId).EndsAt = DateTimeOffset.UtcNow.AddMinutes(-5);
         await Hub.LeaveRoom();
 
         // The room can no longer be re-hydrated from the repository because it has ended.
-        Assert.That(async () => await Hub.JoinRoomExplicit(ROOMID), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.JoinRoomExplicit(RoomId), Throws.TypeOf<InvalidStateException>());
 
-        Assert.That(PlayerManager.GetPlayer<LazerPlayer>(USERID)?.State.CurrentRoom, Is.Null);
-        Assert.That(Hub.CheckRoomExists(ROOMID), Is.False);
+        Assert.That(PlayerManager.GetPlayer<LazerPlayer>(UserId)?.State.CurrentRoom, Is.Null);
+        Assert.That(Hub.CheckRoomExists(RoomId), Is.False);
     }
 
     [Test]
     public async Task UserCantJoinWhenAlreadyJoined()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Ensure the same user can't join a room if already in one.
-        Assert.That(async () => await Hub.JoinRoom(ROOMID), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.TypeOf<InvalidStateException>());
 
         // Once the user leaves, the room is disbanded (last user left) and the
         // server does not revive ended rooms, unlike the reference which clears
         // the room's end date on re-join. Re-joining must therefore fail.
         await Hub.LeaveRoom();
-        Assert.That(Hub.CheckRoomExists(ROOMID), Is.False);
-        Assert.That(async () => await Hub.JoinRoom(ROOMID), Throws.Exception);
+        Assert.That(Hub.CheckRoomExists(RoomId), Is.False);
+        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.Exception);
     }
 
     [Test]
     public async Task UserCantJoinWhenBanned()
     {
-        await Hub.JoinRoom(ROOMID);
-        Hub.GetRoom(ROOMID)!.BanUser(USERID2);
+        await Hub.JoinRoom(RoomId);
+        Hub.GetRoom(RoomId)!.BanUser(UserId2);
 
         SetUserContext(ContextUser2);
 
         // Note: unlike the reference (which expects InvalidStateException), this server
         // folds the ban check into password eligibility and reports it as InvalidPasswordException.
-        Assert.That(async () => await Hub.JoinRoom(ROOMID), Throws.TypeOf<InvalidPasswordException>());
+        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.TypeOf<InvalidPasswordException>());
     }
 
     [Test]
     public async Task LastUserLeavingCausesRoomDisband()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
-        Assert.That(RoomRepository.Rooms.First(r => r.Id == ROOMID).ParticipantCount, Is.EqualTo(1));
+        await Hub.JoinRoom(RoomId);
+        Assert.That(RoomRepository.Rooms.First(r => r.Id == RoomId).ParticipantCount, Is.EqualTo(1));
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
-        Assert.That(RoomRepository.Rooms.First(r => r.Id == ROOMID).ParticipantCount, Is.EqualTo(2));
+        await Hub.JoinRoom(RoomId);
+        Assert.That(RoomRepository.Rooms.First(r => r.Id == RoomId).ParticipantCount, Is.EqualTo(2));
 
         SetUserContext(ContextUser);
         await Hub.LeaveRoom();
 
         // The room still exists even though the original host left.
-        Assert.That(Hub.CheckRoomExists(ROOMID), Is.True);
-        Assert.That(Hub.GetRoom(ROOMID)!.Host?.UserID, Is.EqualTo(USERID2));
-        Assert.That(RoomRepository.Rooms.First(r => r.Id == ROOMID).ParticipantCount, Is.EqualTo(1));
+        Assert.That(Hub.CheckRoomExists(RoomId), Is.True);
+        Assert.That(Hub.GetRoom(RoomId)!.Host?.UserID, Is.EqualTo(UserId2));
+        Assert.That(RoomRepository.Rooms.First(r => r.Id == RoomId).ParticipantCount, Is.EqualTo(1));
 
         SetUserContext(ContextUser2);
         await Hub.LeaveRoom();
 
         // The room is gone once the last user leaves.
-        Assert.That(Hub.CheckRoomExists(ROOMID), Is.False);
-        Assert.That(RoomRepository.Rooms.First(r => r.Id == ROOMID).EndsAt, Is.Not.Null);
+        Assert.That(Hub.CheckRoomExists(RoomId), Is.False);
+        Assert.That(RoomRepository.Rooms.First(r => r.Id == RoomId).EndsAt, Is.Not.Null);
     }
 
     [Test]
@@ -121,28 +121,28 @@ public class RoomParticipationTests : MultiplayerTestBase
     {
         await Hub.LeaveRoom();
 
-        Assert.That(PlayerManager.GetPlayer<LazerPlayer>(USERID)?.State.CurrentRoom, Is.Null);
+        Assert.That(PlayerManager.GetPlayer<LazerPlayer>(UserId)?.State.CurrentRoom, Is.Null);
     }
 
     [Test]
     public async Task UserJoinLeaveNotifiesOtherUsers()
     {
-        await Hub.JoinRoom(ROOMID); // join an arbitrary first user (listener).
+        await Hub.JoinRoom(RoomId); // join an arbitrary first user (listener).
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var roomUser = new MultiplayerRoomUser(USERID2);
+        MultiplayerRoomUser roomUser = new(UserId2);
 
         // Invalid join: the user is already in the room.
-        Assert.That(async () => await Hub.JoinRoom(ROOMID), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.TypeOf<InvalidStateException>());
 
         Receiver.Verify(r => r.UserJoined(roomUser), Times.Once);
 
         await Hub.LeaveRoom();
         Receiver.Verify(r => r.UserLeft(roomUser), Times.Once);
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         Receiver.Verify(r => r.UserJoined(roomUser), Times.Exactly(2));
 
         await Hub.LeaveRoom();
@@ -156,10 +156,10 @@ public class RoomParticipationTests : MultiplayerTestBase
         // does not exist in this architecture. The equivalent join failure here is
         // joining a room that does not exist: it must throw and leave no stale state.
         SetUserContext(ContextUser2);
-        Assert.That(async () => await Hub.JoinRoomExplicit(ROOMID), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.JoinRoomExplicit(RoomId), Throws.TypeOf<InvalidStateException>());
 
-        Assert.That(Hub.CheckRoomExists(ROOMID), Is.False);
-        Assert.That(PlayerManager.GetPlayer<LazerPlayer>(USERID2)?.State.CurrentRoom, Is.Null);
+        Assert.That(Hub.CheckRoomExists(RoomId), Is.False);
+        Assert.That(PlayerManager.GetPlayer<LazerPlayer>(UserId2)?.State.CurrentRoom, Is.Null);
     }
 
     // Skipped: UserCantJoinWhenRestricted — this server has no user restriction check

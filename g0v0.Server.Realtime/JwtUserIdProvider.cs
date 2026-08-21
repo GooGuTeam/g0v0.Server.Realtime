@@ -22,7 +22,7 @@ public class JwtUserIdProvider(ILoggerFactory loggerFactory) : IUserIdProvider
     /// <returns>The resolved user identifier, or <see langword="null"/> if none was found.</returns>
     public string? GetUserId(HubConnectionContext connection)
     {
-        var claim = connection.User.FindFirst(static claim =>
+        Claim? claim = connection.User.FindFirst(static claim =>
             (claim.Type is ClaimTypes.NameIdentifier or "sub")
             && !string.IsNullOrWhiteSpace(claim.Value));
 
@@ -32,24 +32,24 @@ public class JwtUserIdProvider(ILoggerFactory loggerFactory) : IUserIdProvider
         }
 
         // Fallback: parse the Authorization header manually (same logic as HubCallerContextExtensions.GetUserId).
-        var httpContext = connection.GetHttpContext();
+        HttpContext? httpContext = connection.GetHttpContext();
 
         if (httpContext != null &&
-            httpContext.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
+            httpContext.Request.Headers.TryGetValue("Authorization", out Microsoft.Extensions.Primitives.StringValues authHeader) &&
             !string.IsNullOrEmpty(authHeader))
         {
             const string bearerPrefix = "Bearer ";
-            var headerValue = authHeader.ToString();
+            string headerValue = authHeader.ToString();
 
             if (headerValue.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
             {
-                var token = headerValue.Substring(bearerPrefix.Length).Trim();
+                string token = headerValue[bearerPrefix.Length..].Trim();
 
                 try
                 {
-                    var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
-                    var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub");
-                    var subValue = subClaim?.Value;
+                    JwtSecurityToken jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
+                    Claim? subClaim = jwtToken.Claims.FirstOrDefault(c => string.Equals(c.Type, "sub", StringComparison.Ordinal));
+                    string? subValue = subClaim?.Value;
 
                     if (!string.IsNullOrEmpty(subValue))
                     {
@@ -66,7 +66,7 @@ public class JwtUserIdProvider(ILoggerFactory loggerFactory) : IUserIdProvider
             }
         }
 
-        var claimTypes = string.Join(", ", connection.User.Claims.Select(c => $"{c.Type}={c.Value}"));
+        string claimTypes = string.Join(", ", connection.User.Claims.Select(c => $"{c.Type}={c.Value}"));
         _logger.LogWarning(
             "JwtUserIdProvider: could not resolve user ID. Connection {ConnectionId} has claims: [{Claims}]",
             connection.ConnectionId,

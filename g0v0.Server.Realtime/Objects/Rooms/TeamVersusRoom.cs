@@ -34,7 +34,7 @@ public class TeamVersusRoom : StandardRoom
         // Assign teams through HandleUserJoined (which calls GetBestAvailableTeam)
         // rather than assigning here: doing both would re-roll the team of already
         // assigned users and can put everyone into the same team.
-        foreach (var user in Users)
+        foreach (MultiplayerRoomUser user in Users)
         {
             await HandleUserJoined(user);
         }
@@ -72,7 +72,7 @@ public class TeamVersusRoom : StandardRoom
                     throw new InvalidStateException("Teams are currently locked.");
                 }
 
-                if (teamState.Teams.All(t => t.ID != changeTeam.TeamID))
+                if (teamState.Teams.TrueForAll(t => t.ID != changeTeam.TeamID))
                 {
                     throw new InvalidStateException("Attempted to set team out of valid range.");
                 }
@@ -99,20 +99,18 @@ public class TeamVersusRoom : StandardRoom
     /// <inheritdoc />
     protected override int GetNextBestSlot(MultiplayerRoomUser user, int?[] slots)
     {
-        if (user.MatchState is TeamVersusUserState userState
-            && MatchState is TeamVersusRoomState teamState)
+        if (user.MatchState is not TeamVersusUserState userState
+            || MatchState is not TeamVersusRoomState teamState)
         {
-            int teamSize = slots.Length / teamState.Teams.Count;
-            int teamStartIndex = userState.TeamID * teamSize;
-
-            int nextEmptySlotInTeam = Array.FindIndex(slots, teamStartIndex, teamSize, item => item == null);
-            if (nextEmptySlotInTeam >= 0)
-            {
-                return nextEmptySlotInTeam;
-            }
+            return base.GetNextBestSlot(user, slots);
         }
 
-        return base.GetNextBestSlot(user, slots);
+        int teamSize = slots.Length / teamState.Teams.Count;
+        int teamStartIndex = userState.TeamID * teamSize;
+
+        int nextEmptySlotInTeam = Array.FindIndex(slots, teamStartIndex, teamSize, item => item == null);
+
+        return nextEmptySlotInTeam >= 0 ? nextEmptySlotInTeam : base.GetNextBestSlot(user, slots);
     }
 
     /// <summary>
@@ -127,15 +125,12 @@ public class TeamVersusRoom : StandardRoom
         }
 
         // Initially check for any teams which don't yet have players.
-        foreach (var team in teamState.Teams)
+        foreach (MultiplayerTeam team in teamState.Teams.Where(team => Users.All(u => (u.MatchState as TeamVersusUserState)?.TeamID != team.ID)))
         {
-            if (Users.All(u => (u.MatchState as TeamVersusUserState)?.TeamID != team.ID))
-            {
-                return team.ID;
-            }
+            return team.ID;
         }
 
-        var countsByTeams = Users
+        IOrderedEnumerable<IGrouping<int?, MultiplayerRoomUser>> countsByTeams = Users
             .GroupBy(u => (u.MatchState as TeamVersusUserState)?.TeamID)
             .Where(g => g.Key.HasValue)
             .OrderBy(g => g.Count());

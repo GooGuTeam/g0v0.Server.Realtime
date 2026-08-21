@@ -29,7 +29,7 @@ public class MatchTypeRoomEventHookTests : MultiplayerTestBase
     {
         // Join the host and switch the room to team-versus so that joining
         // users are assigned teams by the match-type hook (HandleUserJoined).
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             Name = "team room",
@@ -39,21 +39,21 @@ public class MatchTypeRoomEventHookTests : MultiplayerTestBase
         });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // The team-versus hook must have assigned the newly joined user a team
         // and broadcast the match user-state change to the room.
-        Receiver.Verify(r => r.MatchUserStateChanged(USERID2, It.IsAny<TeamVersusUserState>()), Times.Once);
+        Receiver.Verify(r => r.MatchUserStateChanged(UserId2, It.IsAny<TeamVersusUserState>()), Times.Once);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
-        Assert.That(room!.Users.Single(u => u.UserID == USERID2).MatchState, Is.TypeOf<TeamVersusUserState>());
+        Assert.That(room!.Users.Single(u => u.UserID == UserId2).MatchState, Is.TypeOf<TeamVersusUserState>());
     }
 
     [Test]
     public async Task UserLeavesTriggersMatchTypeHook()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             Name = "team room",
@@ -63,24 +63,24 @@ public class MatchTypeRoomEventHookTests : MultiplayerTestBase
         });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Both users occupy slots (MaxParticipants = 16).
-        var slots = ((StandardMatchRoomState)Hub.GetRoom(ROOMID)!.MatchState!).Slots!;
-        Assert.That(slots, Does.Contain(USERID));
-        Assert.That(slots, Does.Contain(USERID2));
+        int?[] slots = ((StandardMatchRoomState)Hub.GetRoom(RoomId)!.MatchState!).Slots!;
+        Assert.That(slots, Does.Contain(UserId));
+        Assert.That(slots, Does.Contain(UserId2));
 
         SetUserContext(ContextUser2);
         await Hub.LeaveRoom();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
-        Assert.That(room!.Users.Any(u => u.UserID == USERID2), Is.False);
+        Assert.That(room!.Users.Any(u => u.UserID == UserId2), Is.False);
 
         // The leaving user's slot is released by the user-leave hook.
         slots = ((StandardMatchRoomState)room.MatchState!).Slots!;
-        Assert.That(slots, Does.Not.Contain(USERID2));
-        Assert.That(slots, Does.Contain(USERID));
+        Assert.That(slots, Does.Not.Contain(UserId2));
+        Assert.That(slots, Does.Contain(UserId));
     }
 
     [Test]
@@ -91,15 +91,15 @@ public class MatchTypeRoomEventHookTests : MultiplayerTestBase
         CreateUser(5, out Mock<HubCallerContext> contextUser5, out _);
 
         // Join a number of users to the room (the host plus four guests).
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         SetUserContext(contextUser4);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         SetUserContext(contextUser5);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Change the match type to team-versus.
         SetUserContext(ContextUser);
@@ -113,14 +113,14 @@ public class MatchTypeRoomEventHookTests : MultiplayerTestBase
 
         // The match-type hook must have been invoked for every already-joined
         // user, assigning each a valid team and broadcasting the change.
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users, Has.Count.EqualTo(5));
         Assert.That(room.Users.Select(u => u.MatchState).OfType<TeamVersusUserState>().Count(), Is.EqualTo(5));
         Assert.That(room.Users.Select(u => ((TeamVersusUserState)u.MatchState!).TeamID), Is.All.InRange(0, 1));
         Assert.That(room.MatchState, Is.TypeOf<TeamVersusRoomState>());
 
-        foreach (int userId in new[] { USERID, USERID2, 3, 4, 5 })
+        foreach (int userId in new[] { UserId, UserId2, 3, 4, 5 })
         {
             Receiver.Verify(r => r.MatchUserStateChanged(userId, It.IsAny<TeamVersusUserState>()), Times.Once);
         }

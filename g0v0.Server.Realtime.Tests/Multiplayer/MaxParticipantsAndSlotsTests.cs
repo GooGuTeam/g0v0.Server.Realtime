@@ -15,54 +15,54 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
     [Test]
     public async Task MaxParticipantLimitEnforcement()
     {
-        CreateUser(1, out var contextUser1, out _);
-        CreateUser(2, out var contextUser2, out _);
-        CreateUser(3, out var contextUser3, out _);
+        CreateUser(1, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser1, out _);
+        CreateUser(2, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser2, out _);
+        CreateUser(3, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser3, out _);
 
         SetUserContext(contextUser1);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = 2 });
         await CheckSlots([1, null]);
 
         SetUserContext(contextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await CheckSlots([1, 2]);
 
         SetUserContext(contextUser3);
 
         // Expected to fail due to participant limit imposed.
-        Assert.That(async () => await Hub.JoinRoom(ROOMID), Throws.TypeOf<InvalidPasswordException>());
+        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.TypeOf<InvalidPasswordException>());
 
         SetUserContext(contextUser1);
 
         // Lift participant limit.
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = null });
-        await CheckSlots(null);
+        await CheckSlots(expected: null);
 
         SetUserContext(contextUser3);
 
         // Now expected to succeed.
-        await Hub.JoinRoom(ROOMID);
-        Assert.That(Hub.GetRoom(ROOMID)!.Users.Count, Is.EqualTo(3));
+        await Hub.JoinRoom(RoomId);
+        Assert.That(Hub.GetRoom(RoomId)!.Users.Count, Is.EqualTo(3));
     }
 
     [Test]
     public async Task CannotSetParticipantLimitBelowCurrentCountOfUsersInRoom()
     {
-        CreateUser(1, out var contextUser1, out _);
-        CreateUser(2, out var contextUser2, out _);
-        CreateUser(3, out var contextUser3, out _);
+        CreateUser(1, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser1, out _);
+        CreateUser(2, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser2, out _);
+        CreateUser(3, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser3, out _);
 
         SetUserContext(contextUser1);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(contextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        Assert.That(Hub.GetRoom(ROOMID)!.Users.Count, Is.EqualTo(3));
+        Assert.That(Hub.GetRoom(RoomId)!.Users.Count, Is.EqualTo(3));
 
         SetUserContext(contextUser1);
         Assert.That(async () => await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = 2 }), Throws.TypeOf<InvalidStateException>());
@@ -71,16 +71,16 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
     [Test]
     public async Task SlotVacatedOnLeave()
     {
-        CreateUser(1, out var contextUser1, out _);
-        CreateUser(2, out var contextUser2, out _);
+        CreateUser(1, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser1, out _);
+        CreateUser(2, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser2, out _);
 
         SetUserContext(contextUser1);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = 2 });
         await CheckSlots([1, null]);
 
         SetUserContext(contextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await CheckSlots([1, 2]);
 
         SetUserContext(contextUser1);
@@ -91,21 +91,21 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
     [Test]
     public async Task SlotsAssignedInExistingRoom()
     {
-        CreateUser(1, out var contextUser1, out _);
-        CreateUser(2, out var contextUser2, out _);
-        CreateUser(3, out var contextUser3, out _);
+        CreateUser(1, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser1, out _);
+        CreateUser(2, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser2, out _);
+        CreateUser(3, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser3, out _);
 
         SetUserContext(contextUser1);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(contextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // No max participants => no slots.
-        await CheckSlots(null);
+        await CheckSlots(expected: null);
 
         SetUserContext(contextUser1);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = 3 });
@@ -115,21 +115,21 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
     [Test]
     public async Task ManualSlotChanges()
     {
-        CreateUser(1, out var contextUser1, out _);
-        CreateUser(2, out var contextUser2, out _);
-        CreateUser(3, out var contextUser3, out _);
+        CreateUser(1, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser1, out _);
+        CreateUser(2, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser2, out _);
+        CreateUser(3, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser3, out _);
 
         SetUserContext(contextUser1);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = 5 });
         await CheckSlots([1, null, null, null, null]);
 
         SetUserContext(contextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await CheckSlots([1, 2, null, null, null]);
 
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await CheckSlots([1, 2, 3, null, null]);
 
         SetUserContext(contextUser2);
@@ -152,27 +152,27 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
     [Test]
     public async Task ManualSlotChangesPreventedWhenRoomLocked()
     {
-        CreateUser(1, out var contextUser1, out _);
-        CreateUser(2, out var contextUser2, out _);
-        CreateUser(3, out var contextUser3, out _);
+        CreateUser(1, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser1, out _);
+        CreateUser(2, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser2, out _);
+        CreateUser(3, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser3, out _);
 
         SetUserContext(contextUser1);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = 5 });
         await CheckSlots([1, null, null, null, null]);
 
         SetUserContext(contextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await CheckSlots([1, 2, null, null, null]);
 
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await CheckSlots([1, 2, 3, null, null]);
 
         // Lock the room.
         SetUserContext(contextUser1);
         await Hub.SendMatchRequest(new SetLockStateRequest { Locked = true });
-        Assert.That(((StandardMatchRoomState)Hub.GetRoom(ROOMID)!.MatchState!).Locked, Is.True);
+        Assert.That(((StandardMatchRoomState)Hub.GetRoom(RoomId)!.MatchState!).Locked, Is.True);
 
         // Slot change is now rejected.
         SetUserContext(contextUser2);
@@ -183,7 +183,7 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
         // Unlock the room.
         SetUserContext(contextUser1);
         await Hub.SendMatchRequest(new SetLockStateRequest { Locked = false });
-        Assert.That(((StandardMatchRoomState)Hub.GetRoom(ROOMID)!.MatchState!).Locked, Is.False);
+        Assert.That(((StandardMatchRoomState)Hub.GetRoom(RoomId)!.MatchState!).Locked, Is.False);
 
         // Slot change succeeds again.
         SetUserContext(contextUser2);
@@ -194,18 +194,18 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
     [Test]
     public async Task AutomaticSlotReassignmentOnParticipantLimitChange()
     {
-        CreateUser(1, out var contextUser1, out _);
-        CreateUser(2, out var contextUser2, out _);
-        CreateUser(3, out var contextUser3, out _);
+        CreateUser(1, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser1, out _);
+        CreateUser(2, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser2, out _);
+        CreateUser(3, out Moq.Mock<Microsoft.AspNetCore.SignalR.HubCallerContext>? contextUser3, out _);
 
         SetUserContext(contextUser1);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(contextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(contextUser1);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MaxParticipants = 3 });
@@ -235,7 +235,7 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
 
     private async Task CheckSlots(int?[]? expected)
     {
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That((room.MatchState as StandardMatchRoomState)?.Slots, Is.EqualTo(expected));
         await Task.CompletedTask;

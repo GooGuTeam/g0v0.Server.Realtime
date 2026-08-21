@@ -181,8 +181,18 @@ public interface IPlayer
 
     #region Multiplayer
 
+    /// <summary>
+    /// Joins the multiplayer room with the specified ID.
+    /// </summary>
+    /// <param name="roomId">The ID of the room to join.</param>
+    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
     Task JoinRoom(long roomId);
 
+    /// <summary>
+    /// Leaves the multiplayer room with the specified ID.
+    /// </summary>
+    /// <param name="roomId">The ID of the room to leave.</param>
+    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
     Task LeaveRoom(long roomId);
 
     #endregion

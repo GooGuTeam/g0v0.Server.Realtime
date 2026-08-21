@@ -47,7 +47,7 @@ public class SpectatorHubTests
     {
         await _environment.ConnectAsync(3, "connection-3");
 
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3);
+        LazerPlayer? player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3);
 
         Assert.Multiple(() =>
         {
@@ -65,7 +65,7 @@ public class SpectatorHubTests
     public async Task OnScoreProcessedCallback_ShouldNotifyCurrentUser()
     {
         TestHubHandle handle = await _environment.ConnectAsync(3, "connection-3");
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
 
         await player.OnScoreProcessed(777);
 
@@ -76,7 +76,7 @@ public class SpectatorHubTests
     public async Task BeginPlaySession_WhenRulesetIsMissing_ShouldNotStartSession()
     {
         await _environment.ConnectAsync(3, "connection-3");
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
 
         await _environment.CurrentHub.BeginPlaySession(100, new SpectatorState
         {
@@ -95,7 +95,7 @@ public class SpectatorHubTests
     public async Task BeginPlaySession_WhenBeatmapIsMissing_ShouldNotStartSession()
     {
         await _environment.ConnectAsync(3, "connection-3");
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
 
         await _environment.CurrentHub.BeginPlaySession(100, new SpectatorState
         {
@@ -122,7 +122,7 @@ public class SpectatorHubTests
             Checksum = "checksum",
             Status = BeatmapOnlineStatus.Ranked,
         });
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -130,8 +130,8 @@ public class SpectatorHubTests
         };
 
         await _environment.CurrentHub.BeginPlaySession(100, state);
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
-        var bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        osu.Game.Scoring.Score? bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
 
         Assert.Multiple(() =>
         {
@@ -154,7 +154,7 @@ public class SpectatorHubTests
             Checksum = "checksum",
             Status = BeatmapOnlineStatus.Ranked,
         });
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -162,8 +162,8 @@ public class SpectatorHubTests
         };
 
         await _environment.CurrentHub.BeginPlaySessionV2(100, state);
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
-        var bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        osu.Game.Scoring.Score? bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
 
         Assert.Multiple(() =>
         {
@@ -187,7 +187,7 @@ public class SpectatorHubTests
             Checksum = "checksum",
             Status = BeatmapOnlineStatus.Ranked,
         });
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -197,8 +197,8 @@ public class SpectatorHubTests
         // The client re-sends the same token on reconnection.
         await _environment.CurrentHub.BeginPlaySessionV2(100, state);
         await _environment.CurrentHub.BeginPlaySessionV2(100, state);
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
-        var bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        osu.Game.Scoring.Score? bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
 
         Assert.Multiple(() =>
         {
@@ -218,7 +218,7 @@ public class SpectatorHubTests
             Checksum = "checksum",
             Status = BeatmapOnlineStatus.Ranked,
         });
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -230,8 +230,8 @@ public class SpectatorHubTests
             await _environment.CurrentHub.BeginPlaySessionV2(100 + i, state);
         }
 
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
-        var evictedScore = await _environment.ScoreBuffer.DequeueAsync(100);
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        osu.Game.Scoring.Score? evictedScore = await _environment.ScoreBuffer.DequeueAsync(100);
 
         Assert.Multiple(() =>
         {
@@ -245,7 +245,7 @@ public class SpectatorHubTests
     public async Task BeginPlaySessionV2_WhenMaxStartedScoresReloaded_ShouldUseNewLimit()
     {
         // Hot-reload the limit from the default of 2 down to 1.
-        File.WriteAllText(
+        await File.WriteAllTextAsync(
             Path.Combine(_environment.BasePath, "config", "realtime.json"),
             "{\"SaveReplays\":false,\"ReplayUploaderConcurrency\":0,\"MaxStartedScores\":1}");
         _environment.ConfigManager.Reload<RealtimeConfig>();
@@ -258,7 +258,7 @@ public class SpectatorHubTests
             Checksum = "checksum",
             Status = BeatmapOnlineStatus.Ranked,
         });
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -268,7 +268,7 @@ public class SpectatorHubTests
         await _environment.CurrentHub.BeginPlaySessionV2(100, state);
         await _environment.CurrentHub.BeginPlaySessionV2(200, state);
 
-        var player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
+        LazerPlayer player = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!;
         Assert.Multiple(() =>
         {
             Assert.That(player.State.ScoreTokens, Is.EqualTo([200L]));
@@ -281,8 +281,7 @@ public class SpectatorHubTests
     {
         await _environment.ConnectAsync(3, "connection-3");
 
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _environment.CurrentHub.SendFrameDataV2(100, CreateFrameDataBundle(1000)));
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await _environment.CurrentHub.SendFrameDataV2(100, CreateFrameDataBundle(1000)));
     }
 
     [Test]
@@ -296,7 +295,7 @@ public class SpectatorHubTests
             Checksum = "checksum",
             Status = BeatmapOnlineStatus.Ranked,
         });
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -305,7 +304,7 @@ public class SpectatorHubTests
         await _environment.CurrentHub.BeginPlaySessionV2(100, state);
 
         await _environment.CurrentHub.SendFrameDataV2(100, CreateFrameDataBundle(5000));
-        var bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
+        osu.Game.Scoring.Score? bufferedScore = await _environment.ScoreBuffer.DequeueAsync(100);
 
         Assert.Multiple(() =>
         {
@@ -319,8 +318,7 @@ public class SpectatorHubTests
     {
         await _environment.ConnectAsync(3, "connection-3");
 
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _environment.CurrentHub.EndPlaySessionV2(100, SpectatedUserState.Passed));
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await _environment.CurrentHub.EndPlaySessionV2(100, SpectatedUserState.Passed));
     }
 
     [Test]
@@ -336,7 +334,7 @@ public class SpectatorHubTests
             Status = BeatmapOnlineStatus.Ranked,
         });
         await watcher.Hub.StartWatchingUser(3);
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -346,7 +344,7 @@ public class SpectatorHubTests
 
         await player.Hub.EndPlaySessionV2(100, SpectatedUserState.Passed);
 
-        var playerState = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!.State;
+        Realtime.Objects.States.PlayerState playerState = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!.State;
         Assert.Multiple(() =>
         {
             Assert.That(watcher.Recorder.FinishedPlayingEvents, Is.EqualTo([(3, state)]));
@@ -370,7 +368,7 @@ public class SpectatorHubTests
             Status = BeatmapOnlineStatus.Ranked,
         });
         await watcher.Hub.StartWatchingUser(3);
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -400,7 +398,7 @@ public class SpectatorHubTests
             Status = BeatmapOnlineStatus.Ranked,
         });
         await watcher.Hub.StartWatchingUser(3);
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
@@ -412,8 +410,8 @@ public class SpectatorHubTests
         await player.Hub.SendFrameDataV2(1234, CreateFrameDataBundle(1000));
         await player.Hub.SendFrameDataV2(5678, CreateFrameDataBundle(2000));
 
-        var score1234 = await _environment.ScoreBuffer.DequeueAsync(1234);
-        var score5678 = await _environment.ScoreBuffer.DequeueAsync(5678);
+        osu.Game.Scoring.Score? score1234 = await _environment.ScoreBuffer.DequeueAsync(1234);
+        osu.Game.Scoring.Score? score5678 = await _environment.ScoreBuffer.DequeueAsync(5678);
         Assert.Multiple(() =>
         {
             Assert.That(score1234, Is.Not.Null);
@@ -440,17 +438,17 @@ public class SpectatorHubTests
             Status = BeatmapOnlineStatus.Ranked,
         });
         await watcher.Hub.StartWatchingUser(3);
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             RulesetID = 0,
             BeatmapID = 42,
             State = SpectatedUserState.Playing,
         };
-        await player.Hub.BeginPlaySessionV2(null, state);
+        await player.Hub.BeginPlaySessionV2(scoreToken: null, state);
 
-        await player.Hub.EndPlaySessionV2(null, SpectatedUserState.Quit);
+        await player.Hub.EndPlaySessionV2(scoreToken: null, finalState: SpectatedUserState.Quit);
 
-        var playerState = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!.State;
+        Realtime.Objects.States.PlayerState playerState = _environment.PlayerManager.GetPlayer<LazerPlayer>(3)!.State;
         Assert.Multiple(() =>
         {
             Assert.That(watcher.Recorder.FinishedPlayingEvents, Is.EqualTo([(3, state)]));
@@ -468,7 +466,7 @@ public class SpectatorHubTests
 
         await _environment.CurrentHub.StartWatchingUser(9);
 
-        var targetPlayer = _environment.PlayerManager.GetPlayer<LazerPlayer>(9)!;
+        LazerPlayer targetPlayer = _environment.PlayerManager.GetPlayer<LazerPlayer>(9)!;
         Assert.Multiple(() =>
         {
             Assert.That(_environment.PlayerManager.GetWatchingPlayers(targetPlayer).Select(p => p.PlayerId), Is.EqualTo([3]));
@@ -488,7 +486,7 @@ public class SpectatorHubTests
 
         await _environment.CurrentHub.EndWatchingUser(9);
 
-        var targetPlayer = _environment.PlayerManager.GetPlayer<LazerPlayer>(9)!;
+        LazerPlayer targetPlayer = _environment.PlayerManager.GetPlayer<LazerPlayer>(9)!;
         Assert.Multiple(() =>
         {
             Assert.That(_environment.PlayerManager.GetWatchingPlayers(targetPlayer), Is.Empty);
@@ -508,8 +506,8 @@ public class SpectatorHubTests
                 new ScoreProcessorStatistics(),
                 DateTimeOffset.Now,
                 [],
-                null,
-                null),
+                totalScoreWithoutMods: null,
+                pauses: null),
             new List<LegacyReplayFrame>());
     }
 
@@ -517,20 +515,19 @@ public class SpectatorHubTests
     {
         private readonly MemoryCache _memoryCache = new(new MemoryCacheOptions());
         private readonly ServiceProvider _serviceProvider;
-        private readonly string _basePath;
         private readonly InterProcessCommunicationClient _ipcClient;
         private readonly NoOpTransport _transport = new();
 
         public SpectatorHubTestEnvironment()
         {
-            _basePath = Path.Combine(Path.GetTempPath(), "g0v0-spectator-tests", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(_basePath, "config"));
-            File.WriteAllText(Path.Combine(_basePath, "config", "game.json"), "{\"EnableAllBeatmapLeaderboard\":true}");
+            BasePath = Path.Combine(Path.GetTempPath(), "g0v0-spectator-tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(BasePath, "config"));
+            File.WriteAllText(Path.Combine(BasePath, "config", "game.json"), "{\"EnableAllBeatmapLeaderboard\":true}");
             File.WriteAllText(
-                Path.Combine(_basePath, "config", "realtime.json"),
+                Path.Combine(BasePath, "config", "realtime.json"),
                 "{\"SaveReplays\":false,\"ReplayUploaderConcurrency\":0}");
 
-            ConfigManager = new ConfigurationManager(_basePath);
+            ConfigManager = new ConfigurationManager(BasePath);
             UserRepository = new FakeUserRepository();
             BeatmapRepository = new FakeBeatmapRepository();
             ScoreRepository = new FakeScoreRepository();
@@ -540,7 +537,7 @@ public class SpectatorHubTests
             HubContext = new FakeHubContext(Router);
             ScoreBuffer = new ScoreBuffer(_memoryCache, NullLogger<ScoreBuffer>.Instance);
 
-            var serviceCollection = new ServiceCollection();
+            ServiceCollection serviceCollection = new();
             serviceCollection.AddScoped<IUserRepository>(_ => UserRepository);
             serviceCollection.AddScoped<IBeatmapRepository>(_ => BeatmapRepository);
             serviceCollection.AddScoped<IScoreRepository>(_ => ScoreRepository);
@@ -559,12 +556,12 @@ public class SpectatorHubTests
                 ScopeFactory,
                 NullLogger<ScoreUploader>.Instance,
                 new FakeStorageService());
-            RulesetManager = new RulesetManager(_basePath);
+            RulesetManager = new RulesetManager(BasePath);
         }
 
         public ConfigurationManager ConfigManager { get; }
 
-        public string BasePath => _basePath;
+        public string BasePath { get; }
 
         public FakeBeatmapRepository BeatmapRepository { get; }
 
@@ -593,7 +590,7 @@ public class SpectatorHubTests
         public async Task<TestHubHandle> ConnectAsync(int userId, string connectionId)
         {
             Router.EnsureUser(userId.ToString());
-            var hub = new SpectatorHub(
+            SpectatorHub hub = new(
                 PlayerManager,
                 ConfigManager,
                 HubContext,
@@ -621,9 +618,9 @@ public class SpectatorHubTests
             ScoreUploader.Dispose();
             _serviceProvider.Dispose();
             _memoryCache.Dispose();
-            if (Directory.Exists(_basePath))
+            if (Directory.Exists(BasePath))
             {
-                Directory.Delete(_basePath, recursive: true);
+                Directory.Delete(BasePath, recursive: true);
             }
         }
     }
@@ -665,7 +662,7 @@ public class SpectatorHubTests
 
         public ISpectatorClient Caller => router.CreateProxy(_ => [callerUserId]);
 
-        public ISpectatorClient Others => router.CreateProxy(state => state.UserIds.Where(id => id != callerUserId));
+        public ISpectatorClient Others => router.CreateProxy(state => state.UserIds.Where(id => !string.Equals(id, callerUserId, StringComparison.Ordinal)));
 
         public ISpectatorClient OthersInGroup(string groupName) => throw new NotSupportedException();
 

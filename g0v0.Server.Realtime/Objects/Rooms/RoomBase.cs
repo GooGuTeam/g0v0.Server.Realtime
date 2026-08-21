@@ -40,7 +40,7 @@ public abstract class RoomBase : IRoom
     public MultiplayerRoomState State { get; protected set; } = MultiplayerRoomState.Open;
 
     /// <inheritdoc />
-    public MultiplayerRoomSettings Settings { get; protected set; } = new();
+    public MultiplayerRoomSettings Settings { get; protected set; }
 
     /// <inheritdoc />
     public IList<MultiplayerRoomUser> Users { get; } = new List<MultiplayerRoomUser>();
@@ -58,7 +58,7 @@ public abstract class RoomBase : IRoom
     public IList<MultiplayerCountdown> ActiveCountdowns { get; } = new List<MultiplayerCountdown>();
 
     /// <inheritdoc />
-    public int ChannelID { get; }
+    public int ChannelId { get; }
 
     /// <inheritdoc />
     public bool TournamentMode { get; }
@@ -74,25 +74,23 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Gets the per-room lock used to serialise all mutating operations.
     /// </summary>
-    public SemaphoreSlim RoomLock { get; } = new SemaphoreSlim(1, 1);
+    public SemaphoreSlim RoomLock { get; } = new(1, 1);
 
     /// <summary>
     /// Gets the set of banned user IDs.
     /// </summary>
-    public IReadOnlySet<int> BannedUsers => bannedUsers;
+    public IReadOnlySet<int> BannedUsers => _bannedUsers;
 
-    private readonly HashSet<int> bannedUsers = new();
+    private readonly HashSet<int> _bannedUsers = new();
 
-    private readonly ConcurrentDictionary<MultiplayerCountdown, CountdownInfo> trackedCountdowns = new();
+    private readonly ConcurrentDictionary<MultiplayerCountdown, CountdownInfo> _trackedCountdowns = new();
 
-    private int nextCountdownId;
-
-    private readonly IRoomFacade facade;
+    private int _nextCountdownId;
 
     /// <summary>
     /// Gets the room dependency facade.
     /// </summary>
-    protected IRoomFacade Facade => facade;
+    protected IRoomFacade Facade { get; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the room is disbanded (no users remain).
@@ -112,8 +110,8 @@ public abstract class RoomBase : IRoom
     /// <returns>The operation result.</returns>
     private async Task<T> WithRepository<T>(Func<IRoomRepository, Task<T>> operation)
     {
-        using var scope = Facade.ScopeFactory.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
+        using IServiceScope scope = Facade.ScopeFactory.CreateScope();
+        IRoomRepository repository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
         return await operation(repository);
     }
 
@@ -124,8 +122,8 @@ public abstract class RoomBase : IRoom
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task WithRepository(Func<IRoomRepository, Task> operation)
     {
-        using var scope = Facade.ScopeFactory.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
+        using IServiceScope scope = Facade.ScopeFactory.CreateScope();
+        IRoomRepository repository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
         await operation(repository);
     }
 
@@ -137,8 +135,8 @@ public abstract class RoomBase : IRoom
     /// <returns>The operation result, or <see langword="null"/> when no beatmap repository is registered.</returns>
     private async Task<T?> WithBeatmapRepository<T>(Func<IBeatmapRepository, Task<T>> operation)
     {
-        using var scope = Facade.ScopeFactory.CreateScope();
-        var repository = scope.ServiceProvider.GetService<IBeatmapRepository>();
+        using IServiceScope scope = Facade.ScopeFactory.CreateScope();
+        IBeatmapRepository? repository = scope.ServiceProvider.GetService<IBeatmapRepository>();
         return repository == null ? default : await operation(repository);
     }
 
@@ -149,7 +147,7 @@ public abstract class RoomBase : IRoom
     /// <returns>The star rating, or <c>0</c> when the beatmap is unknown.</returns>
     private async Task<double> GetStarRating(int beatmapId)
     {
-        var beatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(beatmapId));
+        Beatmap? beatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(beatmapId));
         return beatmap?.DifficultyRating ?? 0;
     }
 
@@ -168,9 +166,9 @@ public abstract class RoomBase : IRoom
         ArgumentNullException.ThrowIfNull(room);
         ArgumentNullException.ThrowIfNull(facade);
 
-        this.facade = facade;
+        this.Facade = facade;
         RoomId = room.Id;
-        ChannelID = room.ChannelId;
+        ChannelId = room.ChannelId;
         TournamentMode = room.TournamentMode;
         Settings = new MultiplayerRoomSettings
         {
@@ -183,7 +181,7 @@ public abstract class RoomBase : IRoom
             MaxParticipants = room.MaxParticipants,
         };
 
-        foreach (var playlist in room.Playlists)
+        foreach (Playlist playlist in room.Playlists)
         {
             Playlist.Add(playlist.ToMultiplayerPlaylistItem());
         }
@@ -205,17 +203,11 @@ public abstract class RoomBase : IRoom
         }
 
         // An expired room (end date reached but destruction pending) rejects joins.
-        if (EndDate != null && DateTimeOffset.UtcNow >= EndDate)
-        {
-            return Task.FromResult(false);
-        }
-
-        if (!string.IsNullOrEmpty(Settings.Password) && !string.Equals(Settings.Password, password, StringComparison.Ordinal))
-        {
-            return Task.FromResult(false);
-        }
-
-        return UserCanJoin(userId);
+        return EndDate != null && DateTimeOffset.UtcNow >= EndDate
+            ? Task.FromResult(false)
+            : !string.IsNullOrEmpty(Settings.Password) && !string.Equals(Settings.Password, password, StringComparison.Ordinal)
+                ? Task.FromResult(false)
+                : UserCanJoin(userId);
     }
 
     /// <inheritdoc />
@@ -237,10 +229,10 @@ public abstract class RoomBase : IRoom
         {
             CancelEndDateDestruction();
             EndDate = null;
-            await WithRepository(repo => repo.SetRoomEndDate(RoomId, null));
+            await WithRepository(repo => repo.SetRoomEndDate(RoomId, endDate: null));
         }
 
-        var user = new MultiplayerRoomUser(userId)
+        MultiplayerRoomUser user = new(userId)
         {
             Role = role,
             State = MultiplayerUserState.Idle,
@@ -288,11 +280,15 @@ public abstract class RoomBase : IRoom
 
             // RemoveUserInternal may have scheduled a fresh end-date destruction
             // for an empty room; cancel it and restore the previous timer.
-            if (previousEndDate != null)
+            if (previousEndDate == null)
+            {
+                throw;
+            }
+
             {
                 CancelEndDateDestruction();
                 EndDate = null;
-                await WithRepository(repo => repo.SetRoomEndDate(RoomId, null));
+                await WithRepository(repo => repo.SetRoomEndDate(RoomId, endDate: null));
                 await ScheduleEndDateDestruction(previousEndDate.Value);
             }
 
@@ -303,8 +299,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task LeaveRoom(int userId)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         await RemoveUserInternal(user);
         await Facade.EventDispatcher.PostUserLeftAsync(RoomId, user);
@@ -318,8 +314,8 @@ public abstract class RoomBase : IRoom
             throw new InvalidStateException("Can't kick self.");
         }
 
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidOperationException("Target user is not in the current room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidOperationException("Target user is not in the current room.");
 
         if (user.Role == MultiplayerRoomUserRole.Referee)
         {
@@ -333,7 +329,7 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public void BanUser(int userId)
     {
-        bannedUsers.Add(userId);
+        _bannedUsers.Add(userId);
     }
 
     /// <inheritdoc />
@@ -353,8 +349,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task SetHost(int userId)
     {
-        var newHost = Users.FirstOrDefault(u => u.UserID == userId)
-                      ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser newHost = Users.FirstOrDefault(u => u.UserID == userId)
+                                      ?? throw new InvalidStateException("User is not in the room.");
 
         Host = newHost;
         await Facade.EventDispatcher.PostHostChangedAsync(RoomId, newHost.UserID);
@@ -394,7 +390,7 @@ public abstract class RoomBase : IRoom
             return;
         }
 
-        var previousSettings = Settings;
+        MultiplayerRoomSettings previousSettings = Settings;
         Settings = newSettings;
         Settings.PlaylistItemId = previousSettings.PlaylistItemId;
 
@@ -417,7 +413,7 @@ public abstract class RoomBase : IRoom
         await UpdateCurrentItem();
 
         await HandleMatchStateSettingsChanged(previousSettings);
-        await HandleSettingsChanged(false);
+        await HandleSettingsChanged(playlistItemChanged: false);
         await UpdateRoomStateIfRequired();
     }
 
@@ -432,8 +428,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task ChangeUserState(int userId, MultiplayerUserState newState)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         if (user.State == newState)
         {
@@ -462,7 +458,7 @@ public abstract class RoomBase : IRoom
 
         // Signal newly-spectating users to load gameplay if currently in the middle of play.
         if (newState == MultiplayerUserState.Spectating
-            && (State == MultiplayerRoomState.WaitingForLoad || State == MultiplayerRoomState.Playing))
+            && State is MultiplayerRoomState.WaitingForLoad or MultiplayerRoomState.Playing)
         {
             await Facade.EventDispatcher.PostLoadRequestedAsync(user.UserID);
         }
@@ -473,8 +469,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task ChangeUserBeatmapAvailability(int userId, BeatmapAvailability newBeatmapAvailability)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         if (user.BeatmapAvailability.Equals(newBeatmapAvailability))
         {
@@ -488,8 +484,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task ChangeUserStyle(int userId, int? beatmapId, int? rulesetId)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         if (user.Role == MultiplayerRoomUserRole.Referee)
         {
@@ -498,18 +494,11 @@ public abstract class RoomBase : IRoom
 
         if (rulesetId != null)
         {
-            int[] availableIds;
-            if (Facade.RulesetManager != null)
-            {
-                availableIds = Facade.RulesetManager.GetAllRulesets().Select(r => r.RulesetInfo.OnlineID)
+            int[] availableIds = Facade.RulesetManager == null
+                ? [0, 1, 2, 3]
+                : Facade.RulesetManager.GetAllRulesets().Select(r => r.RulesetInfo.OnlineID)
                     .Where(id => id >= 0)
                     .ToArray();
-            }
-            else
-            {
-                availableIds = new int[] { 0, 1, 2, 3 };
-            }
-
             if (!availableIds.Contains(rulesetId.Value))
             {
                 throw new InvalidStateException("Attempted to select an unsupported ruleset.");
@@ -563,7 +552,7 @@ public abstract class RoomBase : IRoom
         }
 
         bool repositoryRegistered = false;
-        var itemBeatmap = await WithBeatmapRepository(repo =>
+        Beatmap? itemBeatmap = await WithBeatmapRepository(repo =>
         {
             repositoryRegistered = true;
             return repo.GetByIdAsync(CurrentItem.BeatmapID);
@@ -575,13 +564,7 @@ public abstract class RoomBase : IRoom
             return;
         }
 
-        var userBeatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(beatmapId.Value));
-
-        if (userBeatmap == null)
-        {
-            throw new InvalidStateException("Invalid beatmap selected.");
-        }
-
+        Beatmap? userBeatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(beatmapId.Value)) ?? throw new InvalidStateException("Invalid beatmap selected.");
         if (userBeatmap.BeatmapSetId != itemBeatmap?.BeatmapSetId)
         {
             throw new InvalidStateException("Selected beatmap is not from the same beatmap set.");
@@ -618,7 +601,7 @@ public abstract class RoomBase : IRoom
             MultiplayerPlaylistItem currentItem = CurrentItem;
             if (!currentItem.ValidateUserMods(user, user.Mods, Facade.RulesetManager, out IEnumerable<APIMod>? validMods))
             {
-                var trimmed = validMods.ToArray();
+                APIMod[] trimmed = validMods.ToArray();
                 user.Mods = trimmed;
                 await Facade.EventDispatcher.PostUserModsChangedAsync(RoomId, user.UserID, trimmed);
             }
@@ -645,24 +628,24 @@ public abstract class RoomBase : IRoom
         if (!currentItem.Freestyle)
         {
             // Reset entire style when freestyle is disabled.
-            foreach (var user in Users)
+            foreach (MultiplayerRoomUser user in Users)
             {
-                await ChangeUserStyleInternal(user, null, null);
+                await ChangeUserStyleInternal(user, beatmapId: null, rulesetId: null);
             }
         }
         else
         {
-            var itemBeatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(currentItem.BeatmapID));
-            var validDifficulties = itemBeatmap == null
+            Beatmap? itemBeatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(currentItem.BeatmapID));
+            IReadOnlyList<Beatmap>? validDifficulties = itemBeatmap == null
                 ? null
                 : await WithBeatmapRepository(repo => repo.GetByBeatmapSetIdAsync(itemBeatmap.BeatmapSetId));
 
-            foreach (var user in Users)
+            foreach (MultiplayerRoomUser user in Users)
             {
                 int? userBeatmapId = user.BeatmapId;
                 int? userRulesetId = user.RulesetId;
 
-                var foundBeatmap = validDifficulties?.SingleOrDefault(b => b.Id == userBeatmapId);
+                Beatmap? foundBeatmap = validDifficulties?.SingleOrDefault(b => b.Id == userBeatmapId);
 
                 // Reset beatmap style if it's not a valid difficulty for the current beatmap set.
                 if (userBeatmapId != null && validDifficulties != null && foundBeatmap == null)
@@ -686,15 +669,15 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task ChangeUserMods(int userId, IEnumerable<APIMod> newMods)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         if (user.Role == MultiplayerRoomUserRole.Referee)
         {
             throw new InvalidStateException("Referees do not participate in the match and cannot set their own mods.");
         }
 
-        var newModList = newMods.ToList();
+        List<APIMod> newModList = newMods.ToList();
 
         if (Facade.RulesetManager != null)
         {
@@ -733,7 +716,7 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task StopCountdown(int countdownId)
     {
-        var countdown = FindCountdownById(countdownId);
+        MultiplayerCountdown? countdown = FindCountdownById(countdownId);
         if (countdown == null)
         {
             return;
@@ -768,13 +751,13 @@ public abstract class RoomBase : IRoom
             return;
         }
 
-        foreach (var user in Users)
+        foreach (MultiplayerRoomUser user in Users)
         {
-            await ChangeUserVoteToSkipIntro(user, false);
+            await ChangeUserVoteToSkipIntro(user, voted: false);
         }
 
-        var readyUsers = Users.Where(u => u.IsReadyForGameplay()).ToArray();
-        foreach (var u in readyUsers)
+        MultiplayerRoomUser[] readyUsers = Users.Where(u => u.IsReadyForGameplay()).ToArray();
+        foreach (MultiplayerRoomUser? u in readyUsers)
         {
             await ChangeAndBroadcastUserState(u, MultiplayerUserState.WaitingForLoad);
         }
@@ -795,12 +778,9 @@ public abstract class RoomBase : IRoom
         }
 
         // Move every user back to idle, not just those in gameplay states.
-        foreach (var user in Users.ToArray())
+        foreach (MultiplayerRoomUser user in Users.ToArray().Where(user => user.State != MultiplayerUserState.Idle))
         {
-            if (user.State != MultiplayerUserState.Idle)
-            {
-                await ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
-            }
+            await ChangeAndBroadcastUserState(user, MultiplayerUserState.Idle);
         }
 
         // Notify the whole room that the match was aborted.
@@ -812,8 +792,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task AbortGameplay(int userId)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         if (!user.State.IsGameplayState())
         {
@@ -827,8 +807,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task VoteToSkipIntro(int userId)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         if (user.Role == MultiplayerRoomUserRole.Referee)
         {
@@ -840,15 +820,15 @@ public abstract class RoomBase : IRoom
             throw new InvalidStateException("Cannot skip while not in gameplay.");
         }
 
-        await ChangeUserVoteToSkipIntro(user, true);
+        await ChangeUserVoteToSkipIntro(user, voted: true);
         await CheckVotesToSkipPassed();
     }
 
     /// <inheritdoc />
     public async Task AddPlaylistItem(int userId, MultiplayerPlaylistItem item)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         bool isHostOrReferee = IsHostOrReferee(user);
 
@@ -914,23 +894,16 @@ public abstract class RoomBase : IRoom
 
         // The checksum must always match the beatmap record (aligned with the
         // reference StandardMatchController).
-        if (item.BeatmapChecksum != beatmap.Checksum)
+        if (!string.Equals(item.BeatmapChecksum, beatmap.Checksum, StringComparison.Ordinal))
         {
             throw new InvalidStateException("Attempted to add a beatmap which has been modified.");
         }
 
-        int[] availableIds;
-        if (Facade.RulesetManager != null)
-        {
-            availableIds = Facade.RulesetManager.GetAllRulesets().Select(r => r.RulesetInfo.OnlineID)
+        int[] availableIds = Facade.RulesetManager != null
+            ? Facade.RulesetManager.GetAllRulesets().Select(r => r.RulesetInfo.OnlineID)
                 .Where(id => id >= 0)
-                .ToArray();
-        }
-        else
-        {
-            availableIds = new int[] { 0, 1, 2, 3 };
-        }
-
+                .ToArray()
+            : [0, 1, 2, 3];
         if (!availableIds.Contains(item.RulesetID))
         {
             throw new InvalidStateException("Attempted to select an unsupported ruleset.");
@@ -948,15 +921,10 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task EditPlaylistItem(int userId, MultiplayerPlaylistItem item)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
-        var existing = Playlist.FirstOrDefault(p => p.ID == item.ID);
-        if (existing == null)
-        {
-            throw new InvalidStateException("Attempted to change an item that doesn't exist.");
-        }
-
+        MultiplayerPlaylistItem? existing = Playlist.FirstOrDefault(p => p.ID == item.ID) ?? throw new InvalidStateException("Attempted to change an item that doesn't exist.");
         if (existing.Expired)
         {
             throw new InvalidStateException("Attempted to change an item which has already been played.");
@@ -992,8 +960,8 @@ public abstract class RoomBase : IRoom
         // Ensure the playlist order doesn't change.
         item.PlaylistOrder = existing.PlaylistOrder;
 
-        var dbItem = await WithRepository(repo => repo.EditItemToPlaylist(item, RoomId, user.UserID));
-        var updated = dbItem.ToMultiplayerPlaylistItem();
+        Playlist dbItem = await WithRepository(repo => repo.EditItemToPlaylist(item, RoomId, user.UserID));
+        MultiplayerPlaylistItem updated = dbItem.ToMultiplayerPlaylistItem();
 
         // The edited item's star rating is derived from its beatmap.
         updated.StarRating = await GetStarRating(updated.BeatmapID);
@@ -1001,7 +969,7 @@ public abstract class RoomBase : IRoom
         int index = Playlist.IndexOf(existing);
         Playlist[index] = updated;
 
-        await HandlePlaylistItemChanged(updated, existing.BeatmapChecksum != updated.BeatmapChecksum);
+        await HandlePlaylistItemChanged(updated, !string.Equals(existing.BeatmapChecksum, updated.BeatmapChecksum, StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -1037,29 +1005,26 @@ public abstract class RoomBase : IRoom
 
         MultiplayerPlaylistItem currentItem = CurrentItem;
 
-        foreach (var user in Users.Where(u => u.Mods.Any()).ToArray())
+        foreach (MultiplayerRoomUser? user in Users.Where(u => u.Mods.Any()).ToArray())
         {
-            if (!currentItem.ValidateUserMods(user, user.Mods, Facade.RulesetManager, out IEnumerable<APIMod>? validMods))
+            if (currentItem.ValidateUserMods(user, user.Mods, Facade.RulesetManager, out IEnumerable<APIMod>? validMods))
             {
-                var trimmed = validMods.ToArray();
-                user.Mods = trimmed;
-                await Facade.EventDispatcher.PostUserModsChangedAsync(RoomId, user.UserID, trimmed);
+                continue;
             }
+
+            APIMod[] trimmed = validMods.ToArray();
+            user.Mods = trimmed;
+            await Facade.EventDispatcher.PostUserModsChangedAsync(RoomId, user.UserID, trimmed);
         }
     }
 
     /// <inheritdoc />
     public async Task RemovePlaylistItem(int userId, long playlistItemId)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
-        var item = Playlist.FirstOrDefault(p => p.ID == playlistItemId);
-        if (item == null)
-        {
-            throw new InvalidStateException("Item does not exist in the room.");
-        }
-
+        MultiplayerPlaylistItem? item = Playlist.FirstOrDefault(p => p.ID == playlistItemId) ?? throw new InvalidStateException("Item does not exist in the room.");
         bool isCurrentItem = item.ID == Settings.PlaylistItemId;
 
         if (isCurrentItem)
@@ -1112,8 +1077,8 @@ public abstract class RoomBase : IRoom
     /// <inheritdoc />
     public async Task HandleUserRequest(int userId, MatchUserRequest request)
     {
-        var user = Users.FirstOrDefault(u => u.UserID == userId)
-                   ?? throw new InvalidStateException("User is not in the room.");
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
 
         switch (request)
         {
@@ -1178,14 +1143,14 @@ public abstract class RoomBase : IRoom
         currentItem.Expired = true;
         currentItem.PlayedAt = DateTimeOffset.UtcNow;
         await WithRepository(repo => repo.EditItemToPlaylist(currentItem, RoomId, currentItem.OwnerID));
-        await HandlePlaylistItemChanged(currentItem, true);
+        await HandlePlaylistItemChanged(item: currentItem, beatmapChanged: true);
 
         await UpdatePlaylistOrder();
 
         // In host-only mode, duplicate the playlist item for the next round if no other non-expired items exist.
         if (Settings.QueueMode == QueueMode.HostOnly && Playlist.All(item => item.Expired))
         {
-            var duplicate = currentItem.Clone();
+            MultiplayerPlaylistItem duplicate = currentItem.Clone();
             duplicate.ID = 0;
             duplicate.Expired = false;
             duplicate.PlayedAt = null;
@@ -1217,7 +1182,7 @@ public abstract class RoomBase : IRoom
 
         if (nextItem.ID != lastItemId)
         {
-            await HandleSettingsChanged(true);
+            await HandleSettingsChanged(playlistItemChanged: true);
         }
     }
 
@@ -1246,10 +1211,10 @@ public abstract class RoomBase : IRoom
                 orderedActiveItems = new List<MultiplayerPlaylistItem>();
 
                 bool isFirstSet = true;
-                var firstSetOrderByUserId = new Dictionary<int, int>();
+                Dictionary<int, int> firstSetOrderByUserId = new();
 
                 // Group each user's items in order of addition.
-                var userItemGroups = Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID);
+                IEnumerable<IGrouping<int, MultiplayerPlaylistItem>> userItemGroups = Playlist.Where(item => !item.Expired).OrderBy(item => item.ID).GroupBy(item => item.OwnerID);
 
                 foreach (IEnumerable<MultiplayerPlaylistItem> set in userItemGroups.Interleave())
                 {
@@ -1276,7 +1241,7 @@ public abstract class RoomBase : IRoom
 
         for (int i = 0; i < orderedActiveItems.Count; i++)
         {
-            var item = orderedActiveItems[i];
+            MultiplayerPlaylistItem item = orderedActiveItems[i];
 
             if (item.PlaylistOrder == i)
             {
@@ -1285,7 +1250,7 @@ public abstract class RoomBase : IRoom
 
             item.PlaylistOrder = (ushort)i;
             await WithRepository(repo => repo.EditItemToPlaylist(item, RoomId, item.OwnerID));
-            await HandlePlaylistItemChanged(item, false);
+            await HandlePlaylistItemChanged(item: item, beatmapChanged: false);
         }
     }
 
@@ -1317,7 +1282,7 @@ public abstract class RoomBase : IRoom
     internal async Task CopyStateFrom(RoomBase other)
     {
         Users.Clear();
-        foreach (var user in other.Users)
+        foreach (MultiplayerRoomUser user in other.Users)
         {
             Users.Add(user);
         }
@@ -1327,12 +1292,12 @@ public abstract class RoomBase : IRoom
         Settings = other.Settings;
 
         Playlist.Clear();
-        foreach (var item in other.Playlist)
+        foreach (MultiplayerPlaylistItem item in other.Playlist)
         {
             Playlist.Add(item);
         }
 
-        foreach (var user in other.BannedUsers)
+        foreach (int user in other.BannedUsers)
         {
             BanUser(user);
         }
@@ -1376,7 +1341,7 @@ public abstract class RoomBase : IRoom
                 {
                     bool anyUserFinishedPlay = false;
 
-                    foreach (var u in Users.Where(u => u.State == MultiplayerUserState.FinishedPlay).ToArray())
+                    foreach (MultiplayerRoomUser? u in Users.Where(u => u.State == MultiplayerUserState.FinishedPlay).ToArray())
                     {
                         anyUserFinishedPlay = true;
                         await ChangeAndBroadcastUserState(u, MultiplayerUserState.Results);
@@ -1405,7 +1370,7 @@ public abstract class RoomBase : IRoom
 
         bool anyUserPlaying = false;
 
-        foreach (var user in Users.ToArray())
+        foreach (MultiplayerRoomUser? user in Users.ToArray())
         {
             if (user.CanStartGameplay())
             {
@@ -1459,7 +1424,7 @@ public abstract class RoomBase : IRoom
 
         if (Host?.UserID == user.UserID)
         {
-            var newHost = Users.FirstOrDefault();
+            MultiplayerRoomUser? newHost = Users.FirstOrDefault();
             if (newHost != null)
             {
                 await SetHost(newHost.UserID);
@@ -1526,53 +1491,55 @@ public abstract class RoomBase : IRoom
 
         CancelEndDateDestruction();
 
-        var cancellationSource = new CancellationTokenSource();
+        CancellationTokenSource cancellationSource = new();
         _endDateCancellation = cancellationSource;
 
-        _ = Task.Run(async () =>
-        {
-            try
+        _ = Task.Run(
+            async () =>
             {
-                // Wait until the end date is reached, re-checking the deadline
-                // after any wake-up so an early wake cannot destroy the room
-                // before its end date.
-                while (DateTimeOffset.UtcNow < endDate)
-                {
-                    TimeSpan delay = endDate - DateTimeOffset.UtcNow;
-                    if (delay <= TimeSpan.Zero)
-                    {
-                        break;
-                    }
-
-                    await Task.Delay(delay, cancellationSource.Token).ConfigureAwait(false);
-                }
-
-                await RoomLock.WaitAsync(cancellationSource.Token).ConfigureAwait(false);
                 try
                 {
-                    // Double-check inside the lock: a join may have cancelled
-                    // the timer and cleared the end date in the meantime.
-                    if (EndDate == null || DateTimeOffset.UtcNow < EndDate)
+                    // Wait until the end date is reached, re-checking the deadline
+                    // after any wake-up so an early wake cannot destroy the room
+                    // before its end date.
+                    while (DateTimeOffset.UtcNow < endDate)
                     {
-                        return;
+                        TimeSpan delay = endDate - DateTimeOffset.UtcNow;
+                        if (delay <= TimeSpan.Zero)
+                        {
+                            break;
+                        }
+
+                        await Task.Delay(delay, cancellationSource.Token).ConfigureAwait(false);
                     }
 
-                    await Disband();
+                    await RoomLock.WaitAsync(cancellationSource.Token).ConfigureAwait(false);
+                    try
+                    {
+                        // Double-check inside the lock: a join may have cancelled
+                        // the timer and cleared the end date in the meantime.
+                        if (EndDate == null || DateTimeOffset.UtcNow < EndDate)
+                        {
+                            return;
+                        }
+
+                        await Disband();
+                    }
+                    finally
+                    {
+                        RoomLock.Release();
+                    }
                 }
-                finally
+                catch (OperationCanceledException)
                 {
-                    RoomLock.Release();
+                    // A join cancelled the destruction.
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // A join cancelled the destruction.
-            }
-            catch (Exception ex)
-            {
-                Facade.Logger?.LogError(ex, "Failed to destroy room {RoomId} at its end date.", RoomId);
-            }
-        });
+                catch (Exception ex)
+                {
+                    Facade.Logger?.LogError(ex, "Failed to destroy room {RoomId} at its end date.", RoomId);
+                }
+            },
+            cancellationSource.Token);
     }
 
     /// <summary>
@@ -1609,14 +1576,14 @@ public abstract class RoomBase : IRoom
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task UnreadyAllUsers(bool resetBeatmapAvailability)
     {
-        foreach (var u in Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
+        foreach (MultiplayerRoomUser? u in Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
         {
             await ChangeAndBroadcastUserState(u, MultiplayerUserState.Idle);
         }
 
         if (resetBeatmapAvailability)
         {
-            foreach (var user in Users)
+            foreach (MultiplayerRoomUser user in Users)
             {
                 await ChangeUserBeatmapAvailability(user.UserID, new BeatmapAvailability(DownloadState.Unknown));
             }
@@ -1641,8 +1608,8 @@ public abstract class RoomBase : IRoom
         item.Expired = false;
         item.PlayedAt = null;
 
-        var dbItem = await WithRepository(repo => repo.AddItemToPlaylist(item, RoomId, ownerId));
-        var converted = dbItem.ToMultiplayerPlaylistItem();
+        Playlist dbItem = await WithRepository(repo => repo.AddItemToPlaylist(item, RoomId, ownerId));
+        MultiplayerPlaylistItem converted = dbItem.ToMultiplayerPlaylistItem();
 
         // The added item's star rating is derived from its beatmap.
         converted.StarRating = await GetStarRating(converted.BeatmapID);
@@ -1684,7 +1651,7 @@ public abstract class RoomBase : IRoom
 
     private async Task CheckVotesToSkipPassed()
     {
-        int countVotedUsers = Users.Count(u => u.State == MultiplayerUserState.Playing && u.VotedToSkipIntro);
+        int countVotedUsers = Users.Count(u => u is { State: MultiplayerUserState.Playing, VotedToSkipIntro: true });
         int countGameplayUsers = Users.Count(u => u.State == MultiplayerUserState.Playing);
 
         if (countVotedUsers >= (countGameplayUsers / 2) + 1)
@@ -1752,7 +1719,7 @@ public abstract class RoomBase : IRoom
                 break;
 
             default:
-                throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
+                throw new ArgumentOutOfRangeException(nameof(newState), newState, message: null);
         }
 
         if (userRole == MultiplayerRoomUserRole.Referee
@@ -1783,10 +1750,10 @@ public abstract class RoomBase : IRoom
             await StopAllCountdowns<T>();
         }
 
-        countdown.ID = Interlocked.Increment(ref nextCountdownId);
+        countdown.ID = Interlocked.Increment(ref _nextCountdownId);
 
-        var countdownInfo = new CountdownInfo(countdown);
-        trackedCountdowns[countdown] = countdownInfo;
+        CountdownInfo countdownInfo = new(countdown);
+        _trackedCountdowns[countdown] = countdownInfo;
         ActiveCountdowns.Add(countdown);
 
         await Facade.EventDispatcher.PostCountdownStartedAsync(RoomId, countdown);
@@ -1798,7 +1765,7 @@ public abstract class RoomBase : IRoom
     {
         try
         {
-            using var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
+            using CancellationTokenSource cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
                 countdownInfo.StopSource.Token,
                 countdownInfo.SkipSource.Token);
             await Task.Delay(countdownInfo.Duration, cancellationSource.Token);
@@ -1834,7 +1801,7 @@ public abstract class RoomBase : IRoom
     private async Task StopAllCountdowns<T>()
         where T : MultiplayerCountdown
     {
-        foreach (var countdown in ActiveCountdowns.OfType<T>().ToArray())
+        foreach (T? countdown in ActiveCountdowns.OfType<T>().ToArray())
         {
             await StopCountdown(countdown);
         }
@@ -1847,12 +1814,12 @@ public abstract class RoomBase : IRoom
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task StopCountdown(MultiplayerCountdown? countdown)
     {
-        if (countdown == null || !trackedCountdowns.TryRemove(countdown, out CountdownInfo? countdownInfo))
+        if (countdown == null || !_trackedCountdowns.TryRemove(countdown, out CountdownInfo? countdownInfo))
         {
             return;
         }
 
-        countdownInfo.StopSource.Cancel();
+        await countdownInfo.StopSource.CancelAsync();
 
         ActiveCountdowns.Remove(countdown);
         await Facade.EventDispatcher.PostCountdownStoppedAsync(RoomId, countdown);

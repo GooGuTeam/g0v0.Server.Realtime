@@ -27,7 +27,7 @@ public class MetadataHub(
     {
         await base.OnConnectedAsync();
 
-        var player = GetOrCreatePlayer(new PlayerFacade(PlayerManager));
+        LazerPlayer player = GetOrCreatePlayer(new PlayerFacade(PlayerManager));
         string connectionId = Context.ConnectionId;
 
         await player.HubConnected(nameof(MetadataHub));
@@ -46,7 +46,7 @@ public class MetadataHub(
     {
         await base.OnDisconnectedAsync(exception);
 
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         player.OnPlayerOnlineForMetadataHub = null;
         player.OnPlayerOfflineForMetadataHub = null;
         player.OnPlayerChangeActivityForMetadataHub = null;
@@ -64,14 +64,14 @@ public class MetadataHub(
     /// <inheritdoc />
     public async Task UpdateActivity(UserActivity? activity)
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         await player.ChangePlayerActivityAsync(activity.ToRealtimeActivity());
     }
 
     /// <inheritdoc />
     public async Task UpdateStatus(UserStatus? status)
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         await player.ChangePlayerStatusAsync(status ?? UserStatus.Offline);
 
         // TODO: Toggle user visibility.
@@ -80,12 +80,9 @@ public class MetadataHub(
     /// <inheritdoc />
     public async Task BeginWatchingUserPresence()
     {
-        foreach (var player in PlayerManager.GetAllPlayers<LazerPlayer>())
+        foreach (LazerPlayer player in PlayerManager.GetAllPlayers<LazerPlayer>().Where(player => ShouldBroadcastPresenceToOtherUsers(player.State)))
         {
-            if (ShouldBroadcastPresenceToOtherUsers(player.State))
-            {
-                await Clients.Caller.UserPresenceUpdated(player.PlayerId, player.State.ToLazerUserPresence());
-            }
+            await Clients.Caller.UserPresenceUpdated(player.PlayerId, player.State.ToLazerUserPresence());
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, OnlinePresenceWatchersGroup);
@@ -112,31 +109,22 @@ public class MetadataHub(
     /// <inheritdoc />
     public Task RefreshFriends()
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         return RefreshFriendsAsync(player);
     }
 
     internal static bool ShouldBroadcastPresenceToOtherUsers(PlayerState state)
     {
-        if (state.UserStatus == null)
-        {
-            return false;
-        }
-
-        switch (state.UserStatus.Value)
-        {
-            case UserStatus.Offline:
-                return false;
-
-            case UserStatus.DoNotDisturb:
-            case UserStatus.Online:
-                return true;
-
-            default:
-                throw new ArgumentOutOfRangeException(
-                    paramName: nameof(state),
-                    message: $"Unexpected user status {state.UserStatus}");
-        }
+        return state.UserStatus == null
+            ? false
+            : state.UserStatus.Value switch
+            {
+                UserStatus.Offline => false,
+                UserStatus.DoNotDisturb or UserStatus.Online => true,
+                _ => throw new ArgumentOutOfRangeException(
+                                    paramName: nameof(state),
+                                    message: $"Unexpected user status {state.UserStatus}"),
+            };
     }
 
     internal static string FriendPresenceWatchersGroup(int userId) => $"metadata:online-presence-watchers:{userId}";
@@ -146,8 +134,8 @@ public class MetadataHub(
         string connectionId,
         IPlayer player)
     {
-        var userId = player.PlayerId;
-        var userPresence = player.State.ToLazerUserPresence();
+        int userId = player.PlayerId;
+        UserPresence? userPresence = player.State.ToLazerUserPresence();
 
         return Task.WhenAll(
             ShouldBroadcastPresenceToOtherUsers(player.State)
@@ -178,7 +166,7 @@ public class MetadataHub(
         // Broadcast presence from any online friends to the caller.
         foreach (int friendId in newFriendIds.Except(player.FriendIds))
         {
-            var friendPlayer = PlayerManager.GetPlayer<LazerPlayer>(friendId);
+            LazerPlayer? friendPlayer = PlayerManager.GetPlayer<LazerPlayer>(friendId);
             if (friendPlayer != null && ShouldBroadcastPresenceToOtherUsers(friendPlayer.State))
             {
                 await Clients.Caller.FriendPresenceUpdated(friendId, friendPlayer.State.ToLazerUserPresence());

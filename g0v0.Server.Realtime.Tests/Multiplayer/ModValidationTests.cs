@@ -21,101 +21,103 @@ public class ModValidationTests : MultiplayerTestBase
     [Test]
     public async Task CanAddIncompatibleAllowedModsCombination()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            AllowedMods = new[]
-            {
+            AllowedMods =
+            [
+
                 // setting an incompatible combination should be allowed.
                 // will be enforced at the point of a user choosing from the allowed mods.
                 new APIMod(new OsuModFlashlight()),
-                new APIMod(new OsuModApproachDifferent()),
-            },
+                new APIMod(new OsuModApproachDifferent())
+            ],
         });
     }
 
     [Test]
     public async Task AddInvalidAllowedModsForRulesetThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 3,
-            AllowedMods = new[]
-            {
-                new APIMod(new OsuModBlinds()),
-            },
+            AllowedMods =
+            [
+                new APIMod(new OsuModBlinds())
+            ],
         }));
     }
 
     [Test]
     public async Task AddInvalidRequiredModsCombinationThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            RequiredMods = new[]
-            {
+            RequiredMods =
+            [
                 new APIMod(new OsuModHidden()),
-                new APIMod(new OsuModApproachDifferent()),
-            },
+                new APIMod(new OsuModApproachDifferent())
+            ],
         }));
     }
 
     [Test]
     public async Task AddInvalidRequiredModsForRulesetThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 3,
-            RequiredMods = new[]
-            {
-                new APIMod(new OsuModBlinds()),
-            },
+            RequiredMods =
+            [
+                new APIMod(new OsuModBlinds())
+            ],
         }));
     }
 
     [Test]
     public async Task AddInvalidRequiredAllowedModsCombinationThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            RequiredMods = new[]
-            {
-                new APIMod(new OsuModHidden()),
-            },
-            AllowedMods = new[]
-            {
+            RequiredMods =
+            [
+                new APIMod(new OsuModHidden())
+            ],
+            AllowedMods =
+            [
+
                 // allowed and required mods should always be cross-compatible.
-                new APIMod(new OsuModApproachDifferent()),
-            },
+                new APIMod(new OsuModApproachDifferent())
+            ],
         }));
     }
 
     [Test]
     public async Task AddOverlappingRequiredAllowedModsFails()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Skipped for parity with the reference test. The reference requires a
         // dedicated dedupe check which our server does not implement; note that
@@ -125,139 +127,137 @@ public class ModValidationTests : MultiplayerTestBase
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            RequiredMods = new[]
-            {
-                new APIMod(new OsuModFlashlight()),
-            },
-            AllowedMods = new[]
-            {
+            RequiredMods =
+            [
+                new APIMod(new OsuModFlashlight())
+            ],
+            AllowedMods =
+            [
+
                 // if a mod is in RequiredMods it shouldn't also be in AllowedMods.
-                new APIMod(new OsuModFlashlight()),
-            },
+                new APIMod(new OsuModFlashlight())
+            ],
         }));
     }
 
     [Test]
     public async Task UserChangesMods()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
+            AllowedMods =
+            [
                 new APIMod(new OsuModFlashlight()),
-                new APIMod(new OsuModApproachDifferent()),
-            },
+                new APIMod(new OsuModApproachDifferent())
+            ],
         });
 
-        var setMods = new[] { new APIMod(new OsuModApproachDifferent()) };
+        APIMod[] setMods = [new(new OsuModApproachDifferent())];
         await Hub.ChangeUserMods(setMods);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.First().Mods, Is.EqualTo(setMods));
 
-        setMods = new[] { new APIMod(new OsuModApproachDifferent()), new APIMod(new OsuModFlashlight()) };
+        setMods = [new(new OsuModApproachDifferent()), new(new OsuModFlashlight())];
         await Hub.ChangeUserMods(setMods);
 
-        Assert.That(Hub.GetRoom(ROOMID)!.Users.First().Mods, Is.EqualTo(setMods));
+        Assert.That(Hub.GetRoom(RoomId)!.Users.First().Mods, Is.EqualTo(setMods));
     }
 
     [Test]
     public async Task ModAcronymComparisonsAreCaseInsensitive()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
+            AllowedMods =
+            [
                 new APIMod { Acronym = "fL" },
-                new APIMod { Acronym = "ad" },
-            },
+                new APIMod { Acronym = "ad" }
+            ],
         });
 
-        await Hub.ChangeUserMods(new[] { new APIMod { Acronym = "fl" } });
+        await Hub.ChangeUserMods([new APIMod { Acronym = "fl" }]);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.First().Mods.Count(), Is.EqualTo(1));
         Assert.That(room.Users.First().Mods.Single().Acronym, Is.EqualTo("FL").IgnoreCase);
 
-        await Hub.ChangeUserMods(new[] { new APIMod { Acronym = "AD" }, new APIMod { Acronym = "Fl" } });
+        await Hub.ChangeUserMods([new APIMod { Acronym = "AD" }, new APIMod { Acronym = "Fl" }]);
 
-        var userMods = Hub.GetRoom(ROOMID)!.Users.First().Mods.ToArray();
+        APIMod[] userMods = Hub.GetRoom(RoomId)!.Users.First().Mods.ToArray();
         Assert.That(userMods.Length, Is.EqualTo(2));
         Assert.That(userMods[0].Acronym, Is.EqualTo("AD").IgnoreCase);
         Assert.That(userMods[1].Acronym, Is.EqualTo("FL").IgnoreCase);
 
-        await AssertInvalid(() => Hub.ChangeUserMods(new[] { new APIMod { Acronym = "Fg" } }));
+        await AssertInvalid(() => Hub.ChangeUserMods([new APIMod { Acronym = "Fg" }]));
     }
 
     [Test]
     public async Task UserSelectsInvalidModCombinationThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
+            AllowedMods =
+            [
                 new APIMod(new OsuModHidden()),
-                new APIMod(new OsuModApproachDifferent()),
-            },
+                new APIMod(new OsuModApproachDifferent())
+            ],
         });
 
-        await Hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) });
+        await Hub.ChangeUserMods([new APIMod(new OsuModApproachDifferent())]);
 
-        IEnumerable<APIMod> originalMods;
-
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
-        originalMods = room!.Users.First().Mods;
-        Assert.That(originalMods, Is.Not.Empty);
+        IEnumerable<APIMod> originalMods = room!.Users.First().Mods;
+        IEnumerable<APIMod> apiMods = originalMods as APIMod[] ?? originalMods.ToArray();
+        Assert.That(apiMods, Is.Not.Empty);
 
-        await AssertInvalid(() => Hub.ChangeUserMods(new[]
-        {
+        await AssertInvalid(() => Hub.ChangeUserMods([
             new APIMod(new OsuModApproachDifferent()),
-            new APIMod(new OsuModHidden()),
-        }));
+            new APIMod(new OsuModHidden())
+        ]));
 
-        Assert.That(Hub.GetRoom(ROOMID)!.Users.First().Mods, Is.EqualTo(originalMods));
+        Assert.That(Hub.GetRoom(RoomId)!.Users.First().Mods, Is.EqualTo(apiMods));
     }
 
     [Test]
     public async Task UserSelectsDisallowedModsThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             RulesetID = 2,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
-                new APIMod(new CatchModHidden()),
-            },
+            AllowedMods =
+            [
+                new APIMod(new CatchModHidden())
+            ],
         });
 
         // this should cause the complete setting change to fail, including the hidden mod application.
-        await AssertInvalid(() => Hub.ChangeUserMods(new[]
-        {
+        await AssertInvalid(() => Hub.ChangeUserMods([
             new APIMod(new CatchModHidden()),
-            new APIMod(new CatchModDaycore()),
-        }));
+            new APIMod(new CatchModDaycore())
+        ]));
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.First().Mods, Is.Empty);
     }
@@ -265,81 +265,80 @@ public class ModValidationTests : MultiplayerTestBase
     [Test]
     public async Task UserSelectsInvalidModsForRulesetThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             RulesetID = 2,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
-                new APIMod(new CatchModHidden()),
-            },
+            AllowedMods =
+            [
+                new APIMod(new CatchModHidden())
+            ],
         });
 
-        await Hub.ChangeUserMods(new[] { new APIMod(new CatchModHidden()) });
+        await Hub.ChangeUserMods([new APIMod(new CatchModHidden())]);
 
-        IEnumerable<APIMod> originalMods;
-
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
-        originalMods = room!.Users.First().Mods;
-        Assert.That(originalMods, Is.Not.Empty);
+        IEnumerable<APIMod> originalMods = room!.Users.First().Mods;
+        IEnumerable<APIMod> apiMods = originalMods as APIMod[] ?? originalMods.ToArray();
+        Assert.That(apiMods, Is.Not.Empty);
 
-        await AssertInvalid(() => Hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) }));
+        await AssertInvalid(() => Hub.ChangeUserMods([new APIMod(new OsuModApproachDifferent())]));
 
-        Assert.That(Hub.GetRoom(ROOMID)!.Users.First().Mods, Is.EqualTo(originalMods));
+        Assert.That(Hub.GetRoom(RoomId)!.Users.First().Mods, Is.EqualTo(apiMods));
     }
 
     [Test]
     public async Task ChangingDisallowedModsRemovesUserMods()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
+            AllowedMods =
+            [
                 new APIMod(new OsuModApproachDifferent()),
                 new APIMod(new OsuModFlashlight()),
-                new APIMod(new OsuModHardRock()),
-            },
+                new APIMod(new OsuModHardRock())
+            ],
         });
 
-        await Hub.ChangeUserMods(new[] { new APIMod(new OsuModFlashlight()), new APIMod(new OsuModApproachDifferent()) });
-        await assertUserMods(USERID, "FL", "AD");
+        await Hub.ChangeUserMods([new APIMod(new OsuModFlashlight()), new APIMod(new OsuModApproachDifferent())]);
+        await AssertUserMods(UserId, "FL", "AD");
 
         SetUserContext(ContextUser2);
-        await Hub.ChangeUserMods(new[] { new APIMod(new OsuModHardRock()), new APIMod(new OsuModApproachDifferent()) });
-        await assertUserMods(USERID2, "HR", "AD");
+        await Hub.ChangeUserMods([new APIMod(new OsuModHardRock()), new APIMod(new OsuModApproachDifferent())]);
+        await AssertUserMods(UserId2, "HR", "AD");
 
         SetUserContext(ContextUser);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
+            AllowedMods =
+            [
                 new APIMod(new OsuModFlashlight()),
-                new APIMod(new OsuModHardRock()),
-            },
+                new APIMod(new OsuModHardRock())
+            ],
         });
 
         // Skipped: our server only re-validates user *styles* on playlist-item
         // edits (see RoomBase.HandlePlaylistItemChanged / EnsureAllUsersValidStyle);
         // it does not trim user mods to the new allowed-mod set.
-        await assertUserMods(USERID, "FL");
-        await assertUserMods(USERID2, "HR");
+        await AssertUserMods(UserId, "FL");
+        await AssertUserMods(UserId2, "HR");
 
-        Task assertUserMods(int userId, params string[] modAcronyms)
+        Task AssertUserMods(int userId, params string[] modAcronyms)
         {
             Receiver.Verify(
                 c => c.UserModsChanged(
@@ -347,10 +346,10 @@ public class ModValidationTests : MultiplayerTestBase
                 It.Is<IEnumerable<APIMod>>(mods => mods.Select(m => m.Acronym).SequenceEqual(modAcronyms))),
                 Times.Once);
 
-            var room = Hub.GetRoom(ROOMID);
+            Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
             Assert.That(room, Is.Not.Null);
 
-            var userMods = room!.Users.Single(u => u.UserID == userId).Mods;
+            IEnumerable<APIMod> userMods = room!.Users.Single(u => u.UserID == userId).Mods;
             Assert.That(userMods.Select(m => m.Acronym), Is.EqualTo(modAcronyms));
             return Task.CompletedTask;
         }
@@ -359,21 +358,21 @@ public class ModValidationTests : MultiplayerTestBase
     [Test]
     public async Task ChangingRulesetRemovesInvalidUserMods()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            AllowedMods = new[]
-            {
-                new APIMod(new OsuModApproachDifferent()),
-            },
+            AllowedMods =
+            [
+                new APIMod(new OsuModApproachDifferent())
+            ],
         });
 
-        await Hub.ChangeUserMods(new[] { new APIMod(new OsuModApproachDifferent()) });
+        await Hub.ChangeUserMods([new APIMod(new OsuModApproachDifferent())]);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.First().Mods, Is.Not.Empty);
 
@@ -386,20 +385,20 @@ public class ModValidationTests : MultiplayerTestBase
 
         // Skipped: our server does not clear user mods when the current item's
         // ruleset changes; only styles are re-validated on playlist edits.
-        Assert.That(Hub.GetRoom(ROOMID)!.Users.First().Mods, Is.Empty);
+        Assert.That(Hub.GetRoom(RoomId)!.Users.First().Mods, Is.Empty);
     }
 
     [Test]
     public async Task AddUserUnplayableModThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            RequiredMods = new[] { new APIMod(new OsuModAutoplay()) },
+            RequiredMods = [new APIMod(new OsuModAutoplay())],
         }));
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -407,21 +406,21 @@ public class ModValidationTests : MultiplayerTestBase
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            AllowedMods = new[] { new APIMod(new OsuModAutoplay()) },
+            AllowedMods = [new APIMod(new OsuModAutoplay())],
         }));
     }
 
     [Test]
     public async Task AddMultiplayerUnplayableModThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            RequiredMods = new[] { new APIMod(new ModAdaptiveSpeed()) },
+            RequiredMods = [new APIMod(new ModAdaptiveSpeed())],
         }));
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -429,21 +428,21 @@ public class ModValidationTests : MultiplayerTestBase
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            AllowedMods = new[] { new APIMod(new ModAdaptiveSpeed()) },
+            AllowedMods = [new APIMod(new ModAdaptiveSpeed())],
         }));
     }
 
     [Test]
     public async Task AddMultiplayerInvalidFreeModThrowsOnAllowedModsOnly()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            RequiredMods = new[] { new APIMod(new OsuModDoubleTime()) },
+            RequiredMods = [new APIMod(new OsuModDoubleTime())],
         });
 
         await AssertInvalidEdit(() => Hub.EditPlaylistItem(new MultiplayerPlaylistItem
@@ -451,7 +450,7 @@ public class ModValidationTests : MultiplayerTestBase
             ID = 1,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            AllowedMods = new[] { new APIMod(new OsuModDoubleTime()) },
+            AllowedMods = [new APIMod(new OsuModDoubleTime())],
         }));
     }
 

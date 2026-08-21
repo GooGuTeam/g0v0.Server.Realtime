@@ -35,11 +35,11 @@ public class MultiplayerHub(
     {
         await base.OnConnectedAsync();
 
-        var player =
+        LazerPlayer player =
             GetOrCreatePlayer(
                 new PlayerFacade(PlayerManager)
                 {
-                    _roomManager = roomManager,
+                    RoomManager = roomManager,
                 });
         await player.HubConnected(nameof(MultiplayerHub));
 
@@ -55,7 +55,7 @@ public class MultiplayerHub(
     /// <inheritdoc />
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var player = PlayerManager.GetPlayer<LazerPlayer>(Context.GetUserId(), "Lazer");
+        LazerPlayer? player = PlayerManager.GetPlayer<LazerPlayer>(Context.GetUserId(), "Lazer");
         if (player != null)
         {
             await player.HubDisconnected(nameof(MultiplayerHub));
@@ -78,7 +78,7 @@ public class MultiplayerHub(
     {
         ArgumentNullException.ThrowIfNull(room);
 
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         if (player.State.CurrentRoom != null)
         {
             throw new InvalidStateException("Can't join a room when already in another room.");
@@ -86,7 +86,7 @@ public class MultiplayerHub(
 
         logger.LogInformation("Creating room {RoomName} by user {UserId}.", room.Settings.Name, player.PlayerId);
 
-        var mpRoom = await roomManager.CreateRoom(room, player.PlayerId);
+        IRoom mpRoom = await roomManager.CreateRoom(room, player.PlayerId);
 
         // Join the room before subscribing to its event group so the joining
         // client does not receive its own UserJoined (which would play the
@@ -152,13 +152,13 @@ public class MultiplayerHub(
     /// <inheritdoc />
     public async Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string password)
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         if (player.State.CurrentRoom != null)
         {
             throw new InvalidStateException("Can't join a room when already in another room.");
         }
 
-        var room = await roomManager.GetOrLoadRoom(roomId)
+        IRoom room = await roomManager.GetOrLoadRoom(roomId)
                    ?? throw new InvalidStateException("Room not found.");
 
         await room.RoomLock.WaitAsync();
@@ -220,14 +220,14 @@ public class MultiplayerHub(
     /// <inheritdoc />
     public async Task LeaveRoom()
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         long? roomId = player.State.CurrentRoom;
         if (roomId == null)
         {
             return;
         }
 
-        var room = roomManager.GetRoom(roomId.Value);
+        IRoom? room = roomManager.GetRoom(roomId.Value);
         if (room == null)
         {
             player.State.CurrentRoom = null;
@@ -334,20 +334,14 @@ public class MultiplayerHub(
 
             // The host must be ready or spectating, and at least one user must be
             // ready.
-            if (room.Host != null
+            return room.Host != null
                 && room.Host.State != MultiplayerUserState.Spectating
                 && room.Host.State != MultiplayerUserState.Ready
-                && room.Host.Role != MultiplayerRoomUserRole.Referee)
-            {
-                throw new InvalidStateException("Can't start match when the host is not ready.");
-            }
-
-            if (room.Users.All(u => u.State != MultiplayerUserState.Ready))
-            {
-                throw new InvalidStateException("Can't start match when no users are ready.");
-            }
-
-            return room.StartMatch();
+                && room.Host.Role != MultiplayerRoomUserRole.Referee
+                ? throw new InvalidStateException("Can't start match when the host is not ready.")
+                : room.Users.All(u => u.State != MultiplayerUserState.Ready)
+                ? throw new InvalidStateException("Can't start match when no users are ready.")
+                : room.StartMatch();
         });
     }
 
@@ -398,14 +392,9 @@ public class MultiplayerHub(
     /// <inheritdoc />
     public async Task InvitePlayer(int userId)
     {
-        var player = GetPlayer();
-        long? roomId = player.State.CurrentRoom;
-        if (roomId == null)
-        {
-            throw new NotJoinedRoomException();
-        }
-
-        var room = roomManager.GetRoom(roomId.Value)
+        LazerPlayer player = GetPlayer();
+        long? roomId = player.State.CurrentRoom ?? throw new NotJoinedRoomException();
+        IRoom room = roomManager.GetRoom(roomId.Value)
                    ?? throw new NotJoinedRoomException();
 
         await room.RoomLock.WaitAsync();
@@ -428,14 +417,9 @@ public class MultiplayerHub(
 
     private async Task InRoomRoomCommand(Func<IRoom, Task> command)
     {
-        var player = GetPlayer();
-        long? roomId = player.State.CurrentRoom;
-        if (roomId == null)
-        {
-            throw new NotJoinedRoomException();
-        }
-
-        var room = roomManager.GetRoom(roomId.Value)
+        LazerPlayer player = GetPlayer();
+        long? roomId = player.State.CurrentRoom ?? throw new NotJoinedRoomException();
+        IRoom room = roomManager.GetRoom(roomId.Value)
                    ?? throw new NotJoinedRoomException();
 
         await room.RoomLock.WaitAsync();
@@ -473,9 +457,9 @@ public class MultiplayerHub(
     /// <exception cref="UserBlocksPMsException">The target disallows PMs from non-friends.</exception>
     private async Task CheckUserToUserPermissionsAsync(int invitingUserId, int targetUserId)
     {
-        using var scope = scopeFactory.CreateScope();
-        var relationshipRepository = scope.ServiceProvider.GetService<IRelationshipRepository>();
-        var userRepository = scope.ServiceProvider.GetService<IUserRepository>();
+        using IServiceScope scope = scopeFactory.CreateScope();
+        IRelationshipRepository? relationshipRepository = scope.ServiceProvider.GetService<IRelationshipRepository>();
+        IUserRepository? userRepository = scope.ServiceProvider.GetService<IUserRepository>();
 
         // Permission checks are skipped when the repositories are not registered
         // (e.g. in tests which opt out).
@@ -496,7 +480,7 @@ public class MultiplayerHub(
             throw new UserBlockedException();
         }
 
-        var targetUser = await userRepository.GetByIdAsync(targetUserId);
+        Common.Database.Models.User? targetUser = await userRepository.GetByIdAsync(targetUserId);
         if (targetUser == null)
         {
             return;
@@ -520,7 +504,7 @@ public class MultiplayerHub(
             MatchState = room.MatchState,
             Playlist = room.Playlist,
             ActiveCountdowns = room.ActiveCountdowns,
-            ChannelID = room.ChannelID,
+            ChannelID = room.ChannelId,
         };
     }
 
@@ -528,8 +512,8 @@ public class MultiplayerHub(
     {
         // Fall back to the manager's tunable (used by tests) when no
         // configuration manager is registered.
-        using var scope = scopeFactory.CreateScope();
-        var configManager = scope.ServiceProvider.GetService<ConfigurationManager>();
+        using IServiceScope scope = scopeFactory.CreateScope();
+        ConfigurationManager? configManager = scope.ServiceProvider.GetService<ConfigurationManager>();
         return configManager?.Get<RealtimeConfig>().MultiplayerDisconnectGracePeriod
                ?? PlayerManager.MultiplayerDisconnectGracePeriod;
     }

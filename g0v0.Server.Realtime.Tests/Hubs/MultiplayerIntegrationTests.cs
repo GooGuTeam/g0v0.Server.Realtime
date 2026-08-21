@@ -11,7 +11,6 @@ using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Rooms;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.TestHost;
@@ -20,7 +19,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 using osu.Game.Online;
-using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
@@ -44,7 +42,7 @@ public class MultiplayerIntegrationTests
     {
         _roomRepository = new FakeRoomRepository();
 
-        var builder = WebApplication.CreateBuilder();
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
 
         builder.Services.AddLogging();
@@ -77,7 +75,7 @@ public class MultiplayerIntegrationTests
 
         builder.Services.AddSingleton<IUserIdProvider, TestUserIdProvider>();
 
-        var app = builder.Build();
+        WebApplication app = builder.Build();
         app.MapHub<MultiplayerHub>("/signalr/multiplayer");
         app.Start();
 
@@ -93,23 +91,23 @@ public class MultiplayerIntegrationTests
     [Test]
     public async Task HeadToHead_TwoClients_FullLifecycle()
     {
-        await using var hostConnection = await ConnectAsync(1);
-        await using var guestConnection = await ConnectAsync(2);
+        await using HubConnection hostConnection = await ConnectAsync(1);
+        await using HubConnection guestConnection = await ConnectAsync(2);
 
-        var hostClient = new TestMultiplayerClient(hostConnection);
-        var guestClient = new TestMultiplayerClient(guestConnection);
+        TestMultiplayerClient hostClient = new(hostConnection);
+        TestMultiplayerClient guestClient = new(guestConnection);
         await hostClient.SubscribeAsync();
         await guestClient.SubscribeAsync();
 
         // Host creates a head-to-head room.
-        var room = await hostConnection.InvokeAsync<MultiplayerRoom>(
+        MultiplayerRoom room = await hostConnection.InvokeAsync<MultiplayerRoom>(
             nameof(IMultiplayerLoungeServer.CreateRoom),
             CreateRoomRequest(OsuMatchType.HeadToHead));
 
         Assert.That(room.RoomID, Is.GreaterThan(0));
 
         // Guest joins.
-        var joined = await guestConnection.InvokeAsync<MultiplayerRoom>(
+        MultiplayerRoom joined = await guestConnection.InvokeAsync<MultiplayerRoom>(
             nameof(IMultiplayerLoungeServer.JoinRoom),
             room.RoomID);
 
@@ -148,17 +146,17 @@ public class MultiplayerIntegrationTests
     [Test]
     public async Task CreateAndJoin_NoSelfUserJoinedEvents()
     {
-        await using var hostConnection = await ConnectAsync(1);
-        await using var guestConnection = await ConnectAsync(2);
+        await using HubConnection hostConnection = await ConnectAsync(1);
+        await using HubConnection guestConnection = await ConnectAsync(2);
 
-        var hostClient = new TestMultiplayerClient(hostConnection);
-        var guestClient = new TestMultiplayerClient(guestConnection);
+        TestMultiplayerClient hostClient = new(hostConnection);
+        TestMultiplayerClient guestClient = new(guestConnection);
         await hostClient.SubscribeAsync();
         await guestClient.SubscribeAsync();
 
         // The host creates a room: they must not receive their own UserJoined
         // (which would play the player-joined sound on the client).
-        var room = await hostConnection.InvokeAsync<MultiplayerRoom>(
+        MultiplayerRoom room = await hostConnection.InvokeAsync<MultiplayerRoom>(
             nameof(IMultiplayerLoungeServer.CreateRoom),
             CreateRoomRequest(OsuMatchType.HeadToHead));
 
@@ -177,29 +175,29 @@ public class MultiplayerIntegrationTests
     [Test]
     public async Task TeamVersus_ThreeClients_TeamsAndChangeTeam()
     {
-        await using var hostConnection = await ConnectAsync(1);
-        await using var guestAConnection = await ConnectAsync(2);
-        await using var guestBConnection = await ConnectAsync(3);
+        await using HubConnection hostConnection = await ConnectAsync(1);
+        await using HubConnection guestAConnection = await ConnectAsync(2);
+        await using HubConnection guestBConnection = await ConnectAsync(3);
 
-        var hostClient = new TestMultiplayerClient(hostConnection);
-        var guestAClient = new TestMultiplayerClient(guestAConnection);
-        var guestBClient = new TestMultiplayerClient(guestBConnection);
+        TestMultiplayerClient hostClient = new(hostConnection);
+        TestMultiplayerClient guestAClient = new(guestAConnection);
+        TestMultiplayerClient guestBClient = new(guestBConnection);
         await hostClient.SubscribeAsync();
         await guestAClient.SubscribeAsync();
         await guestBClient.SubscribeAsync();
 
-        var room = await hostConnection.InvokeAsync<MultiplayerRoom>(
+        MultiplayerRoom room = await hostConnection.InvokeAsync<MultiplayerRoom>(
             nameof(IMultiplayerLoungeServer.CreateRoom),
             CreateRoomRequest(OsuMatchType.TeamVersus));
 
         await guestAConnection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerLoungeServer.JoinRoom), room.RoomID);
-        var joinedB = await guestBConnection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerLoungeServer.JoinRoom), room.RoomID);
+        MultiplayerRoom joinedB = await guestBConnection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerLoungeServer.JoinRoom), room.RoomID);
 
         Assert.That(joinedB.MatchState, Is.TypeOf<TeamVersusRoomState>());
-        var teamState = (TeamVersusRoomState)joinedB.MatchState!;
+        TeamVersusRoomState teamState = (TeamVersusRoomState)joinedB.MatchState!;
         Assert.That(teamState.Teams, Has.Count.EqualTo(2));
 
-        var teams = joinedB.Users.Select(u => (u.MatchState as TeamVersusUserState)?.TeamID).ToArray();
+        int?[] teams = joinedB.Users.Select(u => (u.MatchState as TeamVersusUserState)?.TeamID).ToArray();
         Assert.That(teams, Is.All.InRange(0, 1));
 
         // Change team of guest A to the opposite team of guest B.
@@ -208,29 +206,25 @@ public class MultiplayerIntegrationTests
             nameof(IMultiplayerRoomServer.SendMatchRequest),
             new ChangeTeamRequest { TeamID = guestBTeam == 0 ? 1 : 0 });
 
-        var refreshed = await hostConnection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerRoomServer.ChangeState), MultiplayerUserState.Idle).ContinueWith(
-            _ => hostConnection.InvokeAsync<MultiplayerRoom>(nameof(IMultiplayerLoungeServer.JoinRoom), room.RoomID),
-            TaskContinuationOptions.OnlyOnRanToCompletion);
-
         // The room state is not re-queryable through the hub; assert via the shared manager instead.
-        var manager = _server.Services.GetRequiredService<RoomManager>();
-        var realRoom = manager.GetRoom(room.RoomID)!;
-        var guestAState = realRoom.Users.First(u => u.UserID == 2).MatchState as TeamVersusUserState;
+        RoomManager manager = _server.Services.GetRequiredService<RoomManager>();
+        IRoom realRoom = manager.GetRoom(room.RoomID)!;
+        TeamVersusUserState? guestAState = realRoom.Users.First(u => u.UserID == 2).MatchState as TeamVersusUserState;
         Assert.That(guestAState!.TeamID, Is.EqualTo(guestBTeam == 0 ? 1 : 0));
     }
 
     [Test]
     public async Task KickUser_AsHost_RemovesUserAndBroadcasts()
     {
-        await using var hostConnection = await ConnectAsync(1);
-        await using var guestConnection = await ConnectAsync(2);
+        await using HubConnection hostConnection = await ConnectAsync(1);
+        await using HubConnection guestConnection = await ConnectAsync(2);
 
-        var hostClient = new TestMultiplayerClient(hostConnection);
-        var guestClient = new TestMultiplayerClient(guestConnection);
+        TestMultiplayerClient hostClient = new(hostConnection);
+        TestMultiplayerClient guestClient = new(guestConnection);
         await hostClient.SubscribeAsync();
         await guestClient.SubscribeAsync();
 
-        var room = await hostConnection.InvokeAsync<MultiplayerRoom>(
+        MultiplayerRoom room = await hostConnection.InvokeAsync<MultiplayerRoom>(
             nameof(IMultiplayerLoungeServer.CreateRoom),
             CreateRoomRequest(OsuMatchType.HeadToHead));
 
@@ -247,7 +241,7 @@ public class MultiplayerIntegrationTests
     {
         // Build a real web host (same pipeline as Program.ConfigureServices) and
         // verify the singleton services resolve without scoped-service violations.
-        var builder = WebApplication.CreateBuilder();
+        WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
         builder.Services.AddMemoryCache();
@@ -268,7 +262,7 @@ public class MultiplayerIntegrationTests
         builder.Services.AddSignalR()
             .AddMessagePackProtocol(options => options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS);
 
-        var app = builder.Build();
+        WebApplication app = builder.Build();
         await app.StartAsync();
 
         try
@@ -288,24 +282,32 @@ public class MultiplayerIntegrationTests
     [Test]
     public async Task WrongPassword_JoinFails()
     {
-        await using var hostConnection = await ConnectAsync(1);
-        await using var guestConnection = await ConnectAsync(2);
+        await using HubConnection hostConnection = await ConnectAsync(1);
+        await using HubConnection guestConnection = await ConnectAsync(2);
 
-        var room = await hostConnection.InvokeAsync<MultiplayerRoom>(
+        MultiplayerRoom room = await hostConnection.InvokeAsync<MultiplayerRoom>(
             nameof(IMultiplayerLoungeServer.CreateRoom),
             CreateRoomRequest(OsuMatchType.HeadToHead, password: "secret"));
 
-        Assert.That(
-            async () => await guestConnection.InvokeAsync<MultiplayerRoom>(
+        Exception? joinException = null;
+        try
+        {
+            await guestConnection.InvokeAsync<MultiplayerRoom>(
                 nameof(IMultiplayerLoungeServer.JoinRoomWithPassword),
                 room.RoomID,
-                "wrong"),
-            Throws.TypeOf<HubException>());
+                "wrong");
+        }
+        catch (Exception exception)
+        {
+            joinException = exception;
+        }
+
+        Assert.That(joinException, Is.TypeOf<HubException>());
     }
 
     private async Task<HubConnection> ConnectAsync(int userId)
     {
-        var connection = new HubConnectionBuilder()
+        HubConnection connection = new HubConnectionBuilder()
             .WithUrl(
                 new Uri(_server.BaseAddress, $"/signalr/multiplayer?userId={userId}"),
                 options => options.HttpMessageHandlerFactory = _ => _server.CreateHandler())
@@ -343,8 +345,8 @@ public class MultiplayerIntegrationTests
                     OwnerID = 1,
                     BeatmapID = 100,
                     RulesetID = 0,
-                    RequiredMods = Array.Empty<APIMod>(),
-                    AllowedMods = Array.Empty<APIMod>(),
+                    RequiredMods = [],
+                    AllowedMods = [],
                     Freestyle = false,
                     Expired = false,
                     PlaylistOrder = 0,
@@ -363,14 +365,13 @@ public class MultiplayerIntegrationTests
         {
             // In a real deployment this reads the JWT; the integration test host
             // has no auth so fall back to the connection's query string.
-            var query = connection.GetHttpContext()?.Request.Query;
+            Microsoft.AspNetCore.Http.IQueryCollection? query = connection.GetHttpContext()?.Request.Query;
             return query?["userId"].ToString();
         }
     }
 
     private sealed class TestMultiplayerClient(HubConnection connection) : IDisposable
     {
-        private readonly TaskCompletionSource<MultiplayerUserState[]> _userStateChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly List<MultiplayerRoomState> _roomStates = new();
         private readonly List<int> _userJoined = new();
         private readonly List<int> _userLeft = new();
@@ -450,7 +451,7 @@ public class MultiplayerIntegrationTests
 
         public async Task<bool> WaitForRoomStateAsync(MultiplayerRoomState expected, int timeoutMs = 5000)
         {
-            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             while (DateTime.UtcNow < deadline)
             {
                 lock (_roomStates)
@@ -467,8 +468,10 @@ public class MultiplayerIntegrationTests
             return false;
         }
 
+        // ReSharper disable once InconsistentlySynchronizedField
         public Task<bool> WaitForUserJoinedAsync(int userId, int timeoutMs = 5000) => WaitForListAsync(_userJoined, userId, timeoutMs);
 
+        // ReSharper disable once InconsistentlySynchronizedField
         public Task<bool> WaitForUserKickedAsync(int userId, int timeoutMs = 5000) => WaitForListAsync(_userKicked, userId, timeoutMs);
 
         public Task<bool> WaitForLoadRequestedAsync(int timeoutMs = 5000) => _loadRequested.Task.WaitAsync(TimeSpan.FromMilliseconds(timeoutMs));
@@ -479,7 +482,7 @@ public class MultiplayerIntegrationTests
 
         private async Task<bool> WaitForListAsync(List<int> list, int value, int timeoutMs)
         {
-            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             while (DateTime.UtcNow < deadline)
             {
                 lock (list)

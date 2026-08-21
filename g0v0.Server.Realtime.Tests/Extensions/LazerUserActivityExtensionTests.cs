@@ -13,7 +13,7 @@ public class LazerUserActivityExtensionTests
     [Test]
     public void ToRealtimeActivity_WhenActivityIsNull_ReturnsIdleActivity()
     {
-        IUserActivity activity = LazerUserActivityExtension.ToRealtimeActivity(null);
+        IUserActivity activity = LazerUserActivityExtension.ToRealtimeActivity(activity: null);
 
         Assert.That(activity, Is.TypeOf<IdleActivity>());
     }
@@ -21,7 +21,7 @@ public class LazerUserActivityExtensionTests
     [Test]
     public void ToRealtimeActivity_WhenSpectatingUserTitleIsNull_UsesEmptyString()
     {
-        var activity = new UserActivity.SpectatingUser
+        UserActivity.SpectatingUser activity = new()
         {
             ScoreID = 42,
             PlayerName = "peppy",
@@ -33,9 +33,9 @@ public class LazerUserActivityExtensionTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.ScoreID, Is.EqualTo(42));
+            Assert.That(result.ScoreId, Is.EqualTo(42));
             Assert.That(result.PlayerName, Is.EqualTo("peppy"));
-            Assert.That(result.BeatmapID, Is.EqualTo(321));
+            Assert.That(result.BeatmapId, Is.EqualTo(321));
             Assert.That(result.BeatmapDisplayTitle, Is.EqualTo(string.Empty));
         });
     }
@@ -43,7 +43,7 @@ public class LazerUserActivityExtensionTests
     [Test]
     public void ToRealtimeActivity_WhenSoloGame_PreservesGameplayProperties()
     {
-        var activity = new UserActivity.InSoloGame
+        UserActivity.InSoloGame activity = new()
         {
             BeatmapID = 123,
             BeatmapDisplayTitle = "Song Title",

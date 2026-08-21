@@ -17,16 +17,16 @@ public class MultiplayerFlowTests : MultiplayerTestBase
     [Test]
     public async Task SingleUserMatchFlow()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Idle));
 
         // some users enter a ready state.
         await MarkCurrentUserReadyAndAvailable();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Ready));
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Open));
 
@@ -35,54 +35,54 @@ public class MultiplayerFlowTests : MultiplayerTestBase
 
         // server requests the all users start loading.
         Receiver.Verify(r => r.LoadRequested(), Times.Once);
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.WaitingForLoad), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.WaitingForLoad), Times.Once);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.WaitingForLoad));
 
         // all users finish loading.
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.Playing), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.Playing), Times.Once);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Playing));
 
         // server requests users start playing.
         UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Playing));
 
         // all users finish playing.
         await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Open));
 
         // server lets players know that results are ready for consumption (all players have finished).
         Receiver.Verify(r => r.ResultsReady(), Times.Once);
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.Results), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.Results), Times.Once);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Results));
 
         // players return back to idle state as they please.
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Idle));
     }
 
     [Test]
     public async Task MultiUserMatchFlow()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Idle));
 
@@ -92,7 +92,7 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         SetUserContext(ContextUser2);
         await MarkCurrentUserReadyAndAvailable();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Ready));
 
         // host requests the start of the match.
@@ -102,11 +102,11 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         // server requests the all users start loading.
         Receiver.Verify(r => r.LoadRequested(), Times.Once);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.WaitingForLoad));
 
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.WaitingForLoad), Times.Once);
-        Receiver.Verify(r => r.UserStateChanged(USERID2, MultiplayerUserState.WaitingForLoad), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.WaitingForLoad), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId2, MultiplayerUserState.WaitingForLoad), Times.Once);
 
         // first user finishes loading.
         SetUserContext(ContextUser);
@@ -114,7 +114,7 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
         // room is still waiting for second user to load.
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
 
         Receiver.Verify(r => r.GameplayStarted(), Times.Never);
@@ -124,36 +124,36 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Playing));
         UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
         Assert.That(room.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Playing));
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.Playing), Times.Once);
-        Receiver.Verify(r => r.UserStateChanged(USERID2, MultiplayerUserState.Playing), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.Playing), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId2, MultiplayerUserState.Playing), Times.Once);
 
         // first user finishes playing.
         SetUserContext(ContextUser);
         await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
 
         // room is still waiting for second user to finish playing.
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Playing));
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.FinishedPlay), Times.Once);
-        Receiver.Verify(r => r.UserStateChanged(USERID2, MultiplayerUserState.Playing), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.FinishedPlay), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId2, MultiplayerUserState.Playing), Times.Once);
         Receiver.Verify(r => r.ResultsReady(), Times.Never);
 
         // second user finishes playing.
         SetUserContext(ContextUser2);
         await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
 
         // server lets players know that results are ready for consumption (all players have finished).
         Receiver.Verify(r => r.ResultsReady(), Times.Once);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Results));
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.Results), Times.Once);
-        Receiver.Verify(r => r.UserStateChanged(USERID2, MultiplayerUserState.Results), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.Results), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId2, MultiplayerUserState.Results), Times.Once);
 
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Open));
     }
@@ -162,9 +162,9 @@ public class MultiplayerFlowTests : MultiplayerTestBase
     public async Task SecondUserDoesReceiveLoadRequestWhenMatchRestartedAndNotReady()
     {
         // Start the match initially with both users entering gameplay.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(ContextUser);
         await MarkCurrentUserReadyAndAvailable();
@@ -192,7 +192,7 @@ public class MultiplayerFlowTests : MultiplayerTestBase
     [Test]
     public async Task CanNotVoteToSkipOutsideOfGameplay()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         Assert.That(async () => await Hub.VoteToSkipIntro(), Throws.TypeOf<InvalidStateException>());
     }
 
@@ -202,13 +202,13 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         CreateUser(3, out Mock<HubCallerContext> contextUser3, out _);
 
         // Join all users.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         // Start gameplay
@@ -219,18 +219,18 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         // User 1 skips
         SetUserContext(ContextUser);
         await Hub.VoteToSkipIntro();
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID, true), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId, true), Times.Once);
         Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
         // User 1 skips again (should be a no-op)
         await Hub.VoteToSkipIntro();
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID, true), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId, true), Times.Once);
         Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
         // User 2 skips
         SetUserContext(ContextUser2);
         await Hub.VoteToSkipIntro();
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID2, true), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId2, true), Times.Once);
         Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Once);
 
         // User 3 skips (additional messages should be a no-op for clients)
@@ -254,16 +254,16 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         CreateUser(4, out Mock<HubCallerContext> contextUser4, out _);
 
         // Join all users.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(contextUser3);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(contextUser4);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         // Start gameplay
@@ -274,13 +274,13 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         // User 1 skips
         SetUserContext(ContextUser);
         await Hub.VoteToSkipIntro();
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID, true), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId, true), Times.Once);
         Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
         // User 2 skips
         SetUserContext(ContextUser2);
         await Hub.VoteToSkipIntro();
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID2, true), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId2, true), Times.Once);
         Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
         // User 3 leaves
@@ -294,10 +294,10 @@ public class MultiplayerFlowTests : MultiplayerTestBase
     public async Task VoteToSkipResetOnGameplayState()
     {
         // Join all users.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         // Start gameplay
@@ -308,13 +308,13 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         // User 1 skips
         SetUserContext(ContextUser);
         await Hub.VoteToSkipIntro();
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID, true), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId, true), Times.Once);
         Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Never);
 
         // User 2 skips
         SetUserContext(ContextUser2);
         await Hub.VoteToSkipIntro();
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID2, true), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId2, true), Times.Once);
         Receiver.Verify(r => r.VoteToSkipIntroPassed(), Times.Once);
 
         // Start new gameplay session
@@ -324,7 +324,7 @@ public class MultiplayerFlowTests : MultiplayerTestBase
         await Hub.StartMatch();
         await LoadGameplay(ContextUser, ContextUser2);
 
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID, false), Times.Once);
-        Receiver.Verify(r => r.UserVotedToSkipIntro(USERID2, false), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId, false), Times.Once);
+        Receiver.Verify(r => r.UserVotedToSkipIntro(UserId2, false), Times.Once);
     }
 }

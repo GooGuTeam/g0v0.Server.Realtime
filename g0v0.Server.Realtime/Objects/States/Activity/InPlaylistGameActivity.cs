@@ -41,7 +41,7 @@ public class InPlaylistGameActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.InPlaylistGame()
+        return new UserActivity.InPlaylistGame
         {
             BeatmapID = BeatmapId,
             BeatmapDisplayTitle = BeatmapDisplayTitle,

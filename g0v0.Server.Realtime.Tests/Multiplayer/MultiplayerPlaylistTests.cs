@@ -28,7 +28,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         // Beatmap 3333 is not registered in the beatmap repository.
         BeatmapRepository!.MissingBeatmapIds.Add(3333);
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         Assert.That(
             async () => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -42,7 +42,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task AddCustomizedBeatmapThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // The supplied checksum does not match the beatmap's checksum in the database.
         Assert.That(
@@ -57,16 +57,16 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [TestCase(ILegacyRuleset.MAX_LEGACY_RULESET_ID + 1)]
     [TestCase(-1)]
     [TestCase(99)]
-    public async Task AddCustomRulesetThrows(int rulesetID)
+    public async Task AddCustomRulesetThrows(int rulesetId)
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         Assert.That(
             async () => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
             {
                 BeatmapID = 1234,
                 BeatmapChecksum = "checksum",
-                RulesetID = rulesetID,
+                RulesetID = rulesetId,
             }),
             Throws.TypeOf<InvalidStateException>());
     }
@@ -74,10 +74,10 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task AddCustomRulesetAcceptsAllAvailableRulesets()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         foreach (int rulesetId in BeatmapRepository != null
-                     ? new[] { 0, 1, 2, 3 }
+                     ? [0, 1, 2, 3]
                      : Array.Empty<int>())
         {
             Assert.DoesNotThrowAsync(async () => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -92,7 +92,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task AddingItemWithRulesetIncompatibleWithBeatmapThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Beatmap 100 has native playmode 1 (osu!taiko); selecting ruleset 2 is invalid.
         Assert.That(
@@ -111,7 +111,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [TestCase(3)]
     public async Task AddingItemWithRulesetCompatibleWithBeatmapSucceeds(int scoreRulesetId)
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
@@ -120,7 +120,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
             RulesetID = scoreRulesetId,
         });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
         Assert.That(room!.Playlist.First(i => i.BeatmapID == 9999).RulesetID, Is.EqualTo(scoreRulesetId));
@@ -129,9 +129,9 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task RoomStartsWithCurrentPlaylistItem()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Settings.PlaylistItemId, Is.EqualTo(1));
     }
@@ -144,14 +144,14 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         // pre-configured database room.
         await SeedRoomInRepository(QueueMode.AllPlayers);
 
-        await Hub.JoinRoomExplicit(ROOMID);
+        await Hub.JoinRoomExplicit(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
             BeatmapChecksum = "3333",
         });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Settings.QueueMode, Is.EqualTo(QueueMode.AllPlayers));
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
@@ -164,9 +164,9 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         // loads both, mirroring the reference test's pre-populated database room.
         await SeedRoomInRepository(QueueMode.HostOnly, addExtraItem: true);
 
-        await Hub.JoinRoomExplicit(ROOMID);
+        await Hub.JoinRoomExplicit(RoomId);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
         Assert.That(room!.Playlist[0].BeatmapID, Is.EqualTo(1234));
@@ -176,11 +176,11 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task GuestsCanRemoveTheirOwnItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -189,7 +189,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
 
         await Hub.RemovePlaylistItem(2);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(1));
         Receiver.Verify(client => client.PlaylistItemRemoved(2), Times.Once);
@@ -198,7 +198,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task GuestsCanNotRemoveOtherUsersItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
@@ -207,7 +207,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         Assert.That(
             async () => await Hub.RemovePlaylistItem(2),
@@ -218,11 +218,11 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task HostCanRemoveGuestsItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -232,7 +232,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         SetUserContext(ContextUser);
         await Hub.RemovePlaylistItem(2);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(1));
         Receiver.Verify(client => client.PlaylistItemRemoved(2), Times.Once);
@@ -241,7 +241,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task ExternalItemsCanNotBeRemoved()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
@@ -258,7 +258,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task CurrentItemCanNotBeRemovedIfSingle()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         Assert.That(
@@ -269,7 +269,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task CurrentItemCanBeRemovedIfNotSingle()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
@@ -279,7 +279,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
 
         await Hub.RemovePlaylistItem(1);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(1));
         Assert.That(room!.Settings.PlaylistItemId, Is.EqualTo(2));
@@ -289,7 +289,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task ExpiredItemsCanNotBeRemoved()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
@@ -316,11 +316,11 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task GuestsCanUpdateTheirOwnItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -334,7 +334,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
             BeatmapChecksum = "4444",
         });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
         Receiver.Verify(client => client.PlaylistItemAdded(It.IsAny<MultiplayerPlaylistItem>()), Times.Once);
@@ -344,11 +344,11 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task EditingItemWithRulesetIncompatibleWithBeatmapThrows()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -373,11 +373,11 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [TestCase(3)]
     public async Task EditingItemWithRulesetCompatibleWithBeatmapSucceeds(int scoreRulesetId)
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -392,7 +392,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
             RulesetID = scoreRulesetId,
         });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist.First(i => i.ID == 2).RulesetID, Is.EqualTo(scoreRulesetId));
     }
@@ -400,11 +400,11 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task HostCanUpdateGuestsItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -419,7 +419,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
             BeatmapChecksum = "4444",
         });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
         Receiver.Verify(client => client.PlaylistItemAdded(It.IsAny<MultiplayerPlaylistItem>()), Times.Once);
@@ -429,7 +429,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task HostCanChangeItemsWhenMaxItemsReached()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         for (int i = 1; i < RealtimeConfig.DefaultGuestPlaylistLimit; i++)
@@ -449,7 +449,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
             BeatmapChecksum = "4444",
         });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Playlist, Has.Count.EqualTo(RealtimeConfig.DefaultGuestPlaylistLimit));
         Assert.That(room!.Playlist[0].BeatmapID, Is.EqualTo(4444));
@@ -458,7 +458,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task ExpiredItemsCanNotBeChanged()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         await MarkCurrentUserReadyAndAvailable();
@@ -479,9 +479,9 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task PlaylistItemsWithScoreTokenInDatabaseCannotBeRemoved()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = Hub.GetRoom(ROOMID)!;
+        Realtime.Objects.Rooms.IRoom room = Hub.GetRoom(RoomId)!;
         long itemId = room.Playlist.Single().ID;
 
         // Simulate an existing score token for the item.
@@ -495,7 +495,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task CurrentlyPlayingItemsCannotBeChangedOrRemoved()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         await MarkCurrentUserReadyAndAvailable();
@@ -535,11 +535,11 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task OwnerChangesWhenItemChanges()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -547,8 +547,8 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         });
 
         // The guest owns the added item.
-        var room = Hub.GetRoom(ROOMID)!;
-        Assert.That(room.Playlist.Single(i => i.BeatmapID == 3333).OwnerID, Is.EqualTo(USERID2));
+        Realtime.Objects.Rooms.IRoom room = Hub.GetRoom(RoomId)!;
+        Assert.That(room.Playlist.Single(i => i.BeatmapID == 3333).OwnerID, Is.EqualTo(UserId2));
 
         // The host edits the item; ownership transfers to the host.
         SetUserContext(ContextUser);
@@ -559,13 +559,13 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
             BeatmapChecksum = "3333",
         });
 
-        Assert.That(room.Playlist.Single(i => i.BeatmapID == 3333).OwnerID, Is.EqualTo(USERID));
+        Assert.That(room.Playlist.Single(i => i.BeatmapID == 3333).OwnerID, Is.EqualTo(UserId));
     }
 
     [Test]
     public async Task PlayersCanNotReadyWithAllItemsExpired()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         await MarkCurrentUserReadyAndAvailable();
@@ -574,7 +574,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
         // All items are expired; readying up must fail.
-        var room = Hub.GetRoom(ROOMID)!;
+        Realtime.Objects.Rooms.IRoom room = Hub.GetRoom(RoomId)!;
         Assert.That(room.Playlist.All(i => i.Expired), Is.True);
 
         Assert.That(
@@ -585,10 +585,10 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task PlayersUnReadiedWhenCurrentItemIsEdited()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
@@ -599,7 +599,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
             BeatmapChecksum = "3333",
         });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users[1].State, Is.EqualTo(MultiplayerUserState.Idle));
     }
@@ -607,7 +607,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     [Test]
     public async Task SettingsChangedNotifiedBeforeItemIsRemoved()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 1,
@@ -630,7 +630,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     }
 
     /// <summary>
-    /// Pre-seeds a room with ID <see cref="MultiplayerTestBase.ROOMID"/> in the
+    /// Pre-seeds a room with ID <see cref="MultiplayerTestBase.RoomId"/> in the
     /// fake room repository so a subsequent explicit join loads it from the
     /// database layer, mirroring the reference tests' pre-configured rooms.
     /// </summary>
@@ -639,23 +639,24 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task SeedRoomInRepository(QueueMode queueMode, bool addExtraItem = false)
     {
-        var playlist = new List<MultiplayerPlaylistItem>
-        {
+        List<MultiplayerPlaylistItem> playlist =
+        [
+
             new()
             {
-                OwnerID = USERID,
+                OwnerID = UserId,
                 BeatmapID = 1234,
                 BeatmapChecksum = "checksum",
                 RulesetID = 0,
                 PlaylistOrder = 0,
-            },
-        };
+            }
+        ];
 
         if (addExtraItem)
         {
             playlist.Add(new MultiplayerPlaylistItem
             {
-                OwnerID = USERID,
+                OwnerID = UserId,
                 BeatmapID = 3333,
                 BeatmapChecksum = "3333",
                 RulesetID = 0,
@@ -664,7 +665,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
         }
 
         await RoomRepository.CreateRoom(
-            new MultiplayerRoom(ROOMID)
+            new MultiplayerRoom(RoomId)
             {
                 Settings = new MultiplayerRoomSettings
                 {
@@ -675,6 +676,6 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
                 },
                 Playlist = playlist,
             },
-            USERID);
+            UserId);
     }
 }

@@ -17,10 +17,10 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
     [Test]
     public async Task AddingItemAppendsToQueue()
     {
-        long playlistItemId = (await Hub.JoinRoom(ROOMID)).Settings.PlaylistItemId;
+        long playlistItemId = (await Hub.JoinRoom(RoomId)).Settings.PlaylistItemId;
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-        var newItem = new MultiplayerPlaylistItem
+        MultiplayerPlaylistItem newItem = new()
         {
             BeatmapID = 3333,
             BeatmapChecksum = "3333",
@@ -28,7 +28,7 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
 
         await Hub.AddPlaylistItem(newItem);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         // The currently-selected playlist item is unchanged by the addition.
@@ -48,14 +48,14 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
     [Test]
     public async Task CompletingItemExpiresAndDoesNotAddNewItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
         await LoadAndFinishGameplay(ContextUser);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         // The room maintains its single playlist item.
@@ -81,7 +81,7 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
         // g0v0's RoomBase.AddPlaylistItemInternal only calls UpdateCurrentItem
         // when PlaylistItemId == 0 (the very first item), so the expired item
         // stays selected here.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         await MarkCurrentUserReadyAndAvailable();
@@ -89,7 +89,7 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
         await LoadAndFinishGameplay(ContextUser);
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        var newItem = new MultiplayerPlaylistItem
+        MultiplayerPlaylistItem newItem = new()
         {
             BeatmapID = 3333,
             BeatmapChecksum = "3333",
@@ -97,10 +97,10 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
 
         await Hub.AddPlaylistItem(newItem);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
-        var secondItem = room!.Playlist[1];
+        MultiplayerPlaylistItem secondItem = room!.Playlist[1];
 
         // New playlist item selected.
         Assert.That(secondItem.ID, Is.EqualTo(room.Settings.PlaylistItemId));
@@ -110,7 +110,7 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
     [Test]
     public async Task ItemsNotClearedWhenChangingToHostOnlyMode()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -132,7 +132,7 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
 
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         // All items still present in the room.
@@ -149,7 +149,7 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
         // RoomBase.ChangeRoomSettings only implements that duplication in
         // HandleGameplayCompleted (on gameplay completion), not on mode change,
         // so the room keeps a single expired item here.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         await MarkCurrentUserReadyAndAvailable();
@@ -159,13 +159,13 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
 
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
 
-        var firstItem = room.Playlist[0];
-        var secondItem = room.Playlist[1];
+        MultiplayerPlaylistItem firstItem = room.Playlist[0];
+        MultiplayerPlaylistItem secondItem = room.Playlist[1];
 
         // First item (played).
         Assert.That(firstItem.ID, Is.Not.EqualTo(room.Settings.PlaylistItemId));
@@ -179,20 +179,20 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
     [Test]
     public async Task HostMayAddManyItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         for (int i = 1; i < RealtimeConfig.DefaultGuestPlaylistLimit; i++)
         {
-            await addItem();
+            await AddItem();
         }
 
         // Host should be allowed to add many items even in non-host-only queue modes.
-        await addItem();
-        await addItem();
-        await addItem();
+        await AddItem();
+        await AddItem();
+        await AddItem();
 
-        async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+        async Task AddItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
             BeatmapChecksum = "3333",
@@ -202,23 +202,23 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
     [Test]
     public async Task UserMayOnlyAddLimitedNumberOfItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
         // Play initial beatmap to clear the queue.
-        await playBeatmap();
+        await PlayBeatmap();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Non-host user should be able to add items up to a defined limit.
         for (int i = 0; i < RealtimeConfig.DefaultGuestPlaylistLimit; i++)
         {
-            await addItem();
+            await AddItem();
         }
 
         // User is not allowed to add more items.
-        Assert.That(async () => await addItem(), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await AddItem(), Throws.TypeOf<InvalidStateException>());
 
         await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
@@ -229,16 +229,16 @@ public class MultiplayerAllPlayersQueueTests : MultiplayerTestBase
         await LoadAndFinishGameplay(ContextUser, ContextUser2);
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        await addItem();
-        Assert.That(async () => await addItem(), Throws.TypeOf<InvalidStateException>());
+        await AddItem();
+        Assert.That(async () => await AddItem(), Throws.TypeOf<InvalidStateException>());
 
-        async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+        async Task AddItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
             BeatmapChecksum = "3333",
         });
 
-        async Task playBeatmap()
+        async Task PlayBeatmap()
         {
             SetUserContext(ContextUser);
 

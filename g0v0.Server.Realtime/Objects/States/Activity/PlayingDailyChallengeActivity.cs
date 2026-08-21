@@ -41,7 +41,7 @@ public class PlayingDailyChallengeActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.PlayingDailyChallenge()
+        return new UserActivity.PlayingDailyChallenge
         {
             BeatmapID = BeatmapId,
             BeatmapDisplayTitle = BeatmapDisplayTitle,

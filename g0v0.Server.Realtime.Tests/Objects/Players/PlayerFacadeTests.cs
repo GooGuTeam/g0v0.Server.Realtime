@@ -17,37 +17,37 @@ public class PlayerFacadeTests
     [Test]
     public void ApplyNonNullDependenciesFrom_ShouldCopyOnlyProvidedOptionalDependencies()
     {
-        var ipcClient = new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests");
-        var manager = new PlayerManager(
+        InterProcessCommunicationClient ipcClient = new(new NoOpTransport(), "realtime-tests");
+        PlayerManager manager = new(
             NullLogger<PlayerManager>.Instance,
             ipcClient);
-        var existing = new PlayerFacade(manager);
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
-        var scoreBuffer = new ScoreBuffer(memoryCache, NullLogger<ScoreBuffer>.Instance);
+        PlayerFacade existing = new(manager);
+        using MemoryCache memoryCache = new(new MemoryCacheOptions());
+        ScoreBuffer scoreBuffer = new(memoryCache, NullLogger<ScoreBuffer>.Instance);
 
-        var serviceCollection = new ServiceCollection();
-        var serviceProvider = serviceCollection.BuildServiceProvider();
-        var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var scoreProcessedService = new ScoreProcessedNotificationService(
+        ServiceCollection serviceCollection = new();
+        ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
+        IServiceScopeFactory scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        ScoreProcessedNotificationService scoreProcessedService = new(
             ipcClient,
             scopeFactory,
             NullLogger<ScoreProcessedNotificationService>.Instance);
 
-        var incoming = new PlayerFacade(manager)
+        PlayerFacade incoming = new(manager)
         {
-            _scoreBuffer = scoreBuffer,
-            _scoreProcessedNotificationService = scoreProcessedService,
+            ScoreBuffer = scoreBuffer,
+            ScoreProcessedNotificationService = scoreProcessedService,
         };
 
         ((IPlayerFacade)existing).ApplyNonNullDependenciesFrom(incoming);
 
         Assert.Multiple(() =>
         {
-            Assert.That(existing._manager, Is.SameAs(manager));
-            Assert.That(existing._scoreBuffer, Is.SameAs(scoreBuffer));
-            Assert.That(existing._scoreProcessedNotificationService, Is.SameAs(scoreProcessedService));
-            Assert.That(existing._scoreUploader, Is.Null);
-            Assert.That(existing._configManager, Is.Null);
+            Assert.That(existing.Manager, Is.SameAs(manager));
+            Assert.That(existing.ScoreBuffer, Is.SameAs(scoreBuffer));
+            Assert.That(existing.ScoreProcessedNotificationService, Is.SameAs(scoreProcessedService));
+            Assert.That(existing.ScoreUploader, Is.Null);
+            Assert.That(existing.ConfigManager, Is.Null);
         });
     }
 

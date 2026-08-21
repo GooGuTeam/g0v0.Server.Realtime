@@ -15,7 +15,7 @@ public class WatchingReplayActivity : IUserActivity
     /// <summary>
     /// Gets or sets the replay score ID.
     /// </summary>
-    public long ScoreID { get; set; }
+    public long ScoreId { get; set; }
 
     /// <summary>
     /// Gets or sets the replay owner's player name.
@@ -25,7 +25,7 @@ public class WatchingReplayActivity : IUserActivity
     /// <summary>
     /// Gets or sets the beatmap ID.
     /// </summary>
-    public int BeatmapID { get; set; }
+    public int BeatmapId { get; set; }
 
     /// <summary>
     /// Gets or sets the beatmap display title.
@@ -41,11 +41,11 @@ public class WatchingReplayActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.WatchingReplay()
+        return new UserActivity.WatchingReplay
         {
-            ScoreID = ScoreID,
+            ScoreID = ScoreId,
             PlayerName = PlayerName,
-            BeatmapID = BeatmapID,
+            BeatmapID = BeatmapId,
             BeatmapDisplayTitle = BeatmapDisplayTitle,
         };
     }

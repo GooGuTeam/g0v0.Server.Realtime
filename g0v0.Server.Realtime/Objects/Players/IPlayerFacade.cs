@@ -14,38 +14,38 @@ public interface IPlayerFacade
     /// <summary>
     /// Gets or sets the player manager.
     /// </summary>
-    PlayerManager _manager { get; set; }
+    PlayerManager Manager { get; set; }
 
     /// <summary>
     /// Gets or sets the room manager, when multiplayer room operations are available.
     /// </summary>
-    RoomManager? _roomManager { get; set; }
+    RoomManager? RoomManager { get; set; }
 
     /// <summary>
     /// Gets or sets the configuration manager, when needed by player operations.
     /// </summary>
-    ConfigurationManager? _configManager { get; set; }
+    ConfigurationManager? ConfigManager { get; set; }
 
     /// <summary>
     /// Gets or sets the score buffer, when spectator replay capture is available.
     /// </summary>
-    ScoreBuffer? _scoreBuffer { get; set; }
+    ScoreBuffer? ScoreBuffer { get; set; }
 
     /// <summary>
     /// Gets or sets the score uploader, when spectator replay upload is available.
     /// </summary>
-    ScoreUploader? _scoreUploader { get; set; }
+    ScoreUploader? ScoreUploader { get; set; }
 
     /// <summary>
     /// Gets or sets the score processed notification service,
     /// when score-processed IPC notifications are available.
     /// </summary>
-    ScoreProcessedNotificationService? _scoreProcessedNotificationService { get; set; }
+    ScoreProcessedNotificationService? ScoreProcessedNotificationService { get; set; }
 
     /// <summary>
     /// Gets or sets the logger used for player lifecycle events.
     /// </summary>
-    ILogger? _logger { get; set; }
+    ILogger? Logger { get; set; }
 
     /// <summary>
     /// Copies non-null optional dependencies from another facade.
@@ -55,11 +55,11 @@ public interface IPlayerFacade
     {
         ArgumentNullException.ThrowIfNull(facade);
 
-        _roomManager = facade._roomManager ?? _roomManager;
-        _configManager = facade._configManager ?? _configManager;
-        _scoreBuffer = facade._scoreBuffer ?? _scoreBuffer;
-        _scoreUploader = facade._scoreUploader ?? _scoreUploader;
-        _scoreProcessedNotificationService = facade._scoreProcessedNotificationService ?? _scoreProcessedNotificationService;
-        _logger = facade._logger ?? _logger;
+        RoomManager = facade.RoomManager ?? RoomManager;
+        ConfigManager = facade.ConfigManager ?? ConfigManager;
+        ScoreBuffer = facade.ScoreBuffer ?? ScoreBuffer;
+        ScoreUploader = facade.ScoreUploader ?? ScoreUploader;
+        ScoreProcessedNotificationService = facade.ScoreProcessedNotificationService ?? ScoreProcessedNotificationService;
+        Logger = facade.Logger ?? Logger;
     }
 }

@@ -34,7 +34,7 @@ public static class Program
     /// <param name="args">Command-line arguments.</param>
     public static void Main(string[] args)
     {
-        var builder = WebApplication.CreateBuilder(args);
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
         ConfigureServices(builder);
         ConfigureApp(builder.Build()).Run();
     }
@@ -50,8 +50,8 @@ public static class Program
         builder.Services.AddSwaggerGen();
         builder.Services.AddSingleton<IPathProvider, WebPathProvider>();
 
-        var configManager = new ConfigurationManager(builder.Environment.ContentRootPath);
-        var generalConfig = configManager.Get<GeneralConfiguration>();
+        ConfigurationManager configManager = new(builder.Environment.ContentRootPath);
+        GeneralConfiguration generalConfig = configManager.Get<GeneralConfiguration>();
         builder.Services.AddSingleton(configManager);
 
         builder.Services.AddRepositories(generalConfig.UseLegacyDatabase);

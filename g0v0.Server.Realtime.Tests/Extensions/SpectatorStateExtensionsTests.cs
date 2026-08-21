@@ -12,7 +12,7 @@ public class SpectatorStateExtensionsTests
     [Test]
     public void IsPlaying_WhenStateIsPlaying_ShouldReturnTrue()
     {
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             State = SpectatedUserState.Playing,
         };
@@ -23,7 +23,7 @@ public class SpectatorStateExtensionsTests
     [Test]
     public void IsPlaying_WhenStateIsFailed_ShouldReturnTrue()
     {
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             State = SpectatedUserState.Failed,
         };
@@ -34,7 +34,7 @@ public class SpectatorStateExtensionsTests
     [Test]
     public void IsPlaying_WhenStateIsIdle_ShouldReturnFalse()
     {
-        var state = new SpectatorState
+        SpectatorState state = new()
         {
             State = SpectatedUserState.Idle,
         };

@@ -54,7 +54,7 @@ public interface IRoom
     /// <summary>
     /// Gets the chat channel ID associated with the room.
     /// </summary>
-    int ChannelID { get; }
+    int ChannelId { get; }
 
     /// <summary>
     /// Gets a value indicating whether the room is a tournament room.

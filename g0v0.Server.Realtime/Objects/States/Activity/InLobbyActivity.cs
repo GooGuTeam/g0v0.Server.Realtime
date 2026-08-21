@@ -15,7 +15,7 @@ public class InLobbyActivity : IUserActivity
     /// <summary>
     /// Gets or sets the room ID.
     /// </summary>
-    public long RoomID { get; set; }
+    public long RoomId { get; set; }
 
     /// <summary>
     /// Gets or sets the room name.
@@ -31,9 +31,9 @@ public class InLobbyActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.InLobby()
+        return new UserActivity.InLobby
         {
-            RoomID = RoomID,
+            RoomID = RoomId,
             RoomName = RoomName,
         };
     }

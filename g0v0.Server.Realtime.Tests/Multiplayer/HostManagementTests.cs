@@ -16,119 +16,119 @@ public class HostManagementTests : MultiplayerTestBase
     [Test]
     public async Task FirstUserBecomesHost()
     {
-        var room = await Hub.JoinRoom(ROOMID);
-        Assert.That(room.Host?.UserID, Is.EqualTo(USERID));
+        MultiplayerRoom room = await Hub.JoinRoom(RoomId);
+        Assert.That(room.Host?.UserID, Is.EqualTo(UserId));
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
-        Assert.That(room.Host?.UserID, Is.EqualTo(USERID));
+        await Hub.JoinRoom(RoomId);
+        Assert.That(room.Host?.UserID, Is.EqualTo(UserId));
     }
 
     [Test]
     public async Task HostTransfer()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        await Hub.TransferHost(USERID2);
+        await Hub.TransferHost(UserId2);
 
-        Receiver.Verify(r => r.HostChanged(USERID2), Times.Once);
+        Receiver.Verify(r => r.HostChanged(UserId2), Times.Once);
 
-        var room = Hub.GetRoom(ROOMID);
-        Assert.That(room?.Host?.UserID, Is.EqualTo(USERID2));
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
+        Assert.That(room?.Host?.UserID, Is.EqualTo(UserId2));
     }
 
     [Test]
     public async Task HostLeavingCausesHostTransfer()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
         await Hub.LeaveRoom();
 
-        Receiver.Verify(r => r.HostChanged(USERID2), Times.Once);
+        Receiver.Verify(r => r.HostChanged(UserId2), Times.Once);
 
-        var room = Hub.GetRoom(ROOMID);
-        Assert.That(room?.Host?.UserID, Is.EqualTo(USERID2));
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
+        Assert.That(room?.Host?.UserID, Is.EqualTo(UserId2));
     }
 
     [Test]
     public async Task HostKicksUser()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        await Hub.KickUser(USERID2);
+        await Hub.KickUser(UserId2);
 
         // other players received the event.
-        Receiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == USERID2)), Times.Once);
+        Receiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == UserId2)), Times.Once);
 
         // The kicked user receives the event twice: once via the unicast
         // (Clients.User) and once via the room group broadcast, because this
         // server does not unsubscribe the kicked user from the room group before
         // broadcasting (the reference server unsubscribes first and expects once).
-        User2Receiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == USERID2)), Times.Exactly(2));
+        User2Receiver.Verify(r => r.UserKicked(It.Is<MultiplayerRoomUser>(u => u.UserID == UserId2)), Times.Exactly(2));
 
-        var room = Hub.GetRoom(ROOMID);
-        Assert.That(room?.Users.All(u => u.UserID != USERID2), Is.True);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
+        Assert.That(room?.Users.All(u => u.UserID != UserId2), Is.True);
     }
 
     [Test]
     public async Task HostAttemptsToKickSelf()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        Assert.That(async () => await Hub.KickUser(USERID), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.KickUser(UserId), Throws.TypeOf<InvalidStateException>());
 
         Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
 
-        var room = Hub.GetRoom(ROOMID);
-        Assert.That(room?.Users.Any(u => u.UserID == USERID), Is.True);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
+        Assert.That(room?.Users.Any(u => u.UserID == UserId), Is.True);
     }
 
     [Test]
     public async Task NonHostAttemptsToKickUser()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        Assert.That(async () => await Hub.KickUser(USERID), Throws.TypeOf<NotHostException>());
+        Assert.That(async () => await Hub.KickUser(UserId), Throws.TypeOf<NotHostException>());
 
         Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Never);
 
-        var room = Hub.GetRoom(ROOMID);
-        Assert.That(room?.Users.Any(u => u.UserID == USERID), Is.True);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
+        Assert.That(room?.Users.Any(u => u.UserID == UserId), Is.True);
     }
 
     [Test]
     public async Task HostAbortsMatchWhileMatchNotInProgress()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
@@ -137,18 +137,18 @@ public class HostManagementTests : MultiplayerTestBase
         UserReceiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
         User2Receiver.Verify(r => r.GameplayAborted(It.IsAny<GameplayAbortReason>()), Times.Never);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room?.Users.All(u => u.State == MultiplayerUserState.Ready), Is.True);
     }
 
     [Test]
     public async Task HostAbortsInProgressMatch()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
@@ -172,18 +172,18 @@ public class HostManagementTests : MultiplayerTestBase
         UserReceiver.Verify(r => r.GameplayAborted(GameplayAbortReason.HostAbortedTheMatch), Times.Once);
         User2Receiver.Verify(r => r.GameplayAborted(GameplayAbortReason.HostAbortedTheMatch), Times.Once);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room?.Users.All(u => u.State == MultiplayerUserState.Idle), Is.True);
     }
 
     [Test]
     public async Task NonHostAbortsMatch()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);

@@ -30,7 +30,7 @@ public class HeadToHeadRoom : StandardRoom
     {
         MatchState = StandardMatchRoomState.Create(Settings.MaxParticipants);
 
-        foreach (var user in Users)
+        foreach (MultiplayerRoomUser user in Users)
         {
             user.MatchState = null;
             await HandleUserJoined(user);
@@ -47,7 +47,7 @@ public class HeadToHeadRoom : StandardRoom
             // Head-to-head has no match state; clearing it lets clients see the
             // change and drop any team-specific UI.
             user.MatchState = null;
-            await Facade.EventDispatcher.PostMatchUserStateChangedAsync(RoomId, user.UserID, null);
+            await Facade.EventDispatcher.PostMatchUserStateChangedAsync(RoomId, user.UserID, newMatchUserState: null);
         }
 
         // Assign the user a slot.

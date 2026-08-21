@@ -100,8 +100,8 @@ internal sealed class MultiplayerClientRouter
         public Task UserKicked(MultiplayerRoomUser user)
             => Task.WhenAll(Targets().Select(target => target.UserKicked(user)));
 
-        public Task Invited(int invitedBy, long roomID, string password)
-            => Task.WhenAll(Targets().Select(target => target.Invited(invitedBy, roomID, password)));
+        public Task Invited(int invitedBy, long roomId, string password)
+            => Task.WhenAll(Targets().Select(target => target.Invited(invitedBy, roomId, password)));
 
         public Task HostChanged(int userId)
             => Task.WhenAll(Targets().Select(target => target.HostChanged(userId)));
@@ -246,7 +246,7 @@ internal sealed class RecordingMultiplayerClient : IMultiplayerClient
         return Task.CompletedTask;
     }
 
-    public Task Invited(int invitedBy, long roomID, string password) => Task.CompletedTask;
+    public Task Invited(int invitedBy, long roomId, string password) => Task.CompletedTask;
 
     public Task HostChanged(int userId)
     {
@@ -348,10 +348,10 @@ internal sealed class FakeHubCallerClients(MultiplayerClientRouter router, strin
 
     public IMultiplayerClient Caller => router.CreateProxy(_ => [callerConnectionId]);
 
-    public IMultiplayerClient Others => router.CreateProxy(state => state.ConnectionIds.Where(id => id != callerConnectionId));
+    public IMultiplayerClient Others => router.CreateProxy(state => state.ConnectionIds.Where(id => !string.Equals(id, callerConnectionId, StringComparison.Ordinal)));
 
     public IMultiplayerClient OthersInGroup(string groupName) =>
-        router.CreateProxy(state => state.GetGroupMembers(groupName).Where(id => id != callerConnectionId));
+        router.CreateProxy(state => state.GetGroupMembers(groupName).Where(id => !string.Equals(id, callerConnectionId, StringComparison.Ordinal)));
 
     public IMultiplayerClient AllExcept(IReadOnlyList<string> excludedConnectionIds) =>
         router.CreateProxy(state => state.ConnectionIds.Except(excludedConnectionIds, StringComparer.Ordinal));
@@ -454,27 +454,13 @@ internal sealed class FakeScopeFactory(
     {
         public object? GetService(Type serviceType)
         {
-            if (serviceType == typeof(IRoomRepository))
-            {
-                return roomRepository;
-            }
-
-            if (serviceType == typeof(IBeatmapRepository))
-            {
-                return beatmapRepository;
-            }
-
-            if (serviceType == typeof(IRelationshipRepository))
-            {
-                return relationshipRepository;
-            }
-
-            if (serviceType == typeof(IUserRepository))
-            {
-                return userRepository;
-            }
-
-            return null;
+            return serviceType == typeof(IRoomRepository)
+                ? roomRepository
+                : serviceType == typeof(IBeatmapRepository)
+                ? beatmapRepository
+                : serviceType == typeof(IRelationshipRepository)
+                ? relationshipRepository
+                : serviceType == typeof(IUserRepository) ? userRepository : (object?)null;
         }
     }
 }

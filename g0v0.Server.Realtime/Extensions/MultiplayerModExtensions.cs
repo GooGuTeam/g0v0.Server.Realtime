@@ -33,7 +33,7 @@ internal static class MultiplayerModExtensions
             string invalidRequiredAcronyms = string.Join(
                 ',',
                 item.RequiredMods
-                    .Where(m => requiredMods!.All(valid => !string.Equals(valid.Acronym, m.Acronym, StringComparison.OrdinalIgnoreCase)))
+                    .Where(m => requiredMods!.TrueForAll(valid => !string.Equals(valid.Acronym, m.Acronym, StringComparison.OrdinalIgnoreCase)))
                     .Select(m => m.Acronym));
             throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidRequiredAcronyms}");
         }
@@ -43,7 +43,7 @@ internal static class MultiplayerModExtensions
             string invalidAllowedAcronyms = string.Join(
                 ',',
                 item.AllowedMods
-                    .Where(m => allowedMods!.All(valid => !string.Equals(valid.Acronym, m.Acronym, StringComparison.OrdinalIgnoreCase)))
+                    .Where(m => allowedMods!.TrueForAll(valid => !string.Equals(valid.Acronym, m.Acronym, StringComparison.OrdinalIgnoreCase)))
                     .Select(m => m.Acronym));
             throw new InvalidStateException($"Invalid mods were selected for specified ruleset: {invalidAllowedAcronyms}");
         }
@@ -64,12 +64,9 @@ internal static class MultiplayerModExtensions
         }
 
         // Check aggregate combinations with each allowed mod individually.
-        foreach (Mod allowedMod in allowedMods!)
+        if (allowedMods!.Exists(allowedMod => !ModUtils.CheckCompatibleSet(requiredMods!.Concat([allowedMod]), out invalid)))
         {
-            if (!ModUtils.CheckCompatibleSet(requiredMods!.Concat(new[] { allowedMod }), out invalid))
-            {
-                throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid!.Select(m => m.Acronym))}");
-            }
+            throw new InvalidStateException($"Invalid combination of required and allowed mods: {string.Join(',', invalid!.Select(m => m.Acronym))}");
         }
     }
 
@@ -99,13 +96,10 @@ internal static class MultiplayerModExtensions
         if (!item.Freestyle)
         {
             // Check allowed by the room.
-            foreach (Mod mod in valid!.ToList())
+            foreach (Mod mod in valid!.ToList().Where(mod => item.AllowedMods.All(m => !string.Equals(m.Acronym, mod.Acronym, StringComparison.OrdinalIgnoreCase))))
             {
-                if (item.AllowedMods.All(m => !string.Equals(m.Acronym, mod.Acronym, StringComparison.OrdinalIgnoreCase)))
-                {
-                    valid.Remove(mod);
-                    proposedWereValid = false;
-                }
+                valid.Remove(mod);
+                proposedWereValid = false;
             }
         }
 

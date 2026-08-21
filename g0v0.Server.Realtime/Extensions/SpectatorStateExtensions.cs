@@ -16,7 +16,7 @@ public static class SpectatorStateExtensions
     /// <returns><see langword="true"/> if the player is playing or has just failed.</returns>
     public static bool IsPlaying(this SpectatorState state)
     {
-        var userState = state.State;
+        SpectatedUserState userState = state.State;
         return userState is >= SpectatedUserState.Playing and <= SpectatedUserState.Failed;
     }
 }

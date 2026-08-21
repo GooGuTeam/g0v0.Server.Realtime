@@ -26,9 +26,13 @@ Run from the repo root:
 - Run server: `dotnet run --project g0v0.Server.Realtime/g0v0.Server.Realtime.csproj`
 - Format check (CI gate): `dotnet format --verify-no-changes --verbosity diagnostic`
 - Apply formatting: `dotnet format`
+- Install InspectCode: `dotnet tool install --global JetBrains.ReSharper.GlobalTools --version 2026.2.1`
+- InspectCode: `jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --output=artifacts/inspectcode.sarif`
 - Strict CI-equivalent build: `dotnet build --configuration Release /warnaserror`
 
-CI runs only the `code-style` job: `dotnet format --verify-no-changes` then `dotnet build --configuration Release /warnaserror`. There is **no test job in CI** — tests must be run locally. Format drift or any analyzer warning fails CI even though local debug builds pass.
+CI runs the `code-style` job: `dotnet format --verify-no-changes`, a `/warnaserror` build, and warning-level JetBrains
+InspectCode. It prints every warning/error and uploads the SARIF report. There is **no test job in CI** — tests must
+be run locally. Format drift or any analyzer/InspectCode warning fails CI.
 
 `global.json` pins SDK `8.0.0` (`rollForward: latestMinor`). `Directory.Build.props` injects StyleCop.Analyzers, Meziantou.Analyzer, Roslynator, `EnforceCodeStyleInBuild`, and `GenerateDocumentationFile` into every project — do not duplicate those in `.csproj`.
 
@@ -50,7 +54,7 @@ Enforced by `.editorconfig`, `.globalconfig`, `stylecop.json`, and the shared `D
 - File header on every `.cs`: `// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.` followed by a blank line.
 - `using` directives **outside** the namespace, `System.*` first, no blank lines between groups; file-scoped namespaces; LF; 4 spaces; no trailing newline.
 - SA1124 (regions) and SA1309 (`_underscore` fields) are intentionally disabled. `PlayerFacade`/`IPlayerFacade` even use **public `_underscore` properties** as a dependency-injection facade — preserve this pattern; don't rename them.
-- XML doc comments are required on public/exposed members (`documentExposedElements: true`); the test project sets `<NoWarn>SA0001;CS1591</NoWarn>` so tests deliberately skip them.
+- XML doc comments are required on public/exposed members (`documentExposedElements: true`); the test project sets `<NoWarn>SA0001;SA1600;SA1602;CS1591;CS0618;MA0048</NoWarn>` so tests deliberately skip them.
 - `IDE0005` (unused usings) and `IDE0055` (formatting) are warnings, promoted to errors in CI via `/warnaserror`.
 
 ## Architecture
@@ -111,7 +115,7 @@ NUnit 4 + `Microsoft.NET.Test.Sdk` 17. No real DB/Redis/S3 — tests construct e
 - `MultiplayerHubTests` mirrors this pattern with `MultiplayerHubTestInfrastructure` (router + `RecordingMultiplayerClient` + `FakeRoomRepository` + `FakeScopeFactory`). The router aliases a user id to its connection id recorder so unicast (`Clients.User`) and group events land on the same recorder. `MultiplayerIntegrationTests` spins up a real `TestServer` + `HubConnection` with the MessagePack protocol for genuine multi-client collaboration tests (head-to-head full lifecycle, team-versus teams, kick, wrong password); the test host registers `FakeRoomRepository` as `IRoomRepository` and a no-op IPC transport, and the client URL carries `?userId=` for `IUserIdProvider`.
 - Each environment writes a throwaway `config/` tree under `Path.GetTempPath()` and points a new `ConfigurationManager` at it. Honor this pattern — `ConfigurationManager` requires real files on disk.
 - `ScoreProcessedNotificationService.ScoreLookupTimeout` / `ScoreLookupRetryDelay` are deliberately exposed so tests can shrink them to milliseconds; keep them settable.
-- Tests in the test project have `<NoWarn>SA0001;CS1591</NoWarn>` — do not "fix" missing doc comments there by adding them.
+- Tests in the test project have `<NoWarn>SA0001;SA1600;SA1602;CS1591;CS0618;MA0048</NoWarn>` — do not "fix" missing doc comments there by adding them.
 
 ## Gotchas
 

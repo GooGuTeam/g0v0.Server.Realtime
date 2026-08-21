@@ -41,7 +41,7 @@ public class SoloActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.InSoloGame()
+        return new UserActivity.InSoloGame
         {
             BeatmapID = BeatmapId,
             BeatmapDisplayTitle = BeatmapDisplayTitle,

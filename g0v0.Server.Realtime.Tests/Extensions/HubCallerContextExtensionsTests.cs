@@ -18,11 +18,11 @@ public class HubCallerContextExtensionsTests
     [Test]
     public void GetUserId_WhenBearerTokenContainsSubClaim_ReturnsClaimValue()
     {
-        var handler = new JwtSecurityTokenHandler();
+        JwtSecurityTokenHandler handler = new();
         string token = handler.WriteToken(new JwtSecurityToken(claims: [new Claim("sub", "123")]));
-        var httpContext = new DefaultHttpContext();
+        DefaultHttpContext httpContext = new();
         httpContext.Request.Headers.Authorization = $"Bearer {token}";
-        var context = new TestHubCallerContext(httpContext: httpContext);
+        TestHubCallerContext context = new(httpContext: httpContext);
 
         int userId = context.GetUserId();
 
@@ -32,7 +32,7 @@ public class HubCallerContextExtensionsTests
     [Test]
     public void GetUserId_WhenUserIdentifierExists_FallsBackToUserIdentifier()
     {
-        var context = new TestHubCallerContext(userIdentifier: "456");
+        TestHubCallerContext context = new(userIdentifier: "456");
 
         int userId = context.GetUserId();
 
@@ -42,15 +42,14 @@ public class HubCallerContextExtensionsTests
     [Test]
     public void GetUserId_WhenNoJwtOrValidIdentifier_ThrowsInvalidOperationException()
     {
-        var context = new TestHubCallerContext(userIdentifier: "not-an-int");
+        TestHubCallerContext context = new(userIdentifier: "not-an-int");
 
-        Assert.That(() => context.GetUserId(), Throws.TypeOf<InvalidOperationException>());
+        Assert.That(context.GetUserId, Throws.TypeOf<InvalidOperationException>());
     }
 
     private sealed class TestHubCallerContext : HubCallerContext
     {
         private readonly FeatureCollection _features;
-        private readonly IDictionary<object, object?> _items = new Dictionary<object, object?>();
         private readonly ClaimsPrincipal _user = new();
 
         public TestHubCallerContext(string connectionId = "connection-id", string? userIdentifier = null, HttpContext? httpContext = null)
@@ -75,7 +74,7 @@ public class HubCallerContextExtensionsTests
 
         public override ClaimsPrincipal? User => _user;
 
-        public override IDictionary<object, object?> Items => _items;
+        public override IDictionary<object, object?> Items { get; } = new Dictionary<object, object?>();
 
         public override IFeatureCollection Features => _features;
 
@@ -88,7 +87,7 @@ public class HubCallerContextExtensionsTests
         private void RegisterHttpContextFeature(HttpContext httpContext)
         {
             Assembly httpConnectionsAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault(static assembly => assembly.GetName().Name == "Microsoft.AspNetCore.Http.Connections")
+                .FirstOrDefault(static assembly => string.Equals(assembly.GetName().Name, "Microsoft.AspNetCore.Http.Connections", StringComparison.Ordinal))
                 ?? Assembly.Load("Microsoft.AspNetCore.Http.Connections");
 
             Type signalRAssemblyType = httpConnectionsAssembly.GetType("Microsoft.AspNetCore.Http.Connections.Features.IHttpContextFeature")
@@ -96,10 +95,10 @@ public class HubCallerContextExtensionsTests
 
             MethodInfo createMethod = typeof(DispatchProxy)
                 .GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .Single(static method => method.Name == nameof(DispatchProxy.Create) && method.IsGenericMethodDefinition)
+                .Single(static method => string.Equals(method.Name, nameof(DispatchProxy.Create), StringComparison.Ordinal) && method.IsGenericMethodDefinition)
                 .MakeGenericMethod(signalRAssemblyType, typeof(HttpContextFeatureProxy));
 
-            object feature = createMethod.Invoke(null, null)
+            object feature = createMethod.Invoke(obj: null, parameters: null)
                 ?? throw new InvalidOperationException("Unable to create the SignalR IHttpContextFeature proxy instance.");
 
             ((HttpContextFeatureProxy)feature).HttpContext = httpContext;

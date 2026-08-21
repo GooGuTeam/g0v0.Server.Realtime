@@ -23,25 +23,25 @@ public class MultiplayerInviteTest : MultiplayerTestBase
         AddTargetUserWithEnabledPms();
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        await Hub.InvitePlayer(USERID2);
+        await Hub.InvitePlayer(UserId2);
 
-        User2Receiver.Verify(r => r.Invited(USERID, ROOMID, string.Empty), Times.Once);
+        User2Receiver.Verify(r => r.Invited(UserId, RoomId, string.Empty), Times.Once);
     }
 
     [Test]
     public async Task UserCantInviteUserTheyBlocked()
     {
         AddTargetUserWithEnabledPms();
-        RelationshipRepository!.AddBlock(USERID, USERID2);
+        RelationshipRepository!.AddBlock(UserId, UserId2);
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        Assert.That(async () => await Hub.InvitePlayer(USERID2), Throws.TypeOf<UserBlockedException>());
+        Assert.That(async () => await Hub.InvitePlayer(UserId2), Throws.TypeOf<UserBlockedException>());
 
         User2Receiver.Verify(r => r.Invited(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<string>()), Times.Never);
     }
@@ -50,13 +50,13 @@ public class MultiplayerInviteTest : MultiplayerTestBase
     public async Task UserCantInviteUserTheyAreBlockedBy()
     {
         AddTargetUserWithEnabledPms();
-        RelationshipRepository!.AddBlock(USERID2, USERID);
+        RelationshipRepository!.AddBlock(UserId2, UserId);
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        Assert.That(async () => await Hub.InvitePlayer(USERID2), Throws.TypeOf<UserBlockedException>());
+        Assert.That(async () => await Hub.InvitePlayer(UserId2), Throws.TypeOf<UserBlockedException>());
 
         User2Receiver.Verify(r => r.Invited(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<string>()), Times.Never);
     }
@@ -65,13 +65,13 @@ public class MultiplayerInviteTest : MultiplayerTestBase
     public async Task UserCantInviteUserWithDisabledPMs()
     {
         // The target disallows PMs from non-friends and the inviter is not a friend.
-        UserRepository!.AddUser(new User { Id = USERID2, Username = "target", PmFriendsOnly = true });
+        UserRepository!.AddUser(new User { Id = UserId2, Username = "target", PmFriendsOnly = true });
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        Assert.That(async () => await Hub.InvitePlayer(USERID2), Throws.TypeOf<UserBlocksPMsException>());
+        Assert.That(async () => await Hub.InvitePlayer(UserId2), Throws.TypeOf<UserBlocksPMsException>());
 
         User2Receiver.Verify(r => r.Invited(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<string>()), Times.Never);
     }
@@ -83,12 +83,12 @@ public class MultiplayerInviteTest : MultiplayerTestBase
         AddTargetUserWithEnabledPms();
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        await Hub.InvitePlayer(USERID2);
+        await Hub.InvitePlayer(UserId2);
 
-        User2Receiver.Verify(r => r.Invited(USERID, ROOMID, string.Empty), Times.Once);
+        User2Receiver.Verify(r => r.Invited(UserId, RoomId, string.Empty), Times.Once);
     }
 
     [Test]
@@ -97,12 +97,12 @@ public class MultiplayerInviteTest : MultiplayerTestBase
         AddTargetUserWithEnabledPms();
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        Hub.GetRoom(ROOMID)!.BanUser(USERID2);
+        Hub.GetRoom(RoomId)!.BanUser(UserId2);
 
         SetUserContext(ContextUser);
-        Assert.That(async () => await Hub.InvitePlayer(USERID2), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.InvitePlayer(UserId2), Throws.TypeOf<InvalidStateException>());
 
         User2Receiver.Verify(r => r.Invited(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<string>()), Times.Never);
     }
@@ -113,12 +113,12 @@ public class MultiplayerInviteTest : MultiplayerTestBase
         AddTargetUserWithEnabledPms();
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        await Hub.InvitePlayer(USERID2);
+        await Hub.InvitePlayer(UserId2);
 
-        User2Receiver.Verify(r => r.Invited(USERID, ROOMID, string.Empty), Times.Once);
+        User2Receiver.Verify(r => r.Invited(UserId, RoomId, string.Empty), Times.Once);
     }
 
     [Test]
@@ -129,14 +129,14 @@ public class MultiplayerInviteTest : MultiplayerTestBase
         const string password = "password";
 
         SetUserContext(ContextUser);
-        await Hub.JoinRoomWithPassword(ROOMID, password);
+        await Hub.JoinRoomWithPassword(RoomId, password);
 
         SetUserContext(ContextUser);
-        await Hub.InvitePlayer(USERID2);
+        await Hub.InvitePlayer(UserId2);
 
-        User2Receiver.Verify(r => r.Invited(USERID, ROOMID, password), Times.Once);
+        User2Receiver.Verify(r => r.Invited(UserId, RoomId, password), Times.Once);
     }
 
     private void AddTargetUserWithEnabledPms()
-        => UserRepository!.AddUser(new User { Id = USERID2, Username = "target", PmFriendsOnly = false });
+        => UserRepository!.AddUser(new User { Id = UserId2, Username = "target", PmFriendsOnly = false });
 }

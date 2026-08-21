@@ -31,7 +31,7 @@ public class ModdingBeatmapActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.ModdingBeatmap()
+        return new UserActivity.ModdingBeatmap
         {
             BeatmapID = BeatmapId,
             BeatmapDisplayTitle = BeatmapDisplayTitle,

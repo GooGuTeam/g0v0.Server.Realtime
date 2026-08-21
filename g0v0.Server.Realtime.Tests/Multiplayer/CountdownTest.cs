@@ -20,9 +20,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task StartAndStopCountdown()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown = Mock.Of<MultiplayerCountdown>();
         countdown.TimeRemaining = TimeSpan.FromMinutes(1);
 
@@ -38,9 +38,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task CallbackInvokedWhenCountdownCompletes()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown = Mock.Of<MultiplayerCountdown>();
         countdown.TimeRemaining = TimeSpan.FromMilliseconds(50);
 
@@ -60,9 +60,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task CallbackInvokedWhenCountdownSkippedToEnd()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown = Mock.Of<MultiplayerCountdown>();
         countdown.TimeRemaining = TimeSpan.FromMinutes(1);
 
@@ -82,9 +82,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task CallbackNotInvokedWhenCountdownStopped()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown = Mock.Of<MultiplayerCountdown>();
         countdown.TimeRemaining = TimeSpan.FromMinutes(1);
 
@@ -107,9 +107,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task StartMultipleCountdowns()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
         MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
         countdown1.TimeRemaining = TimeSpan.FromMinutes(1);
@@ -126,9 +126,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task CallbackInvokedWhenMultipleCountdownsComplete()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
         MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
         countdown1.TimeRemaining = TimeSpan.FromMilliseconds(50);
@@ -166,9 +166,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task CallbackInvokedWhenMultipleCountdownsSkippedToEnd()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
         MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
         countdown1.TimeRemaining = TimeSpan.FromMinutes(1);
@@ -207,9 +207,9 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task CallbackNotInvokedWhenMultipleCountdownsStopped()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         MultiplayerCountdown countdown1 = Mock.Of<MultiplayerCountdown>();
         MultiplayerCountdown countdown2 = Mock.Of<MultiplayerCountdown>();
         countdown1.TimeRemaining = TimeSpan.FromMinutes(1);
@@ -250,12 +250,12 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task StartingNewExclusiveCountdownReplacesExisting()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
-        Mock<ExclusiveCountdown> countdown1 = new Mock<ExclusiveCountdown> { CallBase = true };
-        Mock<MultiplayerCountdown> countdown2 = new Mock<MultiplayerCountdown> { CallBase = true };
-        Mock<ExclusiveCountdown> countdown3 = new Mock<ExclusiveCountdown> { CallBase = true };
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
+        Mock<ExclusiveCountdown> countdown1 = new() { CallBase = true };
+        Mock<MultiplayerCountdown> countdown2 = new() { CallBase = true };
+        Mock<ExclusiveCountdown> countdown3 = new() { CallBase = true };
         countdown1.Object.TimeRemaining = TimeSpan.FromMinutes(1);
         countdown2.Object.TimeRemaining = TimeSpan.FromMinutes(1);
         countdown3.Object.TimeRemaining = TimeSpan.FromMinutes(1);
@@ -278,14 +278,14 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task MatchStartCountdownStartsMatchWhenCompleted()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         await Hub.SendMatchRequest(new StartMatchCountdownRequest { Duration = TimeSpan.FromMilliseconds(50) });
 
         await Task.Delay(300);
 
-        var room = Hub.GetRoom(ROOMID);
+        IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
         Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown is MatchStartCountdown)), Times.Once);
@@ -295,20 +295,20 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task AutoStartCountdownStartsWhenUserReady()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             AutoStartDuration = TimeSpan.FromMinutes(1),
         });
 
         // No countdown yet — no user is ready.
-        var room = Hub.GetRoom(ROOMID);
+        IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.ActiveCountdowns.OfType<MatchStartCountdown>().Any(), Is.False);
 
         await MarkCurrentUserReadyAndAvailable();
 
-        var countdown = room.ActiveCountdowns.OfType<MatchStartCountdown>().Single();
+        MatchStartCountdown countdown = room.ActiveCountdowns.OfType<MatchStartCountdown>().Single();
         Assert.That(countdown.TimeRemaining, Is.EqualTo(TimeSpan.FromMinutes(1)));
         Receiver.Verify(r => r.MatchEvent(It.Is<CountdownStartedEvent>(e => e.Countdown == countdown)), Times.Once);
     }
@@ -316,7 +316,7 @@ public class CountdownTest : MultiplayerTestBase
     [Test]
     public async Task AutoStartCountdownStartsMatchWhenCompleted()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             AutoStartDuration = TimeSpan.FromMilliseconds(50),
@@ -326,7 +326,7 @@ public class CountdownTest : MultiplayerTestBase
 
         await Task.Delay(300);
 
-        var room = Hub.GetRoom(ROOMID);
+        IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
         Receiver.Verify(r => r.LoadRequested(), Times.Once);
@@ -342,7 +342,7 @@ public class CountdownTest : MultiplayerTestBase
     /// <returns>The task which completes when the countdown finishes.</returns>
     private static Task GetCountdownTask(RoomBase room, MultiplayerCountdown countdown)
     {
-        object countdownInfo = findCountdownInfo(room, countdown);
+        object countdownInfo = FindCountdownInfo(room, countdown);
         return (Task)countdownInfo.GetType().GetProperty("Task")!.GetValue(countdownInfo)!;
     }
 
@@ -358,8 +358,8 @@ public class CountdownTest : MultiplayerTestBase
     /// </returns>
     private static Task SkipToEndOfCountdown(RoomBase room, MultiplayerCountdown countdown)
     {
-        object countdownInfo = findCountdownInfo(room, countdown);
-        var skipSource = (CancellationTokenSource)countdownInfo.GetType().GetProperty("SkipSource")!.GetValue(countdownInfo)!;
+        object countdownInfo = FindCountdownInfo(room, countdown);
+        CancellationTokenSource skipSource = (CancellationTokenSource)countdownInfo.GetType().GetProperty("SkipSource")!.GetValue(countdownInfo)!;
         skipSource.Cancel();
         return (Task)countdownInfo.GetType().GetProperty("Task")!.GetValue(countdownInfo)!;
     }
@@ -371,15 +371,15 @@ public class CountdownTest : MultiplayerTestBase
     /// <param name="room">The room hosting the countdown.</param>
     /// <param name="countdown">The countdown to locate.</param>
     /// <returns>The countdown info instance.</returns>
-    private static object findCountdownInfo(RoomBase room, MultiplayerCountdown countdown)
+    private static object FindCountdownInfo(RoomBase room, MultiplayerCountdown countdown)
     {
-        var trackedCountdownsField = typeof(RoomBase).GetField("trackedCountdowns", BindingFlags.NonPublic | BindingFlags.Instance)
-                                     ?? throw new InvalidOperationException("Could not find RoomBase.trackedCountdowns field.");
+        FieldInfo trackedCountdownsField = typeof(RoomBase).GetField("_trackedCountdowns", BindingFlags.NonPublic | BindingFlags.Instance)
+                                           ?? throw new InvalidOperationException("Could not find RoomBase._trackedCountdowns field.");
 
         // ConcurrentDictionary<MultiplayerCountdown, CountdownInfo> implements the
         // non-generic IEnumerable; each item is a boxed KeyValuePair whose Key is
         // the countdown and whose Value is the (private) CountdownInfo instance.
-        var trackedCountdowns = (IEnumerable)trackedCountdownsField.GetValue(room)!;
+        IEnumerable trackedCountdowns = (IEnumerable)trackedCountdownsField.GetValue(room)!;
 
         foreach (object item in trackedCountdowns)
         {

@@ -24,7 +24,7 @@ public class MetadataHubTests
     [Test]
     public async Task BeginWatchingUserPresence_ReplaysVisibleUsersAndAddsCallerToWatcherGroup()
     {
-        var environment = new MetadataHubTestEnvironment();
+        MetadataHubTestEnvironment environment = new();
 
         TestHubHandle onlineUser = await environment.ConnectAsync(10, "connection-online");
         await onlineUser.Hub.UpdateStatus(UserStatus.Online);
@@ -52,7 +52,7 @@ public class MetadataHubTests
     [Test]
     public async Task RefreshFriends_ReplacesTrackedGroupsAndPublishesPresenceForNewOnlineFriends()
     {
-        var environment = new MetadataHubTestEnvironment();
+        MetadataHubTestEnvironment environment = new();
         environment.RelationshipRepository.SetFriendIds(30, [10]);
 
         TestHubHandle oldFriend = await environment.ConnectAsync(10, "connection-old-friend");
@@ -86,7 +86,7 @@ public class MetadataHubTests
     [Test]
     public async Task RefreshFriends_DoesNotPublishPresenceForOfflineNewFriends()
     {
-        var environment = new MetadataHubTestEnvironment();
+        MetadataHubTestEnvironment environment = new();
         TestHubHandle friend = await environment.ConnectAsync(20, "connection-friend");
         await friend.Hub.UpdateStatus(UserStatus.Offline);
 
@@ -109,15 +109,20 @@ public class MetadataHubTests
     [Test]
     public async Task BroadcastUserPresenceUpdate_WhenPresenceIsVisible_NotifiesWatcherGroupsAndCaller()
     {
-        var environment = new MetadataHubTestEnvironment();
+        MetadataHubTestEnvironment environment = new();
         environment.Router.EnsureConnection("caller");
         environment.Router.EnsureConnection("watcher");
         environment.Router.EnsureConnection("friend-watcher");
         environment.Router.AddToGroup("watcher", MetadataHub.OnlinePresenceWatchersGroup);
         environment.Router.AddToGroup("friend-watcher", MetadataHub.FriendPresenceWatchersGroup(42));
 
-        var player = new LazerPlayer(42, new PlayerFacade(environment.PlayerManager));
-        player.State.UserStatus = UserStatus.Online;
+        LazerPlayer player = new(42, new PlayerFacade(environment.PlayerManager))
+        {
+            State =
+            {
+                UserStatus = UserStatus.Online
+            }
+        };
 
         await InvokeBroadcastUserPresenceUpdateAsync(environment.HubContext, "caller", player);
 
@@ -134,15 +139,20 @@ public class MetadataHubTests
     [Test]
     public async Task BroadcastUserPresenceUpdate_WhenPresenceIsHidden_NotifiesOnlyCaller()
     {
-        var environment = new MetadataHubTestEnvironment();
+        MetadataHubTestEnvironment environment = new();
         environment.Router.EnsureConnection("caller");
         environment.Router.EnsureConnection("watcher");
         environment.Router.EnsureConnection("friend-watcher");
         environment.Router.AddToGroup("watcher", MetadataHub.OnlinePresenceWatchersGroup);
         environment.Router.AddToGroup("friend-watcher", MetadataHub.FriendPresenceWatchersGroup(42));
 
-        var player = new LazerPlayer(42, new PlayerFacade(environment.PlayerManager));
-        player.State.UserStatus = UserStatus.Offline;
+        LazerPlayer player = new(42, new PlayerFacade(environment.PlayerManager))
+        {
+            State =
+            {
+                UserStatus = UserStatus.Offline
+            }
+        };
 
         await InvokeBroadcastUserPresenceUpdateAsync(environment.HubContext, "caller", player);
 
@@ -161,7 +171,7 @@ public class MetadataHubTests
     [TestCase(UserStatus.DoNotDisturb, true)]
     public void ShouldBroadcastPresenceToOtherUsers_ReturnsExpectedValue(UserStatus? status, bool expected)
     {
-        var state = new PlayerState(new IdleActivity())
+        PlayerState state = new(new IdleActivity())
         {
             UserStatus = status,
         };
@@ -174,7 +184,7 @@ public class MetadataHubTests
     [Test]
     public void ShouldBroadcastPresenceToOtherUsers_WhenStatusIsUnexpected_ThrowsArgumentOutOfRangeException()
     {
-        var state = new PlayerState(new IdleActivity())
+        PlayerState state = new(new IdleActivity())
         {
             UserStatus = (UserStatus)999,
         };
@@ -202,7 +212,7 @@ public class MetadataHubTests
                 BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("Could not locate BroadcastUserPresenceUpdate.");
 
-        var task = (Task?)method.Invoke(null, [hubContext, connectionId, player]);
+        Task? task = (Task?)method.Invoke(null, [hubContext, connectionId, player]);
         await (task ?? Task.CompletedTask);
     }
 
@@ -231,8 +241,8 @@ public class MetadataHubTests
         {
             Router.EnsureConnection(connectionId);
 
-            var groupManager = new FakeGroupManager(Router);
-            var hub = new MetadataHub(PlayerManager, RelationshipRepository, HubContext)
+            FakeGroupManager groupManager = new(Router);
+            MetadataHub hub = new(PlayerManager, RelationshipRepository, HubContext)
             {
                 Context = new TestHubCallerContext(connectionId, userId.ToString()),
                 Clients = new FakeHubCallerClients(Router, connectionId),
@@ -241,7 +251,7 @@ public class MetadataHubTests
 
             await hub.OnConnectedAsync();
 
-            var handle = new TestHubHandle(hub, connectionId, Router.GetRecorder(connectionId), groupManager);
+            TestHubHandle handle = new(hub, connectionId, Router.GetRecorder(connectionId), groupManager);
             handle.Recorder.Clear();
             handle.GroupManager.Reset();
             return handle;
@@ -324,10 +334,10 @@ public class MetadataHubTests
 
         public IMetadataClient Caller => router.CreateProxy(_ => [callerConnectionId]);
 
-        public IMetadataClient Others => router.CreateProxy(state => state.ConnectionIds.Where(id => id != callerConnectionId));
+        public IMetadataClient Others => router.CreateProxy(state => state.ConnectionIds.Where(id => !string.Equals(id, callerConnectionId, StringComparison.Ordinal)));
 
         public IMetadataClient OthersInGroup(string groupName) =>
-            router.CreateProxy(state => state.GetGroupMembers(groupName).Where(id => id != callerConnectionId));
+            router.CreateProxy(state => state.GetGroupMembers(groupName).Where(id => !string.Equals(id, callerConnectionId, StringComparison.Ordinal)));
 
         public IMetadataClient AllExcept(IReadOnlyList<string> excludedConnectionIds) =>
             router.CreateProxy(state => state.ConnectionIds.Except(excludedConnectionIds, StringComparer.Ordinal));

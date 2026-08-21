@@ -41,7 +41,7 @@ public class InMultiplayerGameActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.InMultiplayerGame()
+        return new UserActivity.InMultiplayerGame
         {
             BeatmapID = BeatmapId,
             BeatmapDisplayTitle = BeatmapDisplayTitle,

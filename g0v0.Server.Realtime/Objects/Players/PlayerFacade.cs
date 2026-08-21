@@ -13,23 +13,23 @@ namespace g0v0.Server.Realtime.Objects.Players;
 public class PlayerFacade(PlayerManager manager) : IPlayerFacade
 {
     /// <inheritdoc />
-    public PlayerManager _manager { get; set; } = manager;
+    public PlayerManager Manager { get; set; } = manager;
 
     /// <inheritdoc />
-    public RoomManager? _roomManager { get; set; }
+    public RoomManager? RoomManager { get; set; }
 
     /// <inheritdoc />
-    public ConfigurationManager? _configManager { get; set; }
+    public ConfigurationManager? ConfigManager { get; set; }
 
     /// <inheritdoc />
-    public ScoreBuffer? _scoreBuffer { get; set; }
+    public ScoreBuffer? ScoreBuffer { get; set; }
 
     /// <inheritdoc />
-    public ScoreUploader? _scoreUploader { get; set; }
+    public ScoreUploader? ScoreUploader { get; set; }
 
     /// <inheritdoc />
-    public ScoreProcessedNotificationService? _scoreProcessedNotificationService { get; set; }
+    public ScoreProcessedNotificationService? ScoreProcessedNotificationService { get; set; }
 
     /// <inheritdoc />
-    public ILogger? _logger { get; set; }
+    public ILogger? Logger { get; set; }
 }

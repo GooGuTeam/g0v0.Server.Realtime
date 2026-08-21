@@ -19,7 +19,7 @@ public class RoomManagerTests : MultiplayerTestBase
     [Test]
     public async Task CreateRoom_RegistersRoomAndReturnsInstance()
     {
-        var room = await RoomManager.CreateRoom(createRoomRequest(), USERID);
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
 
         Assert.That(room, Is.TypeOf<HeadToHeadRoom>());
         Assert.That(RoomManager.GetRoom(room.RoomId), Is.SameAs(room));
@@ -31,30 +31,30 @@ public class RoomManagerTests : MultiplayerTestBase
     [TestCase(OsuMatchType.RankedPlay)]
     public void CreateRoom_UnsupportedMatchType_Throws(OsuMatchType matchType)
     {
-        var request = createRoomRequest();
+        MultiplayerRoom request = CreateRoomRequest();
         request.Settings.MatchType = matchType;
 
         Assert.That(
-            async () => await RoomManager.CreateRoom(request, USERID),
+            async () => await RoomManager.CreateRoom(request, UserId),
             Throws.TypeOf<InvalidStateException>());
     }
 
     [Test]
     public void CreateRoom_FreestyleItemWithAllowedMods_Throws()
     {
-        var request = createRoomRequest();
+        MultiplayerRoom request = CreateRoomRequest();
         request.Playlist[0].Freestyle = true;
-        request.Playlist[0].AllowedMods = new[] { new APIMod { Acronym = "HR" } };
+        request.Playlist[0].AllowedMods = [new APIMod { Acronym = "HR" }];
 
         Assert.That(
-            async () => await RoomManager.CreateRoom(request, USERID),
+            async () => await RoomManager.CreateRoom(request, UserId),
             Throws.TypeOf<InvalidStateException>());
     }
 
     [Test]
     public async Task CreateRoom_TournamentMode_IsPersisted()
     {
-        var room = await RoomManager.CreateRoom(createRoomRequest(), USERID, tournamentMode: true);
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId, tournamentMode: true);
 
         Assert.That(room.TournamentMode, Is.True);
     }
@@ -62,12 +62,12 @@ public class RoomManagerTests : MultiplayerTestBase
     [Test]
     public async Task GetOrLoadRoom_LoadsExistingRoomFromDatabase()
     {
-        var room = await RoomManager.CreateRoom(createRoomRequest(), USERID);
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
         RoomManager.RemoveRoom(room.RoomId);
 
         Assert.That(RoomManager.GetRoom(room.RoomId), Is.Null);
 
-        var loaded = await RoomManager.GetOrLoadRoom(room.RoomId);
+        IRoom? loaded = await RoomManager.GetOrLoadRoom(room.RoomId);
         Assert.That(loaded, Is.Not.Null);
         Assert.That(loaded!.RoomId, Is.EqualTo(room.RoomId));
     }
@@ -81,7 +81,7 @@ public class RoomManagerTests : MultiplayerTestBase
     [Test]
     public async Task GetOrLoadRoom_EndedRoom_ReturnsNull()
     {
-        var room = await RoomManager.CreateRoom(createRoomRequest(), USERID);
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
         long roomId = room.RoomId;
 
         // End the room in the database.
@@ -94,29 +94,29 @@ public class RoomManagerTests : MultiplayerTestBase
     [Test]
     public async Task GetOrLoadRoom_FutureEndDate_LoadsRoomAndClearsEndDate()
     {
-        var room = await RoomManager.CreateRoom(createRoomRequest(), USERID, tournamentMode: true);
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId, tournamentMode: true);
         long roomId = room.RoomId;
 
         // A future end date (empty tournament room awaiting destruction).
         await RoomRepository.SetRoomEndDate(roomId, DateTimeOffset.UtcNow.AddMinutes(30));
         RoomManager.RemoveRoom(roomId);
 
-        var loaded = await RoomManager.GetOrLoadRoom(roomId);
+        IRoom? loaded = await RoomManager.GetOrLoadRoom(roomId);
         Assert.That(loaded, Is.Not.Null);
         Assert.That(loaded!.RoomId, Is.EqualTo(roomId));
 
         // The future end date is cleared so the room can be joined again.
-        var dbRoom = RoomRepository.Rooms.First(r => r.Id == roomId);
+        Common.Database.Models.Room dbRoom = RoomRepository.Rooms.First(r => r.Id == roomId);
         Assert.That(dbRoom.EndsAt, Is.Null);
     }
 
     [Test]
     public async Task ChangeMatchType_SwapsRoomInstance()
     {
-        var room = await RoomManager.CreateRoom(createRoomRequest(), USERID);
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
         long roomId = room.RoomId;
 
-        var changed = await RoomManager.ChangeMatchType(roomId, OsuMatchType.TeamVersus);
+        IRoom changed = await RoomManager.ChangeMatchType(roomId, OsuMatchType.TeamVersus);
 
         Assert.That(changed, Is.TypeOf<TeamVersusRoom>());
         Assert.That(changed.RoomId, Is.EqualTo(roomId));
@@ -135,7 +135,7 @@ public class RoomManagerTests : MultiplayerTestBase
     [Test]
     public async Task RemoveRoom_UnregistersRoom()
     {
-        var room = await RoomManager.CreateRoom(createRoomRequest(), USERID);
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
         long roomId = room.RoomId;
 
         RoomManager.RemoveRoom(roomId);
@@ -143,7 +143,7 @@ public class RoomManagerTests : MultiplayerTestBase
         Assert.That(RoomManager.GetRoom(roomId), Is.Null);
     }
 
-    private static MultiplayerRoom createRoomRequest() => new(0)
+    private static MultiplayerRoom CreateRoomRequest() => new(0)
     {
         Settings = new MultiplayerRoomSettings
         {
@@ -158,8 +158,8 @@ public class RoomManagerTests : MultiplayerTestBase
                 OwnerID = 1234,
                 BeatmapID = 1234,
                 RulesetID = 0,
-                RequiredMods = Array.Empty<APIMod>(),
-                AllowedMods = Array.Empty<APIMod>(),
+                RequiredMods = [],
+                AllowedMods = [],
                 Freestyle = false,
                 Expired = false,
                 PlaylistOrder = 0,

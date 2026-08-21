@@ -50,12 +50,9 @@ public abstract class StandardRoom : RoomBase
     {
         get
         {
-            if (Playlist.Count == 0)
-            {
-                throw new InvalidOperationException("Room has no playlist items.");
-            }
-
-            return Playlist.All(item => item.Expired)
+            return Playlist.Count == 0
+                ? throw new InvalidOperationException("Room has no playlist items.")
+                : Playlist.All(item => item.Expired)
                 ? Playlist.OrderBy(item => item.PlayedAt).Last()
                 : Playlist.Where(item => !item.Expired).OrderBy(item => item.PlaylistOrder).First();
         }
@@ -116,7 +113,7 @@ public abstract class StandardRoom : RoomBase
 
                 uint max = rollRequest.Max ?? 100;
                 uint result = (uint)Random.Shared.Next(1, 1 + (int)max);
-                var resultEvent = new RollEvent { UserID = user.UserID, Max = max, Result = result };
+                RollEvent resultEvent = new() { UserID = user.UserID, Max = max, Result = result };
                 await Facade.EventDispatcher.PostMatchEventAsync(RoomId, resultEvent);
                 break;
 
@@ -188,7 +185,7 @@ public abstract class StandardRoom : RoomBase
 
             for (int j = 0; j < Users.Count; j++)
             {
-                var user = Users[j];
+                MultiplayerRoomUser user = Users[j];
                 int slot = GetNextBestSlot(user, state.Slots);
                 state.Slots[slot] = user.UserID;
             }
@@ -232,7 +229,7 @@ public abstract class StandardRoom : RoomBase
                 continue;
             }
 
-            var user = Users.SingleOrDefault(u => u.UserID == userId.Value);
+            MultiplayerRoomUser? user = Users.SingleOrDefault(u => u.UserID == userId.Value);
             if (user == null)
             {
                 continue;
@@ -333,11 +330,8 @@ public abstract class StandardRoom : RoomBase
     protected virtual int GetNextBestSlot(MultiplayerRoomUser user, int?[] slots)
     {
         int nextEmptySlot = Array.FindIndex(slots, item => item == null);
-        if (nextEmptySlot < 0)
-        {
-            throw new InvalidOperationException("Ran out of slots in the room. This should never happen, as the user should not have been able to join the room to begin with.");
-        }
-
-        return nextEmptySlot;
+        return nextEmptySlot < 0
+            ? throw new InvalidOperationException("Ran out of slots in the room. This should never happen, as the user should not have been able to join the room to begin with.")
+            : nextEmptySlot;
     }
 }

@@ -20,12 +20,12 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     [Test]
     public async Task CountdownStartsWhenMatchStarts()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         await Hub.StartMatch();
 
-        var room = Hub.GetRoom(ROOMID);
+        IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.ActiveCountdowns.OfType<ForceGameplayStartCountdown>().Any(), Is.True);
     }
@@ -33,13 +33,13 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     [Test]
     public async Task CountdownStopsWhenAllPlayersAbort()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         await Hub.StartMatch();
         await Hub.AbortGameplay();
 
-        var room = Hub.GetRoom(ROOMID);
+        IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.ActiveCountdowns.OfType<ForceGameplayStartCountdown>().Any(), Is.False);
     }
@@ -47,15 +47,15 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     [Test]
     public async Task LoadingUsersAbortWhenCountdownEnds()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
 
         await SkipToEndOfCountdown();
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Open));
-        Assert.That(room.Users.Single(u => u.UserID == USERID).State, Is.EqualTo(MultiplayerUserState.Idle));
+        Assert.That(room.Users.Single(u => u.UserID == UserId).State, Is.EqualTo(MultiplayerUserState.Idle));
 
         UserReceiver.Verify(r => r.GameplayAborted(It.Is<GameplayAbortReason>(reason => reason == GameplayAbortReason.LoadTookTooLong)), Times.Once);
         UserReceiver.Verify(r => r.GameplayStarted(), Times.Never);
@@ -64,16 +64,16 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     [Test]
     public async Task LoadedUsersStartWhenCountdownEnds()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
         await Hub.ChangeState(MultiplayerUserState.Loaded);
 
         await SkipToEndOfCountdown();
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Playing));
-        Assert.That(room.Users.Single(u => u.UserID == USERID).State, Is.EqualTo(MultiplayerUserState.Playing));
+        Assert.That(room.Users.Single(u => u.UserID == UserId).State, Is.EqualTo(MultiplayerUserState.Playing));
 
         UserReceiver.Verify(r => r.GameplayAborted(It.Is<GameplayAbortReason>(reason => reason == GameplayAbortReason.LoadTookTooLong)), Times.Never);
         UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
@@ -82,11 +82,11 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     [Test]
     public async Task ReadyAndLoadedUsersStartWhenCountdownEnds()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         // User 1 becomes ready for gameplay.
@@ -101,10 +101,10 @@ public class AutomaticForceStartTest : MultiplayerTestBase
 
         await SkipToEndOfCountdown();
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Playing));
-        Assert.That(room.Users.Single(u => u.UserID == USERID).State, Is.EqualTo(MultiplayerUserState.Playing));
-        Assert.That(room.Users.Single(u => u.UserID == USERID2).State, Is.EqualTo(MultiplayerUserState.Playing));
+        Assert.That(room.Users.Single(u => u.UserID == UserId).State, Is.EqualTo(MultiplayerUserState.Playing));
+        Assert.That(room.Users.Single(u => u.UserID == UserId2).State, Is.EqualTo(MultiplayerUserState.Playing));
 
         UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
         User2Receiver.Verify(r => r.GameplayStarted(), Times.Once);
@@ -113,17 +113,17 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     [Test]
     public async Task CountdownCannotBeStopped()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
 
-        int countdownId = Hub.GetRoom(ROOMID)!.ActiveCountdowns.OfType<ForceGameplayStartCountdown>().Single().ID;
+        int countdownId = Hub.GetRoom(RoomId)!.ActiveCountdowns.OfType<ForceGameplayStartCountdown>().Single().ID;
 
         Assert.That(
             async () => await Hub.SendMatchRequest(new StopCountdownRequest(countdownId)),
             Throws.TypeOf<InvalidStateException>());
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.That(room.ActiveCountdowns.OfType<ForceGameplayStartCountdown>().Any(), Is.True);
     }
 
@@ -139,20 +139,20 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     /// <returns>A task which completes when the active countdown completes.</returns>
     private async Task SkipToEndOfCountdown()
     {
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
 
-        var trackedCountdownsField = typeof(RoomBase).GetField("trackedCountdowns", BindingFlags.NonPublic | BindingFlags.Instance)
-                                     ?? throw new InvalidOperationException("Could not find RoomBase.trackedCountdowns field.");
+        FieldInfo trackedCountdownsField = typeof(RoomBase).GetField("_trackedCountdowns", BindingFlags.NonPublic | BindingFlags.Instance)
+                                     ?? throw new InvalidOperationException("Could not find RoomBase._trackedCountdowns field.");
 
         // ConcurrentDictionary<MultiplayerCountdown, CountdownInfo> implements the
         // non-generic IEnumerable; each item is a boxed KeyValuePair whose Key is
         // the countdown and whose Value is the (private) CountdownInfo instance.
-        var trackedCountdowns = (IEnumerable)trackedCountdownsField.GetValue(room)!;
+        IEnumerable trackedCountdowns = (IEnumerable)trackedCountdownsField.GetValue(room)!;
 
         foreach (object item in trackedCountdowns)
         {
             Type itemType = item.GetType();
-            var countdown = (MultiplayerCountdown)itemType.GetProperty("Key")!.GetValue(item)!;
+            MultiplayerCountdown countdown = (MultiplayerCountdown)itemType.GetProperty("Key")!.GetValue(item)!;
 
             if (countdown is not ForceGameplayStartCountdown)
             {
@@ -162,10 +162,10 @@ public class AutomaticForceStartTest : MultiplayerTestBase
             object countdownInfo = itemType.GetProperty("Value")!.GetValue(item)!;
             Type countdownInfoType = countdownInfo.GetType();
 
-            var skipSource = (CancellationTokenSource)countdownInfoType.GetProperty("SkipSource")!.GetValue(countdownInfo)!;
-            var countdownTask = (Task)countdownInfoType.GetProperty("Task")!.GetValue(countdownInfo)!;
+            CancellationTokenSource skipSource = (CancellationTokenSource)countdownInfoType.GetProperty("SkipSource")!.GetValue(countdownInfo)!;
+            Task countdownTask = (Task)countdownInfoType.GetProperty("Task")!.GetValue(countdownInfo)!;
 
-            skipSource.Cancel();
+            await skipSource.CancelAsync();
 
             try
             {

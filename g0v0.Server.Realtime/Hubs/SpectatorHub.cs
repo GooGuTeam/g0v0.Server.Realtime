@@ -50,19 +50,19 @@ public class SpectatorHub(
     {
         await base.OnConnectedAsync();
 
-        var hub = hubContext;
-        var manager = PlayerManager;
-        var scopes = scopeFactory;
+        IHubContext<SpectatorHub, ISpectatorClient> hub = hubContext;
+        PlayerManager manager = PlayerManager;
+        IServiceScopeFactory scopes = scopeFactory;
 
-        var player =
+        LazerPlayer player =
             GetOrCreatePlayer(
                 new PlayerFacade(PlayerManager)
                 {
-                    _scoreBuffer = scoreBuffer,
-                    _scoreUploader = scoreUploader,
-                    _configManager = configManager,
-                    _scoreProcessedNotificationService = scoreProcessedNotificationService,
-                    _logger = logger,
+                    ScoreBuffer = scoreBuffer,
+                    ScoreUploader = scoreUploader,
+                    ConfigManager = configManager,
+                    ScoreProcessedNotificationService = scoreProcessedNotificationService,
+                    Logger = logger,
                 });
 
         await player.HubConnected(nameof(SpectatorHub));
@@ -123,7 +123,7 @@ public class SpectatorHub(
                 player.PlayerId,
                 player.Server);
 
-            var username = await GetUsernameByIdAsync(scopes, watcher.PlayerId);
+            string? username = await GetUsernameByIdAsync(scopes, watcher.PlayerId);
             if (username == null)
             {
                 logger.LogWarning(
@@ -135,9 +135,9 @@ public class SpectatorHub(
             string displayUsername;
             Debug.Assert(username != null, nameof(username) + " != null");
 
-            var notFromThisSource =
+            IPlayer[] notFromThisSource =
                 manager
-                    .GetWatchingPlayers(player).Where(p => p.PlayerId == watcher.PlayerId && p.Server != watcher.Server)
+                    .GetWatchingPlayers(player).Where(p => p.PlayerId == watcher.PlayerId && !string.Equals(p.Server, watcher.Server, StringComparison.Ordinal))
                     .ToArray();
             switch (notFromThisSource.Length)
             {
@@ -152,7 +152,7 @@ public class SpectatorHub(
                 default:
                     {
                         // There is only one same watcher from the different server. Remove this and add both them with server name.
-                        var formerPlayer = notFromThisSource[0];
+                        IPlayer formerPlayer = notFromThisSource[0];
                         await hub.Clients.User(player.PlayerId.ToString())
                             .UserEndedWatching(formerPlayer.PlayerId);
                         await hub.Clients.User(player.PlayerId.ToString()).UserStartedWatching([
@@ -181,9 +181,9 @@ public class SpectatorHub(
                 player.PlayerId,
                 player.Server);
 
-            var notFromThisSource =
+            IPlayer[] notFromThisSource =
                 manager
-                    .GetWatchingPlayers(player).Where(p => p.PlayerId == watcher.PlayerId && p.Server != watcher.Server)
+                    .GetWatchingPlayers(player).Where(p => p.PlayerId == watcher.PlayerId && !string.Equals(p.Server, watcher.Server, StringComparison.Ordinal))
                     .ToArray();
             switch (notFromThisSource.Length)
             {
@@ -194,8 +194,8 @@ public class SpectatorHub(
                 case 1:
                     {
                         // There is only one same watcher from the different server. Remove this and add the other one with server name.
-                        var remainingPlayer = notFromThisSource[0];
-                        var username = await GetUsernameByIdAsync(scopes, watcher.PlayerId);
+                        IPlayer remainingPlayer = notFromThisSource[0];
+                        string? username = await GetUsernameByIdAsync(scopes, watcher.PlayerId);
                         Debug.Assert(username != null, nameof(username) + " != null");
                         await hub.Clients.User(player.PlayerId.ToString()).UserEndedWatching(watcher.PlayerId);
                         await hub.Clients.User(player.PlayerId.ToString()).UserStartedWatching([
@@ -214,7 +214,7 @@ public class SpectatorHub(
             }
         };
 
-        player.OnScoreProcessedForSpectatorHub = (scoreId) =>
+        player.OnScoreProcessedForSpectatorHub = scoreId =>
         {
             logger.LogInformation(
                 "Spectator score processed for player {TargetUserId} ({TargetServer}). ScoreId: {ScoreId}.",
@@ -231,7 +231,7 @@ public class SpectatorHub(
     {
         await base.OnDisconnectedAsync(exception);
 
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         if (exception == null)
         {
             logger.LogInformation(
@@ -257,10 +257,11 @@ public class SpectatorHub(
         await player.HubDisconnected(nameof(SpectatorHub));
     }
 
+    /// <inheritdoc/>
     [Obsolete("New clients should use BeginPlaySessionV2.")] // can remove method 20270102
     public async Task BeginPlaySession(long? scoreToken, SpectatorState state)
     {
-        var playerId = Context.GetUserId();
+        int playerId = Context.GetUserId();
         logger.LogInformation(
             "Begin spectator play session requested by player {UserId}. ScoreToken: {ScoreToken}, RulesetId: {RulesetId}, BeatmapId: {BeatmapId}, State: {SpectatorState}.",
             playerId,
@@ -293,7 +294,7 @@ public class SpectatorHub(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BeginPlaySessionV2(long? scoreToken, SpectatorState state)
     {
-        var playerId = Context.GetUserId();
+        int playerId = Context.GetUserId();
         logger.LogInformation(
             "Begin spectator V2 play session requested by player {UserId}. ScoreToken: {ScoreToken}, RulesetId: {RulesetId}, BeatmapId: {BeatmapId}, State: {SpectatorState}.",
             playerId,
@@ -317,10 +318,11 @@ public class SpectatorHub(
             score.ScoreInfo.Ruleset.OnlineID);
     }
 
+    /// <inheritdoc/>
     [Obsolete("New clients should use SendFrameDataV2.")] // can remove method 20270102
     public async Task SendFrameData(FrameDataBundle data)
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug(
@@ -342,7 +344,7 @@ public class SpectatorHub(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task SendFrameDataV2(long? scoreToken, FrameDataBundle data)
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug(
@@ -356,10 +358,11 @@ public class SpectatorHub(
         await player.SendFrames(scoreToken, data);
     }
 
+    /// <inheritdoc/>
     [Obsolete("New clients should use EndPlaySessionV2.")] // can remove method 20270102
     public async Task EndPlaySession(SpectatorState state)
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         logger.LogInformation(
             "End spectator play session requested by player {UserId} ({Server}). ScoreToken: {ScoreToken}, State: {SpectatorState}.",
             player.PlayerId,
@@ -378,7 +381,7 @@ public class SpectatorHub(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task EndPlaySessionV2(long? scoreToken, SpectatedUserState finalState)
     {
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         logger.LogInformation(
             "End spectator V2 play session requested by player {UserId} ({Server}). ScoreToken: {ScoreToken}, FinalState: {FinalState}.",
             player.PlayerId,
@@ -395,14 +398,14 @@ public class SpectatorHub(
         // TODO: restricted check
 
         // FIXME: support users from different server.
-        var player = GetPlayer();
+        LazerPlayer player = GetPlayer();
         logger.LogInformation(
             "Spectator watch request from player {WatcherUserId} ({WatcherServer}) for target {TargetUserId}.",
             player.PlayerId,
             player.Server,
             userId);
 
-        var target = PlayerManager.GetPlayerAllInstances(userId).FirstOrDefault();
+        IPlayer? target = PlayerManager.GetPlayerAllInstances(userId).FirstOrDefault();
 
         if (target == null)
         {
@@ -420,8 +423,8 @@ public class SpectatorHub(
     /// <inheritdoc />
     public async Task EndWatchingUser(int userId)
     {
-        var player = GetPlayer();
-        var targets = PlayerManager.GetPlayerAllInstances(userId).ToArray();
+        LazerPlayer player = GetPlayer();
+        IPlayer[] targets = PlayerManager.GetPlayerAllInstances(userId).ToArray();
         logger.LogInformation(
             "Spectator unwatch request from player {WatcherUserId} ({WatcherServer}) for target {TargetUserId}. TargetInstanceCount: {TargetInstanceCount}.",
             player.PlayerId,
@@ -429,7 +432,7 @@ public class SpectatorHub(
             userId,
             targets.Length);
 
-        foreach (var target in targets)
+        foreach (IPlayer? target in targets)
         {
             await player.StopWatchPlayer(target);
         }
@@ -437,8 +440,8 @@ public class SpectatorHub(
 
     private static async Task<string?> GetUsernameByIdAsync(IServiceScopeFactory scopeFactory, int userId)
     {
-        using var scope = scopeFactory.CreateScope();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+        using IServiceScope scope = scopeFactory.CreateScope();
+        IUserRepository userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         return await userRepository.GetUsernameByIdAsync(userId);
     }
 
@@ -450,7 +453,7 @@ public class SpectatorHub(
     /// <returns>The created score, or <see langword="null"/> when the request is invalid.</returns>
     private async Task<Score?> TryCreateScoreAsync(long? scoreToken, SpectatorState state)
     {
-        var playerId = Context.GetUserId();
+        int playerId = Context.GetUserId();
 
         if (state.RulesetID == null)
         {
@@ -470,35 +473,35 @@ public class SpectatorHub(
             return null;
         }
 
-        var beatmap = await beatmapRepository.GetByIdAsync(state.BeatmapID.Value);
-        if (beatmap == null)
+        Common.Database.Models.Beatmap? beatmap = await beatmapRepository.GetByIdAsync(state.BeatmapID.Value);
+        if (beatmap != null)
         {
-            logger.LogWarning(
-                "Ignoring spectator begin-play request from player {UserId} because beatmap {BeatmapId} was not found. ScoreToken: {ScoreToken}.",
-                playerId,
-                state.BeatmapID.Value,
-                scoreToken);
-            return null;
+            return new Score
+            {
+                ScoreInfo = new ScoreInfo
+                {
+                    APIMods = state.Mods.ToArray(),
+                    User =
+                        new APIUser { Id = playerId, Username = (await userRepository.GetUsernameByIdAsync(playerId))!, },
+                    Ruleset = rulesetManager.GetRuleset(state.RulesetID.Value).RulesetInfo,
+                    BeatmapInfo = new BeatmapInfo
+                    {
+                        OnlineID = state.BeatmapID.Value,
+                        MD5Hash = beatmap.Checksum!,
+                        Status = configManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard
+                            ? BeatmapOnlineStatus.Approved
+                            : beatmap.Status,
+                    },
+                    MaximumStatistics = state.MaximumStatistics
+                }
+            };
         }
 
-        return new Score()
-        {
-            ScoreInfo = new ScoreInfo
-            {
-                APIMods = state.Mods.ToArray(),
-                User =
-                    new APIUser { Id = playerId, Username = (await userRepository.GetUsernameByIdAsync(playerId))!, },
-                Ruleset = rulesetManager.GetRuleset(state.RulesetID.Value).RulesetInfo,
-                BeatmapInfo = new BeatmapInfo
-                {
-                    OnlineID = state.BeatmapID.Value,
-                    MD5Hash = beatmap.Checksum!,
-                    Status = configManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard
-                        ? BeatmapOnlineStatus.Approved
-                        : beatmap.Status,
-                },
-                MaximumStatistics = state.MaximumStatistics
-            }
-        };
+        logger.LogWarning(
+            "Ignoring spectator begin-play request from player {UserId} because beatmap {BeatmapId} was not found. ScoreToken: {ScoreToken}.",
+            playerId,
+            state.BeatmapID.Value,
+            scoreToken);
+        return null;
     }
 }

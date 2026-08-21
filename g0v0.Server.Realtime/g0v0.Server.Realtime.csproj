@@ -8,24 +8,24 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.26" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.26" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="8.0.26" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.3" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.22"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.26"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.26"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="8.0.26"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.3"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
-      <Content Include="..\.github\workflows\ci.yml">
-        <Link>g0v0.Server.Realtime\.github\workflows\ci.yml</Link>
-      </Content>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
+        <Content Include="..\.github\workflows\ci.yml">
+            <Link>g0v0.Server.Realtime\.github\workflows\ci.yml</Link>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\g0v0.Server.Common\g0v0.Server.Common\g0v0.Server.Common.csproj" />
+        <ProjectReference Include="..\..\g0v0.Server.Common\g0v0.Server.Common\g0v0.Server.Common.csproj"/>
     </ItemGroup>
 
 </Project>

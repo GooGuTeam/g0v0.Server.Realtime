@@ -15,7 +15,7 @@ namespace g0v0.Server.Realtime.Tests.Multiplayer;
 /// </summary>
 public class DelegatingMultiplayerClient : IMultiplayerClient
 {
-    public virtual IEnumerable<IMultiplayerClient> Clients => Enumerable.Empty<IMultiplayerClient>();
+    public virtual IEnumerable<IMultiplayerClient> Clients => [];
 
     public virtual Task RoomStateChanged(MultiplayerRoomState state)
         => Task.WhenAll(Clients.Select(c => c.RoomStateChanged(state)));
@@ -29,8 +29,10 @@ public class DelegatingMultiplayerClient : IMultiplayerClient
     public virtual Task UserKicked(MultiplayerRoomUser user)
         => Task.WhenAll(Clients.Select(c => c.UserKicked(user)));
 
-    public virtual Task Invited(int invitedBy, long roomID, string password)
-        => Task.WhenAll(Clients.Select(c => c.Invited(invitedBy, roomID, password)));
+#pragma warning disable CA1725
+    public virtual Task Invited(int invitedBy, long roomId, string password)
+#pragma warning restore CA1725
+        => Task.WhenAll(Clients.Select(c => c.Invited(invitedBy, roomId, password)));
 
     public virtual Task HostChanged(int userId)
         => Task.WhenAll(Clients.Select(c => c.HostChanged(userId)));

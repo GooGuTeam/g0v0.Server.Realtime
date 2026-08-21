@@ -13,7 +13,7 @@ public class PlayerStateTests
     [Test]
     public void ToLazerUserPresence_WhenStatusIsNull_ReturnsNull()
     {
-        var state = new PlayerState(new IdleActivity())
+        PlayerState state = new(new IdleActivity())
         {
             UserStatus = null,
         };
@@ -24,7 +24,7 @@ public class PlayerStateTests
     [Test]
     public void ToLazerUserPresence_WhenStatusIsOffline_ReturnsNull()
     {
-        var state = new PlayerState(new IdleActivity())
+        PlayerState state = new(new IdleActivity())
         {
             UserStatus = UserStatus.Offline,
         };
@@ -35,7 +35,7 @@ public class PlayerStateTests
     [Test]
     public void ToLazerUserPresence_WhenStatusIsVisible_ReturnsConvertedPresence()
     {
-        var state = new PlayerState(new SoloActivity
+        PlayerState state = new(new SoloActivity
         {
             BeatmapId = 123,
             BeatmapDisplayTitle = "Song Title",
@@ -57,7 +57,7 @@ public class PlayerStateTests
             Assert.That(value.Activity, Is.TypeOf<UserActivity.InSoloGame>());
         });
 
-        var activity = (UserActivity.InSoloGame)value.Activity!;
+        UserActivity.InSoloGame activity = (UserActivity.InSoloGame)value.Activity!;
         Assert.Multiple(() =>
         {
             Assert.That(activity.BeatmapID, Is.EqualTo(123));

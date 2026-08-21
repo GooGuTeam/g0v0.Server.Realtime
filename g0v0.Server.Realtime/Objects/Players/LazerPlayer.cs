@@ -90,111 +90,61 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// <inheritdoc />
     public override Task OnPlayerOnline(IPlayer player)
     {
-        if (OnPlayerOnlineForMetadataHub != null)
-        {
-            return OnPlayerOnlineForMetadataHub(player);
-        }
-
-        return Task.CompletedTask;
+        return OnPlayerOnlineForMetadataHub != null ? OnPlayerOnlineForMetadataHub(player) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnPlayerOffline(IPlayer player, bool isKicked = false)
     {
-        if (OnPlayerOfflineForMetadataHub != null)
-        {
-            return OnPlayerOfflineForMetadataHub(player, isKicked);
-        }
-
-        return Task.CompletedTask;
+        return OnPlayerOfflineForMetadataHub != null ? OnPlayerOfflineForMetadataHub(player, isKicked) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnPlayerChangeActivity(IPlayer player, IUserActivity activity)
     {
-        if (OnPlayerChangeActivityForMetadataHub != null)
-        {
-            return OnPlayerChangeActivityForMetadataHub(player, activity);
-        }
-
-        return Task.CompletedTask;
+        return OnPlayerChangeActivityForMetadataHub != null ? OnPlayerChangeActivityForMetadataHub(player, activity) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnPlayerChangeStatus(IPlayer player, UserStatus? status)
     {
-        if (OnPlayerChangeStatusForMetadataHub != null)
-        {
-            return OnPlayerChangeStatusForMetadataHub(player, status);
-        }
-
-        return Task.CompletedTask;
+        return OnPlayerChangeStatusForMetadataHub != null ? OnPlayerChangeStatusForMetadataHub(player, status) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnUserBeganPlaying(IPlayer player)
     {
-        if (OnUserBeganPlayingForSpectatorHub != null)
-        {
-            return OnUserBeganPlayingForSpectatorHub(player);
-        }
-
-        return Task.CompletedTask;
+        return OnUserBeganPlayingForSpectatorHub != null ? OnUserBeganPlayingForSpectatorHub(player) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnUserFinishedPlaying(IPlayer player)
     {
-        if (OnUserFinishedPlayingForSpectatorHub != null)
-        {
-            return OnUserFinishedPlayingForSpectatorHub(player);
-        }
-
-        return Task.CompletedTask;
+        return OnUserFinishedPlayingForSpectatorHub != null ? OnUserFinishedPlayingForSpectatorHub(player) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnUserSentFrames(IPlayer player, FrameDataBundle frame)
     {
-        if (OnUserSentFramesForSpectatorHub != null)
-        {
-            return OnUserSentFramesForSpectatorHub(player, frame);
-        }
-
-        return Task.CompletedTask;
+        return OnUserSentFramesForSpectatorHub != null ? OnUserSentFramesForSpectatorHub(player, frame) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnWatched(IPlayer source)
     {
-        if (OnWatchedForSpectatorHub != null)
-        {
-            return OnWatchedForSpectatorHub(source);
-        }
-
-        return Task.CompletedTask;
+        return OnWatchedForSpectatorHub != null ? OnWatchedForSpectatorHub(source) : Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public override Task OnWatchedStopped(IPlayer source)
     {
-        if (OnWatchedStoppedForSpectatorHub != null)
-        {
-            return OnWatchedStoppedForSpectatorHub(source);
-        }
-
-        return Task.CompletedTask;
+        return OnWatchedStoppedForSpectatorHub != null ? OnWatchedStoppedForSpectatorHub(source) : Task.CompletedTask;
     }
 
     /// <inheritdoc/>
     public override Task OnScoreProcessed(long scoreId)
     {
-        if (OnScoreProcessedForSpectatorHub != null)
-        {
-            return OnScoreProcessedForSpectatorHub(scoreId);
-        }
-
-        return Task.CompletedTask;
+        return OnScoreProcessedForSpectatorHub != null ? OnScoreProcessedForSpectatorHub(scoreId) : Task.CompletedTask;
     }
 
     /// <summary>

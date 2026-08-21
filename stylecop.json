@@ -23,7 +23,13 @@
       "newlineAtEndOfFile": "allow"
     },
     "maintainabilityRules": {
-      "topLevelTypes": ["class", "interface", "struct", "enum", "delegate"]
+      "topLevelTypes": [
+        "class",
+        "interface",
+        "struct",
+        "enum",
+        "delegate"
+      ]
     }
   }
 }

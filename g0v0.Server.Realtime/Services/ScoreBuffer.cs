@@ -42,7 +42,7 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
     /// <returns><see langword="true" /> when the score was added; otherwise <see langword="false" />.</returns>
     public async Task<bool> TryAddAsync(long scoreTokenId, Score score)
     {
-        var semaphore = GetLock(scoreTokenId);
+        SemaphoreSlim semaphore = GetLock(scoreTokenId);
         await semaphore.WaitAsync();
 
         try
@@ -75,7 +75,7 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task UpdateAsync(long scoreTokenId, FrameDataBundle data)
     {
-        var semaphore = GetLock(scoreTokenId);
+        SemaphoreSlim semaphore = GetLock(scoreTokenId);
         await semaphore.WaitAsync();
 
         try
@@ -88,7 +88,7 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
                 return;
             }
 
-            var scoreInfo = bufferedScore.Score.ScoreInfo;
+            ScoreInfo scoreInfo = bufferedScore.Score.ScoreInfo;
 
             scoreInfo.Accuracy = data.Header.Accuracy;
             scoreInfo.Statistics = data.Header.Statistics;
@@ -96,6 +96,10 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
             scoreInfo.Combo = data.Header.Combo;
             scoreInfo.TotalScore = data.Header.TotalScore;
 
+            // FrameHeader.Mods is annotated non-nullable, but it arrives through MessagePack
+            // deserialization where older clients may omit the property entirely, so the null
+            // check is a deliberate runtime guard rather than dead code.
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             if (data.Header.Mods != null)
             {
                 scoreInfo.APIMods = data.Header.Mods;
@@ -131,7 +135,7 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
     /// <returns>The buffered score, or <see langword="null" /> if no score was buffered for the token.</returns>
     public async Task<Score?> DequeueAsync(long scoreTokenId)
     {
-        var semaphore = GetLock(scoreTokenId);
+        SemaphoreSlim semaphore = GetLock(scoreTokenId);
         await semaphore.WaitAsync();
 
         try
@@ -176,7 +180,7 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
             return;
         }
 
-        scorePauses.GetType().GetMethod(nameof(List<object>.Clear), Type.EmptyTypes)?.Invoke(scorePauses, null);
+        scorePauses.GetType().GetMethod(nameof(List<object>.Clear), Type.EmptyTypes)?.Invoke(scorePauses, parameters: null);
         scorePauses.GetType().GetMethod(nameof(List<object>.AddRange))?.Invoke(scorePauses, [pauses]);
     }
 

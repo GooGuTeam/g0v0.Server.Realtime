@@ -22,20 +22,20 @@ public class SyncAlignmentTests : MultiplayerTestBase
     [Test]
     public async Task FailedJoinRollsBackInMemoryState()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Enable the persistence failure before the second user joins.
         RoomRepository.FailAddUserToRoom = true;
 
         SetUserContext(ContextUser2);
         Assert.That(
-            async () => await Hub.JoinRoom(ROOMID),
+            async () => await Hub.JoinRoom(RoomId),
             Throws.TypeOf<InvalidOperationException>());
 
         // The failed joiner must not remain in the room.
-        var room = Hub.GetRoom(ROOMID)!;
-        Assert.That(room.Users.Any(u => u.UserID == USERID2), Is.False);
-        Assert.That(room.Host!.UserID, Is.EqualTo(USERID));
+        IRoom room = Hub.GetRoom(RoomId)!;
+        Assert.That(room.Users.Any(u => u.UserID == UserId2), Is.False);
+        Assert.That(room.Host!.UserID, Is.EqualTo(UserId));
     }
 
     [Test]
@@ -46,22 +46,22 @@ public class SyncAlignmentTests : MultiplayerTestBase
         RoomRepository.FailAddUserToRoom = true;
 
         Assert.That(
-            async () => await Hub.JoinRoom(ROOMID),
+            async () => await Hub.JoinRoom(RoomId),
             Throws.TypeOf<InvalidOperationException>());
 
-        var room = Hub.GetRoom(ROOMID);
+        IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Null);
     }
 
     [Test]
     public async Task ResubmittingSameSettingsIsNoOp()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
-        var room = Hub.GetRoom(ROOMID)!;
-        var original = room.Settings;
-        var settings = new MultiplayerRoomSettings
+        IRoom room = Hub.GetRoom(RoomId)!;
+        MultiplayerRoomSettings original = room.Settings;
+        MultiplayerRoomSettings settings = new()
         {
             Name = original.Name,
             MatchType = original.MatchType,
@@ -84,7 +84,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
     [Test]
     public async Task UnknownMatchUserRequestIsIgnored()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // A team-versus request sent to a head-to-head room is silently ignored.
         Assert.DoesNotThrowAsync(async () => await Hub.SendMatchRequest(new ChangeTeamRequest { TeamID = 0 }));
@@ -94,13 +94,13 @@ public class SyncAlignmentTests : MultiplayerTestBase
     public async Task RefereeCanChangeSettings()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Promote user 2 to referee.
-        var room = Hub.GetRoom(ROOMID)!;
-        room.Users.First(u => u.UserID == USERID2).Role = MultiplayerRoomUserRole.Referee;
+        IRoom room = Hub.GetRoom(RoomId)!;
+        room.Users.First(u => u.UserID == UserId2).Role = MultiplayerRoomUserRole.Referee;
 
         SetUserContext(ContextUser2);
         Assert.DoesNotThrowAsync(async () => await Hub.ChangeSettings(new MultiplayerRoomSettings
@@ -116,18 +116,18 @@ public class SyncAlignmentTests : MultiplayerTestBase
     public async Task RefereeCanAbortMatch()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
         await Hub.StartMatch();
 
         // Promote user 2 to referee and abort as referee.
-        var room = Hub.GetRoom(ROOMID)!;
-        room.Users.First(u => u.UserID == USERID2).Role = MultiplayerRoomUserRole.Referee;
+        IRoom room = Hub.GetRoom(RoomId)!;
+        room.Users.First(u => u.UserID == UserId2).Role = MultiplayerRoomUserRole.Referee;
 
         SetUserContext(ContextUser2);
         Assert.DoesNotThrowAsync(async () => await Hub.AbortMatch());
@@ -138,23 +138,23 @@ public class SyncAlignmentTests : MultiplayerTestBase
     public async Task RefereeCanTransferHost()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        var room = Hub.GetRoom(ROOMID)!;
-        room.Users.First(u => u.UserID == USERID2).Role = MultiplayerRoomUserRole.Referee;
+        IRoom room = Hub.GetRoom(RoomId)!;
+        room.Users.First(u => u.UserID == UserId2).Role = MultiplayerRoomUserRole.Referee;
 
         SetUserContext(ContextUser2);
-        await Hub.TransferHost(USERID2);
+        await Hub.TransferHost(UserId2);
 
-        Assert.That(room.Host!.UserID, Is.EqualTo(USERID2));
+        Assert.That(room.Host!.UserID, Is.EqualTo(UserId2));
     }
 
     [Test]
     public async Task TeamChangeAllowedDuringGameplayWhenNotManuallyLocked()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             Name = "team room",
@@ -164,7 +164,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
         });
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
@@ -173,19 +173,19 @@ public class SyncAlignmentTests : MultiplayerTestBase
         await LoadGameplay(ContextUser, ContextUser2);
 
         // Without a manual lock, teams can still change during gameplay.
-        var room = Hub.GetRoom(ROOMID)!;
-        int currentTeam = ((TeamVersusUserState)room.Users.First(u => u.UserID == USERID).MatchState!).TeamID;
+        IRoom room = Hub.GetRoom(RoomId)!;
+        int currentTeam = ((TeamVersusUserState)room.Users.First(u => u.UserID == UserId).MatchState!).TeamID;
         int otherTeam = currentTeam == 0 ? 1 : 0;
 
         SetUserContext(ContextUser);
         Assert.DoesNotThrowAsync(async () => await Hub.SendMatchRequest(new ChangeTeamRequest { TeamID = otherTeam }));
-        Assert.That(((TeamVersusUserState)room.Users.First(u => u.UserID == USERID).MatchState!).TeamID, Is.EqualTo(otherTeam));
+        Assert.That(((TeamVersusUserState)room.Users.First(u => u.UserID == UserId).MatchState!).TeamID, Is.EqualTo(otherTeam));
     }
 
     [Test]
     public async Task TeamChangeRejectedWhenManuallyLocked()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             Name = "team room",
@@ -206,7 +206,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
     public async Task FailedHandleUserJoinedRollsBackParticipantAndBroadcastsUserLeft()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             Name = "team room",
@@ -222,16 +222,16 @@ public class SyncAlignmentTests : MultiplayerTestBase
 
         SetUserContext(ContextUser2);
         Assert.That(
-            async () => await Hub.JoinRoom(ROOMID),
+            async () => await Hub.JoinRoom(RoomId),
             Throws.TypeOf<InvalidOperationException>());
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
 
         // The failed joiner is not in memory, not in the database participants,
         // and a compensating UserLeft was broadcast to existing clients.
-        Assert.That(room.Users.Any(u => u.UserID == USERID2), Is.False);
-        Assert.That(RoomRepository.GetParticipants(ROOMID).Any(p => p.UserId == USERID2 && p.LeftAt == null), Is.False);
-        Receiver.Verify(r => r.UserLeft(It.Is<MultiplayerRoomUser>(u => u.UserID == USERID2)), Times.Once);
+        Assert.That(room.Users.Any(u => u.UserID == UserId2), Is.False);
+        Assert.That(RoomRepository.GetParticipants(RoomId).Any(p => p is { UserId: UserId2, LeftAt: null }), Is.False);
+        Receiver.Verify(r => r.UserLeft(It.Is<MultiplayerRoomUser>(u => u.UserID == UserId2)), Times.Once);
     }
 
     [Test]
@@ -239,7 +239,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
     {
         // An unsupported match type passes mod validation but fails in
         // CreateRoomInstance; the persisted database room must be cleaned up.
-        var request = new MultiplayerRoom(0)
+        MultiplayerRoom request = new(0)
         {
             Settings = new MultiplayerRoomSettings
             {
@@ -250,7 +250,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
         };
 
         Assert.That(
-            async () => await RoomManager.CreateRoom(request, USERID),
+            async () => await RoomManager.CreateRoom(request, UserId),
             Throws.TypeOf<InvalidStateException>());
 
         Assert.That(RoomRepository.Rooms, Is.Empty);
@@ -261,7 +261,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
     public async Task FailedSubscriptionUnsubscribesAndRollsBackJoin()
     {
         SetUserContext(ContextUser);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Simulate a group subscription failure for the second user's join.
         Groups.Setup(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -269,20 +269,20 @@ public class SyncAlignmentTests : MultiplayerTestBase
 
         SetUserContext(ContextUser2);
         Assert.That(
-            async () => await Hub.JoinRoom(ROOMID),
+            async () => await Hub.JoinRoom(RoomId),
             Throws.TypeOf<InvalidOperationException>());
 
         // The failed joiner was removed from the room and the subscription was
         // compensated with a removal from the group.
-        var room = Hub.GetRoom(ROOMID)!;
-        Assert.That(room.Users.Any(u => u.UserID == USERID2), Is.False);
-        Groups.Verify(g => g.RemoveFromGroupAsync(It.IsAny<string>(), MultiplayerEventDispatcher.GetGroupId(ROOMID), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+        IRoom room = Hub.GetRoom(RoomId)!;
+        Assert.That(room.Users.Any(u => u.UserID == UserId2), Is.False);
+        Groups.Verify(g => g.RemoveFromGroupAsync(It.IsAny<string>(), MultiplayerEventDispatcher.GetGroupId(RoomId), It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
 
     [Test]
     public async Task QueueModeChangeReordersQueueImmediately()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             Name = "round robin room",
@@ -302,8 +302,8 @@ public class SyncAlignmentTests : MultiplayerTestBase
             BeatmapChecksum = "checksum3",
         });
 
-        var room = Hub.GetRoom(ROOMID)!;
-        var before = room.Playlist.OrderBy(i => i.PlaylistOrder).Select(i => i.BeatmapID).ToArray();
+        IRoom room = Hub.GetRoom(RoomId)!;
+        int[] before = room.Playlist.OrderBy(i => i.PlaylistOrder).Select(i => i.BeatmapID).ToArray();
 
         // Switch to host-only mode: the queue is reordered immediately.
         await Hub.ChangeSettings(new MultiplayerRoomSettings
@@ -313,7 +313,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
             QueueMode = QueueMode.HostOnly,
         });
 
-        var after = room.Playlist.OrderBy(i => i.PlaylistOrder).Select(i => i.BeatmapID).ToArray();
+        int[] after = room.Playlist.OrderBy(i => i.PlaylistOrder).Select(i => i.BeatmapID).ToArray();
         Assert.That(after, Is.EquivalentTo(before));
 
         // The current item is repointed to the first non-expired item under the
@@ -324,7 +324,7 @@ public class SyncAlignmentTests : MultiplayerTestBase
     [Test]
     public async Task JoinRejectedWhenEndDateHasPassed()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings
         {
             Name = "tournament room",
@@ -335,12 +335,12 @@ public class SyncAlignmentTests : MultiplayerTestBase
 
         // Simulate an end date which has already passed (destruction pending):
         // the room must reject new joins.
-        var room = (RoomBase)Hub.GetRoom(ROOMID)!;
+        RoomBase room = (RoomBase)Hub.GetRoom(RoomId)!;
         room.SetEndDateForTesting(DateTimeOffset.UtcNow.AddMinutes(-1));
 
         SetUserContext(ContextUser2);
         Assert.That(
-            async () => await Hub.JoinRoom(ROOMID),
+            async () => await Hub.JoinRoom(RoomId),
             Throws.TypeOf<InvalidPasswordException>());
     }
 }

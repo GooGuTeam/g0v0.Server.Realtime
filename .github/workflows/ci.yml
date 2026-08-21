@@ -8,12 +8,77 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
+  INSPECTCODE_VERSION: '2026.2.1'
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  code-style:
+  code-style-and-quality:
     name: Code Style & Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: g0v0.Server.Realtime
+
+      - name: Checkout CommonLib
+        uses: actions/checkout@v4
+        with:
+          repository: GooGuTeam/g0v0.Server.Common
+          path: g0v0.Server.Common
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup .NET runtime for InspectCode
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: |
+          cd g0v0.Server.Realtime
+          dotnet restore
+
+      - name: Check code formatting
+        run: |
+          cd g0v0.Server.Realtime
+          dotnet format --verify-no-changes --verbosity diagnostic
+
+      - name: Build with analyzers
+        run: |
+          cd g0v0.Server.Realtime
+          dotnet build --no-restore --configuration Release /warnaserror
+
+      - name: Install JetBrains InspectCode
+        run: |
+          dotnet tool install --global JetBrains.ReSharper.GlobalTools --version ${{ env.INSPECTCODE_VERSION }}
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Run JetBrains InspectCode
+        run: |
+          cd g0v0.Server.Realtime
+          mkdir -p artifacts
+          jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --output=artifacts/inspectcode.sarif
+          warnings=$(jq '[.runs[].results[] | select(.level == "warning" or .level == "error")] | length' artifacts/inspectcode.sarif)
+          echo "InspectCode warning/error count: $warnings"
+          jq -r '.runs[].results[] | select(.level == "warning" or .level == "error") | [ .level, .ruleId, (.locations[0].physicalLocation.artifactLocation.uri // ""), (.locations[0].physicalLocation.region.startLine // 0), .message.text ] | @tsv' artifacts/inspectcode.sarif
+          test "$warnings" -eq 0
+
+      - name: Upload InspectCode report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jetbrains-inspectcode-realtime
+          path: g0v0.Server.Realtime/artifacts/inspectcode.sarif
+          if-no-files-found: error
+
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -38,12 +103,20 @@ jobs:
           cd g0v0.Server.Realtime
           dotnet restore
 
-      - name: Check code formatting
+      - name: Build
         run: |
           cd g0v0.Server.Realtime
-          dotnet format --verify-no-changes --verbosity diagnostic
+          dotnet build --no-restore --configuration Release
 
-      - name: Build with analyzers
+      - name: Run tests
         run: |
           cd g0v0.Server.Realtime
-          dotnet build --no-restore --configuration Release /warnaserror
+          dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: g0v0.Server.Realtime/**/TestResults/**
+          retention-days: 30

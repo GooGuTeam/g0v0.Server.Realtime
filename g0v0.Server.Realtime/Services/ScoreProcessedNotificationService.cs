@@ -115,12 +115,12 @@ public sealed class ScoreProcessedNotificationService
         ArgumentNullException.ThrowIfNull(player);
 
         Common.Database.Models.Score? score = null;
-        var deadline = DateTime.UtcNow + ScoreLookupTimeout;
+        DateTime deadline = DateTime.UtcNow + ScoreLookupTimeout;
 
         while (DateTime.UtcNow < deadline)
         {
-            using var scope = _scopeFactory.CreateScope();
-            var scoreRepository = scope.ServiceProvider.GetRequiredService<IScoreRepository>();
+            using IServiceScope scope = _scopeFactory.CreateScope();
+            IScoreRepository scoreRepository = scope.ServiceProvider.GetRequiredService<IScoreRepository>();
             score = await scoreRepository.GetScoreByToken(scoreToken).ConfigureAwait(false);
             if (score != null)
             {
@@ -132,24 +132,24 @@ public sealed class ScoreProcessedNotificationService
 
         if (score == null)
         {
-            LogScoreLookupTimedOut(_logger, scoreToken, ScoreLookupTimeout, null);
+            LogScoreLookupTimedOut(_logger, scoreToken, ScoreLookupTimeout, arg4: null);
             return;
         }
 
         if (score.Processed)
         {
-            LogScoreAlreadyProcessed(_logger, score.Id, scoreToken, player.PlayerId, null);
+            LogScoreAlreadyProcessed(_logger, score.Id, scoreToken, player.PlayerId, arg5: null);
             await player.OnScoreProcessed(score.Id).ConfigureAwait(false);
             return;
         }
 
         if (!_pendingScores.TryAdd(score.Id, player))
         {
-            LogPendingScoreAlreadyRegistered(_logger, score.Id, scoreToken, null);
+            LogPendingScoreAlreadyRegistered(_logger, score.Id, scoreToken, arg4: null);
             return;
         }
 
-        LogPlayerRegisteredForScore(_logger, player.PlayerId, score.Id, scoreToken, null);
+        LogPlayerRegisteredForScore(_logger, player.PlayerId, score.Id, scoreToken, arg5: null);
     }
 
     private async Task HandleScoreProcessedAsync(string sourceServer, ScoreProcessedPayload? payload)
@@ -161,18 +161,18 @@ public sealed class ScoreProcessedNotificationService
 
         if (!string.Equals(sourceServer, LazerServerIdentifier, StringComparison.OrdinalIgnoreCase))
         {
-            LogNonLazerScoreProcessedIgnored(_logger, sourceServer, null);
+            LogNonLazerScoreProcessedIgnored(_logger, sourceServer, arg3: null);
             return;
         }
 
         if (_pendingScores.TryRemove(payload.ScoreId, out IPlayer? player))
         {
-            LogDispatchingScoreProcessed(_logger, payload.ScoreId, player.PlayerId, null);
+            LogDispatchingScoreProcessed(_logger, payload.ScoreId, player.PlayerId, arg4: null);
             await player.OnScoreProcessed(payload.ScoreId).ConfigureAwait(false);
         }
         else
         {
-            LogNoPendingScoreRegistration(_logger, payload.ScoreId, null);
+            LogNoPendingScoreRegistration(_logger, payload.ScoreId, arg3: null);
         }
     }
 

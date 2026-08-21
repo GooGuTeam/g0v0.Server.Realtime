@@ -50,13 +50,13 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
     /// <inheritdoc />
     public async Task Online()
     {
-        await facade._manager.AddPlayer(this);
+        await facade.Manager.AddPlayer(this);
     }
 
     /// <inheritdoc />
     public async Task Offline(bool isKicked = false)
     {
-        await facade._manager.RemovePlayer(this, isKicked);
+        await facade.Manager.RemovePlayer(this, isKicked);
     }
 
     /// <inheritdoc />
@@ -68,7 +68,7 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         }
 
         State.UserActivity = newActivity;
-        await facade._manager.BroadcastPlayerChangeActivity(this, newActivity);
+        await facade.Manager.BroadcastPlayerChangeActivity(this, newActivity);
     }
 
     /// <inheritdoc />
@@ -80,7 +80,7 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         }
 
         State.UserStatus = newStatus;
-        await facade._manager.BroadcastPlayerChangeStatus(this, newStatus);
+        await facade.Manager.BroadcastPlayerChangeStatus(this, newStatus);
     }
 
     /// <inheritdoc />
@@ -123,22 +123,22 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
                 // Read per call so hot-reloaded configuration takes effect without a restart.
                 int maxStartedScores = Math.Max(
                     1,
-                    facade._configManager?.Get<RealtimeConfig>().MaxStartedScores ?? RealtimeConfig.DefaultMaxStartedScores);
+                    facade.ConfigManager?.Get<RealtimeConfig>().MaxStartedScores ?? RealtimeConfig.DefaultMaxStartedScores);
 
                 while (State.ScoreTokens.Count >= maxStartedScores)
                 {
                     long expiredToken = State.ScoreTokens[0];
                     State.ScoreTokens.RemoveAt(0);
-                    if (facade._scoreBuffer != null)
+                    if (facade.ScoreBuffer != null)
                     {
-                        Score? expiredScore = await facade._scoreBuffer.DequeueAsync(expiredToken);
+                        Score? expiredScore = await facade.ScoreBuffer.DequeueAsync(expiredToken);
                         if (expiredScore != null)
                         {
                             await ProcessScore(expiredToken, expiredScore);
                         }
                     }
 
-                    facade._logger?.LogWarning(
+                    facade.Logger?.LogWarning(
                         "Score for token {ScoreToken} was dropped from buffer due to exceeding limit.",
                         expiredToken);
                 }
@@ -146,16 +146,16 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
                 State.ScoreTokens.Add(scoreToken.Value);
             }
 
-            if (facade._scoreBuffer != null)
+            if (facade.ScoreBuffer != null)
             {
-                await facade._scoreBuffer.TryAddAsync(scoreToken.Value, score);
+                await facade.ScoreBuffer.TryAddAsync(scoreToken.Value, score);
             }
         }
 
         // The ambient score token is kept in sync with the most recently started score.
         State.ScoreToken = scoreToken;
 
-        await facade._manager.BroadcastUserBeganPlaying(this);
+        await facade.Manager.BroadcastUserBeganPlaying(this);
     }
 
     /// <inheritdoc />
@@ -168,13 +168,13 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
                 throw new InvalidOperationException("Incorrect score token supplied.");
             }
 
-            if (facade._scoreBuffer != null)
+            if (facade.ScoreBuffer != null)
             {
-                await facade._scoreBuffer.UpdateAsync(scoreToken.Value, data);
+                await facade.ScoreBuffer.UpdateAsync(scoreToken.Value, data);
             }
         }
 
-        await facade._manager.BroadcastUserSentFrames(this, data);
+        await facade.Manager.BroadcastUserSentFrames(this, data);
     }
 
     /// <inheritdoc />
@@ -193,9 +193,9 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
                     throw new InvalidOperationException("Incorrect score token supplied.");
                 }
 
-                if (facade._scoreBuffer != null)
+                if (facade.ScoreBuffer != null)
                 {
-                    Score? score = await facade._scoreBuffer.DequeueAsync(scoreToken.Value);
+                    Score? score = await facade.ScoreBuffer.DequeueAsync(scoreToken.Value);
                     if (score == null)
                     {
                         return;
@@ -224,35 +224,35 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
     /// <inheritdoc />
     public async Task WatchPlayer(IPlayer target)
     {
-        await facade._manager.UserWatchingPlayer(this, target);
+        await facade.Manager.UserWatchingPlayer(this, target);
     }
 
     /// <inheritdoc />
     public async Task StopWatchPlayer(IPlayer target)
     {
-        await facade._manager.UserStoppedWatchingPlayer(this, target);
+        await facade.Manager.UserStoppedWatchingPlayer(this, target);
     }
 
     /// <inheritdoc />
     public async Task JoinRoom(long roomId)
     {
-        if (facade._roomManager == null)
+        if (facade.RoomManager == null)
         {
             throw new InvalidOperationException("Room manager is not available on this player facade.");
         }
 
-        await facade._manager.UserJoinRoom(facade._roomManager, this, roomId);
+        await facade.Manager.UserJoinRoom(facade.RoomManager, this, roomId);
     }
 
     /// <inheritdoc />
     public async Task LeaveRoom(long roomId)
     {
-        if (facade._roomManager == null)
+        if (facade.RoomManager == null)
         {
             throw new InvalidOperationException("Room manager is not available on this player facade.");
         }
 
-        await facade._manager.UserLeaveRoom(facade._roomManager, this);
+        await facade.Manager.UserLeaveRoom(facade.RoomManager, this);
     }
 
     /// <summary>
@@ -262,7 +262,7 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
     /// <returns><see langword="true"/> when both players have the same ID and server.</returns>
     public bool Equals(IPlayer? other)
     {
-        return other != null && (other.PlayerId == PlayerId && other.Server == Server);
+        return other != null && (other.PlayerId == PlayerId && string.Equals(other.Server, Server, StringComparison.Ordinal));
     }
 
     private async Task ProcessScore(long scoreToken, Score score)
@@ -270,11 +270,11 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         Debug.Assert(score != null, "score != null");
 
         // Do nothing with scores on unranked beatmaps.
-        var status = score.ScoreInfo.BeatmapInfo!.Status;
+        BeatmapOnlineStatus status = score.ScoreInfo.BeatmapInfo!.Status;
         bool allRanked = false;
-        if (facade._configManager != null)
+        if (facade.ConfigManager != null)
         {
-            allRanked = facade._configManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard;
+            allRanked = facade.ConfigManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard;
         }
 
         if (!allRanked && status is < BeatmapOnlineStatus.Ranked or > BeatmapOnlineStatus.Loved)
@@ -295,16 +295,16 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         // even though in theory the rank could be recomputed after every replay frame.
         score.ScoreInfo.Rank = StandardisedScoreMigrationTools.ComputeRank(score.ScoreInfo);
 
-        if (facade._scoreUploader != null)
+        if (facade.ScoreUploader != null)
         {
-            await facade._scoreUploader.EnqueueAsync(scoreToken, score);
+            await facade.ScoreUploader.EnqueueAsync(scoreToken, score);
         }
 
         // await scoreProcessedSubscriber.RegisterForSingleScoreAsync(Context.ConnectionId, Context.GetUserId(),
         //     scoreToken);
-        if (facade._scoreProcessedNotificationService != null)
+        if (facade.ScoreProcessedNotificationService != null)
         {
-            await facade._scoreProcessedNotificationService.RegisterForSingleScoreAsync(this, scoreToken);
+            await facade.ScoreProcessedNotificationService.RegisterForSingleScoreAsync(this, scoreToken);
         }
     }
 
@@ -316,6 +316,6 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
             State.SpectatorState.State = SpectatedUserState.Quit;
         }
 
-        await facade._manager.BroadcastUserFinishedPlaying(this);
+        await facade.Manager.BroadcastUserFinishedPlaying(this);
     }
 }

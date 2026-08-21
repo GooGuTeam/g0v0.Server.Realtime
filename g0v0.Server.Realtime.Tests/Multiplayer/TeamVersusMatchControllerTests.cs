@@ -20,17 +20,17 @@ public class TeamVersusMatchControllerTests : MultiplayerTestBase
     [TestCase(1)]
     public async Task UserRequestsValidTeamChange(int team)
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await ChangeRoomToTeamVersus();
 
         // The head-to-head -> team-versus conversion assigns the host a team,
         // broadcasting a single MatchUserStateChanged.
-        Receiver.Verify(r => r.MatchUserStateChanged(USERID, It.IsAny<MatchUserState>()), Times.Once);
+        Receiver.Verify(r => r.MatchUserStateChanged(UserId, It.IsAny<MatchUserState>()), Times.Once);
 
         await Hub.SendMatchRequest(new ChangeTeamRequest { TeamID = team });
 
-        checkUserOnTeam(USERID, team);
-        Receiver.Verify(r => r.MatchUserStateChanged(USERID, It.IsAny<MatchUserState>()), Times.Exactly(2));
+        CheckUserOnTeam(UserId, team);
+        Receiver.Verify(r => r.MatchUserStateChanged(UserId, It.IsAny<MatchUserState>()), Times.Exactly(2));
     }
 
     [Test]
@@ -42,16 +42,16 @@ public class TeamVersusMatchControllerTests : MultiplayerTestBase
         // to the default NotSupportedException path), so the manual lock flow
         // cannot be exercised here. Team changes during gameplay (teams locked)
         // are covered by MultiplayerHubTests.TeamVersus_ChangeTeamDuringGameplay_Throws.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await ChangeRoomToTeamVersus();
 
         await Hub.SendMatchRequest(new SetLockStateRequest { Locked = true });
 
-        var previousTeam = ((TeamVersusUserState)Hub.GetRoom(ROOMID)!.Users.Single(u => u.UserID == USERID).MatchState!).TeamID;
+        int previousTeam = ((TeamVersusUserState)Hub.GetRoom(RoomId)!.Users.Single(u => u.UserID == UserId).MatchState!).TeamID;
 
         Assert.That(async () => await Hub.SendMatchRequest(new ChangeTeamRequest { TeamID = 0 }), Throws.TypeOf<InvalidStateException>());
 
-        checkUserOnTeam(USERID, previousTeam);
+        CheckUserOnTeam(UserId, previousTeam);
     }
 
     [TestCase(-1)]
@@ -59,30 +59,30 @@ public class TeamVersusMatchControllerTests : MultiplayerTestBase
     [TestCase(3)]
     public async Task UserRequestsInvalidTeamChange(int team)
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await ChangeRoomToTeamVersus();
 
         // The head-to-head -> team-versus conversion assigns the host a team.
-        Receiver.Verify(r => r.MatchUserStateChanged(USERID, It.IsAny<MatchUserState>()), Times.Once);
+        Receiver.Verify(r => r.MatchUserStateChanged(UserId, It.IsAny<MatchUserState>()), Times.Once);
 
-        var previousTeam = ((TeamVersusUserState)Hub.GetRoom(ROOMID)!.Users.Single(u => u.UserID == USERID).MatchState!).TeamID;
+        int previousTeam = ((TeamVersusUserState)Hub.GetRoom(RoomId)!.Users.Single(u => u.UserID == UserId).MatchState!).TeamID;
 
         Assert.That(async () => await Hub.SendMatchRequest(new ChangeTeamRequest { TeamID = team }), Throws.TypeOf<InvalidStateException>());
 
-        checkUserOnTeam(USERID, previousTeam);
+        CheckUserOnTeam(UserId, previousTeam);
 
         // was not called a second time from the invalid change.
-        Receiver.Verify(r => r.MatchUserStateChanged(USERID, It.IsAny<MatchUserState>()), Times.Once);
+        Receiver.Verify(r => r.MatchUserStateChanged(UserId, It.IsAny<MatchUserState>()), Times.Once);
     }
 
     [Test]
     public async Task NewUsersAssignedToTeamWithFewerUsers()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await ChangeRoomToTeamVersus();
 
         // join a number of users initially to the room
-        var contexts = new Dictionary<int, Mock<HubCallerContext>> { [USERID] = ContextUser };
+        Dictionary<int, Mock<HubCallerContext>> contexts = new() { [UserId] = ContextUser };
 
         for (int i = 3; i < 7; i++)
         {
@@ -90,7 +90,7 @@ public class TeamVersusMatchControllerTests : MultiplayerTestBase
             contexts[i] = context;
 
             SetUserContext(context);
-            await Hub.JoinRoom(ROOMID);
+            await Hub.JoinRoom(RoomId);
         }
 
         // change all users to team 0
@@ -100,7 +100,7 @@ public class TeamVersusMatchControllerTests : MultiplayerTestBase
             await Hub.SendMatchRequest(new ChangeTeamRequest { TeamID = 0 });
         }
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users, Is.All.Matches<MultiplayerRoomUser>(u => (u.MatchState as TeamVersusUserState)?.TeamID == 0));
 
@@ -109,42 +109,42 @@ public class TeamVersusMatchControllerTests : MultiplayerTestBase
         {
             CreateUser(i, out Mock<HubCallerContext> context, out _);
             SetUserContext(context);
-            await Hub.JoinRoom(ROOMID);
+            await Hub.JoinRoom(RoomId);
 
-            checkUserOnTeam(i, 1);
+            CheckUserOnTeam(i, 1);
         }
     }
 
     [Test]
     public async Task InitialUsersAssignedToTeamsEqually()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // join a number of users initially to the room (still head-to-head)
         for (int i = 3; i < 7; i++)
         {
             CreateUser(i, out Mock<HubCallerContext> context, out _);
             SetUserContext(context);
-            await Hub.JoinRoom(ROOMID);
+            await Hub.JoinRoom(RoomId);
         }
 
         // change the match type
         SetUserContext(ContextUser);
         await ChangeRoomToTeamVersus();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
-        checkUserOnTeam(room!.Users[0], 0);
-        checkUserOnTeam(room.Users[1], 1);
-        checkUserOnTeam(room.Users[2], 0);
-        checkUserOnTeam(room.Users[3], 1);
-        checkUserOnTeam(room.Users[4], 0);
+        CheckUserOnTeam(room!.Users[0], 0);
+        CheckUserOnTeam(room.Users[1], 1);
+        CheckUserOnTeam(room.Users[2], 0);
+        CheckUserOnTeam(room.Users[3], 1);
+        CheckUserOnTeam(room.Users[4], 0);
     }
 
     [Test]
     public async Task StateMaintainedBetweenRulesetSwitch()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await ChangeRoomToTeamVersus();
 
         // join a number of users initially to the room
@@ -152,41 +152,41 @@ public class TeamVersusMatchControllerTests : MultiplayerTestBase
         {
             CreateUser(i, out Mock<HubCallerContext> context, out _);
             SetUserContext(context);
-            await Hub.JoinRoom(ROOMID);
+            await Hub.JoinRoom(RoomId);
         }
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
-        checkUserOnTeam(room!.Users[0], 0);
-        checkUserOnTeam(room.Users[1], 1);
-        checkUserOnTeam(room.Users[2], 0);
-        checkUserOnTeam(room.Users[3], 1);
-        checkUserOnTeam(room.Users[4], 0);
+        CheckUserOnTeam(room!.Users[0], 0);
+        CheckUserOnTeam(room.Users[1], 1);
+        CheckUserOnTeam(room.Users[2], 0);
+        CheckUserOnTeam(room.Users[3], 1);
+        CheckUserOnTeam(room.Users[4], 0);
 
         // change the match type away and back again
         SetUserContext(ContextUser);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { MatchType = OsuMatchType.HeadToHead });
         await ChangeRoomToTeamVersus();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
-        checkUserOnTeam(room!.Users[0], 0);
-        checkUserOnTeam(room.Users[1], 1);
-        checkUserOnTeam(room.Users[2], 0);
-        checkUserOnTeam(room.Users[3], 1);
-        checkUserOnTeam(room.Users[4], 0);
+        CheckUserOnTeam(room!.Users[0], 0);
+        CheckUserOnTeam(room.Users[1], 1);
+        CheckUserOnTeam(room.Users[2], 0);
+        CheckUserOnTeam(room.Users[3], 1);
+        CheckUserOnTeam(room.Users[4], 0);
     }
 
-    private void checkUserOnTeam(int userId, int team)
+    private void CheckUserOnTeam(int userId, int team)
     {
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
-        var user = room!.Users.Single(u => u.UserID == userId);
+        MultiplayerRoomUser user = room!.Users.Single(u => u.UserID == userId);
         Assert.That((user.MatchState as TeamVersusUserState)?.TeamID, Is.EqualTo(team));
     }
 
-    private void checkUserOnTeam(MultiplayerRoomUser user, int team) =>
+    private void CheckUserOnTeam(MultiplayerRoomUser user, int team) =>
         Assert.That((user.MatchState as TeamVersusUserState)?.TeamID, Is.EqualTo(team));
 
     private async Task ChangeRoomToTeamVersus()

@@ -27,10 +27,10 @@ public class MultiplayerHubTests
     [Test]
     public async Task CreateRoom_AsHost_ReturnsSnapshotAndJoinsGroup()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
 
         Assert.Multiple(() =>
         {
@@ -60,15 +60,15 @@ public class MultiplayerHubTests
     [Test]
     public async Task JoinRoom_WithMatchingPassword_AddsUserAndBroadcasts()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead, password: "secret"));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead, password: "secret"));
         host.Recorder.Clear();
         host.GroupManager.Reset();
 
-        var joined = await guest.Hub.JoinRoomWithPassword(room.RoomID, "secret");
+        MultiplayerRoom joined = await guest.Hub.JoinRoomWithPassword(room.RoomID, "secret");
 
         Assert.Multiple(() =>
         {
@@ -93,11 +93,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task JoinRoomWithPassword_WithWrongPassword_ThrowsInvalidPassword()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead, password: "secret"));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead, password: "secret"));
 
         Assert.That(
             async () => await guest.Hub.JoinRoomWithPassword(room.RoomID, "wrong"),
@@ -107,11 +107,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task ChangeState_ReadyThenStart_StartsMatch()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         // Both users ready.
@@ -122,7 +122,7 @@ public class MultiplayerHubTests
 
         await host.Hub.StartMatch();
 
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
         Assert.Multiple(() =>
         {
             Assert.That(realRoom.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
@@ -135,11 +135,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task CompleteLoadHandshake_StartsGameplay()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
         await host.Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
         await guest.Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
@@ -152,7 +152,7 @@ public class MultiplayerHubTests
         await guest.Hub.ChangeState(MultiplayerUserState.Loaded);
         await guest.Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
         Assert.Multiple(() =>
         {
             Assert.That(realRoom.State, Is.EqualTo(MultiplayerRoomState.Playing));
@@ -165,11 +165,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task FinishPlay_AllUsers_ReturnsToOpen()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
         await host.Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
         await guest.Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
@@ -185,7 +185,7 @@ public class MultiplayerHubTests
         await host.Hub.ChangeState(MultiplayerUserState.FinishedPlay);
         await guest.Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
         Assert.Multiple(() =>
         {
             Assert.That(realRoom.State, Is.EqualTo(MultiplayerRoomState.Open));
@@ -198,11 +198,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task SpectatingUser_ReceivesLoadRequested_OnMatchStart()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle spectator = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await spectator.Hub.JoinRoom(room.RoomID);
 
         // The spectator enters spectate mode.
@@ -225,11 +225,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task SpectatingUser_ExitingSpectate_CanReady()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         await guest.Hub.ChangeState(MultiplayerUserState.Spectating);
@@ -246,19 +246,19 @@ public class MultiplayerHubTests
     [Test]
     public async Task TeamVersus_JoinAssignsTeams_AndChangeTeamWorks()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guestA = await environment.ConnectAsync(2, "conn-guest-a");
         TestHubHandle guestB = await environment.ConnectAsync(3, "conn-guest-b");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.TeamVersus));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.TeamVersus));
         await guestA.Hub.JoinRoom(room.RoomID);
         await guestB.Hub.JoinRoom(room.RoomID);
 
         // Host and first guest on team 0/1 respectively.
-        var hostState = room.Users.First(u => u.UserID == 1).MatchState as TeamVersusUserState;
-        var guestAState = room.Users.First(u => u.UserID == 2).MatchState as TeamVersusUserState;
-        var guestBState = room.Users.First(u => u.UserID == 3).MatchState as TeamVersusUserState;
+        TeamVersusUserState? hostState = room.Users.First(u => u.UserID == 1).MatchState as TeamVersusUserState;
+        TeamVersusUserState? guestAState = room.Users.First(u => u.UserID == 2).MatchState as TeamVersusUserState;
+        TeamVersusUserState? guestBState = room.Users.First(u => u.UserID == 3).MatchState as TeamVersusUserState;
 
         Assert.Multiple(() =>
         {
@@ -274,18 +274,18 @@ public class MultiplayerHubTests
 
         // Change team of guest A to the team of guest B.
         await guestA.Hub.SendMatchRequest(new ChangeTeamRequest { TeamID = guestBState!.TeamID });
-        var updated = room.Users.First(u => u.UserID == 2).MatchState as TeamVersusUserState;
+        TeamVersusUserState? updated = room.Users.First(u => u.UserID == 2).MatchState as TeamVersusUserState;
         Assert.That(updated!.TeamID, Is.EqualTo(guestBState.TeamID));
     }
 
     [Test]
     public async Task TeamVersus_ChangeTeamDuringGameplay_AllowedWithoutManualLock()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.TeamVersus));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.TeamVersus));
         await guest.Hub.JoinRoom(room.RoomID);
         await host.Hub.ChangeState(MultiplayerUserState.Ready);
         await guest.Hub.ChangeState(MultiplayerUserState.Ready);
@@ -306,16 +306,16 @@ public class MultiplayerHubTests
     [Test]
     public async Task TransferHost_AsHost_UpdatesHost()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         await host.Hub.TransferHost(2);
 
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
         Assert.Multiple(() =>
         {
             Assert.That(realRoom.Host?.UserID, Is.EqualTo(2));
@@ -326,11 +326,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task KickUser_AsHost_RemovesUserAndBroadcasts()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
         host.Recorder.Clear();
 
@@ -349,11 +349,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task ChangeSettings_MatchTypeChange_SwapsRoomInstance()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         await host.Hub.ChangeSettings(new MultiplayerRoomSettings
@@ -363,7 +363,7 @@ public class MultiplayerHubTests
             QueueMode = room.Settings.QueueMode,
         });
 
-        var swapped = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom swapped = environment.RoomManager.GetRoom(room.RoomID)!;
         Assert.Multiple(() =>
         {
             Assert.That(swapped, Is.TypeOf<TeamVersusRoom>());
@@ -382,11 +382,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task ChangeSettings_AsNonHost_ThrowsNotHost()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         Assert.That(
@@ -397,11 +397,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task LeaveRoom_ClearsCurrentRoom_AndBroadcastsUserLeft()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
         host.Recorder.Clear();
 
@@ -419,11 +419,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task LeaveRoom_LastUser_DisbandsRoom()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         // Host leaves first; guest becomes host.
@@ -439,11 +439,11 @@ public class MultiplayerHubTests
     [Test]
     public async Task AddPlaylistItem_GuestLimit_Throws()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         // In host-only mode a guest cannot add items at all.
@@ -473,10 +473,10 @@ public class MultiplayerHubTests
     [Test]
     public async Task HostOnly_AfterGameplay_CurrentItemExpired_AndDuplicateAdded()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         host.Recorder.Clear();
 
         // Starting with no ready users is rejected (aligned with the reference).
@@ -493,7 +493,7 @@ public class MultiplayerHubTests
         await host.Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
         await host.Hub.ChangeState(MultiplayerUserState.FinishedPlay);
 
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
         Assert.Multiple(() =>
         {
             Assert.That(realRoom.Playlist, Has.Count.EqualTo(2));
@@ -514,10 +514,10 @@ public class MultiplayerHubTests
     [Test]
     public async Task RemovePlaylistItem_OnlyNonExpiredItem_Throws()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
 
         Assert.That(
             async () => await host.Hub.RemovePlaylistItem(room.Playlist[0].ID),
@@ -527,15 +527,15 @@ public class MultiplayerHubTests
     [Test]
     public async Task RemovePlaylistItem_CurrentItem_RepointsPlaylistItemIdBeforeRemoval()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await host.Hub.AddPlaylistItem(CreatePlaylistItem(200, 1));
         host.Recorder.Clear();
 
         long currentItemId = room.Playlist[0].ID;
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
 
         await host.Hub.RemovePlaylistItem(currentItemId);
 
@@ -548,8 +548,8 @@ public class MultiplayerHubTests
             // SettingsChanged (with the repointed PlaylistItemId) must be
             // broadcast BEFORE the removal so the client's CurrentPlaylistItem
             // (Single()) never fails.
-            int settingsIndex = host.Recorder.EventLog.FindIndex(e => e == nameof(IMultiplayerClient.SettingsChanged));
-            int removalIndex = host.Recorder.EventLog.FindIndex(e => e == nameof(IMultiplayerClient.PlaylistItemRemoved));
+            int settingsIndex = host.Recorder.EventLog.FindIndex(e => string.Equals(e, nameof(IMultiplayerClient.SettingsChanged), StringComparison.Ordinal));
+            int removalIndex = host.Recorder.EventLog.FindIndex(e => string.Equals(e, nameof(IMultiplayerClient.PlaylistItemRemoved), StringComparison.Ordinal));
             Assert.That(settingsIndex, Is.GreaterThanOrEqualTo(0));
             Assert.That(removalIndex, Is.GreaterThan(settingsIndex));
         });
@@ -558,12 +558,12 @@ public class MultiplayerHubTests
     [Test]
     public async Task EditPlaylistItem_CurrentItemBeatmapChanged_ResetsInvalidFreestyleStyles()
     {
-        var beatmapRepository = new FakeBeatmapRepository();
-        var environment = new MultiplayerHubTestEnvironment(beatmapRepository);
+        FakeBeatmapRepository beatmapRepository = new();
+        MultiplayerHubTestEnvironment environment = new(beatmapRepository);
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         long itemId = room.Playlist[0].ID;
@@ -594,13 +594,13 @@ public class MultiplayerHubTests
     [Test]
     public async Task EditPlaylistItem_PreservesPlaylistOrder()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await host.Hub.AddPlaylistItem(CreatePlaylistItem(200, 1));
 
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
         long firstId = realRoom.Playlist[0].ID;
         ushort firstOrder = realRoom.Playlist[0].PlaylistOrder;
         ushort secondOrder = realRoom.Playlist[1].PlaylistOrder;
@@ -612,8 +612,8 @@ public class MultiplayerHubTests
             OwnerID = 1,
             BeatmapID = 300,
             RulesetID = 0,
-            RequiredMods = Array.Empty<APIMod>(),
-            AllowedMods = Array.Empty<APIMod>(),
+            RequiredMods = [],
+            AllowedMods = [],
             Freestyle = false,
             Expired = false,
             PlaylistOrder = (ushort)(secondOrder + 1),
@@ -630,12 +630,12 @@ public class MultiplayerHubTests
     [Test]
     public async Task AddPlaylistItem_AndEdit_ResolveStarRatingFromBeatmap()
     {
-        var beatmapRepository = new FakeBeatmapRepository();
-        var environment = new MultiplayerHubTestEnvironment(beatmapRepository);
+        FakeBeatmapRepository beatmapRepository = new();
+        MultiplayerHubTestEnvironment environment = new(beatmapRepository);
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
-        var realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        IRoom realRoom = environment.RoomManager.GetRoom(room.RoomID)!;
 
         // Adding a playlist item for beatmap 200 resolves its star rating from
         // the beatmap repository (the created item has no beatmap navigation).
@@ -651,8 +651,8 @@ public class MultiplayerHubTests
             BeatmapID = 100,
             BeatmapChecksum = "checksum",
             RulesetID = 0,
-            RequiredMods = Array.Empty<APIMod>(),
-            AllowedMods = Array.Empty<APIMod>(),
+            RequiredMods = [],
+            AllowedMods = [],
             Freestyle = false,
             Expired = false,
             PlaylistOrder = 0,
@@ -665,13 +665,13 @@ public class MultiplayerHubTests
     [Test]
     public async Task AddPlaylistItem_WithInvalidMod_Throws()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
 
-        var item = CreatePlaylistItem(200, 1);
-        item.RequiredMods = new[] { new APIMod { Acronym = "VN" } };
+        MultiplayerPlaylistItem item = CreatePlaylistItem(200, 1);
+        item.RequiredMods = [new APIMod { Acronym = "VN" }];
 
         Assert.That(
             async () => await host.Hub.AddPlaylistItem(item),
@@ -681,14 +681,14 @@ public class MultiplayerHubTests
     [Test]
     public async Task EditPlaylistItem_WithInvalidMod_Throws()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
 
-        var item = CreatePlaylistItem(200, 1);
+        MultiplayerPlaylistItem item = CreatePlaylistItem(200, 1);
         item.ID = room.Playlist[0].ID;
-        item.RequiredMods = new[] { new APIMod { Acronym = "VN" } };
+        item.RequiredMods = [new APIMod { Acronym = "VN" }];
 
         Assert.That(
             async () => await host.Hub.EditPlaylistItem(item),
@@ -698,35 +698,35 @@ public class MultiplayerHubTests
     [Test]
     public async Task ChangeUserMods_WithModNotAllowedByCurrentItem_Throws()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         // The current item allows no free mods (AllowedMods is empty and the item
         // is not freestyle), so selecting HardRock must be rejected.
         Assert.That(
-            async () => await guest.Hub.ChangeUserMods(new[] { new APIMod { Acronym = "HR" } }),
+            async () => await guest.Hub.ChangeUserMods([new APIMod { Acronym = "HR" }]),
             Throws.TypeOf<InvalidStateException>());
     }
 
     [Test]
     public async Task ChangeUserMods_WithAllowedMod_Succeeds()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         // Make the current item allow HardRock.
         long itemId = room.Playlist[0].ID;
-        var edit = CreatePlaylistItem(100, 1);
+        MultiplayerPlaylistItem edit = CreatePlaylistItem(100, 1);
         edit.ID = itemId;
-        var hardRock = new[] { new APIMod { Acronym = "HR" } };
+        APIMod[] hardRock = [new() { Acronym = "HR" }];
         edit.AllowedMods = hardRock;
         await host.Hub.EditPlaylistItem(edit);
 
@@ -739,16 +739,16 @@ public class MultiplayerHubTests
     [Test]
     public async Task ChangeUserStyle_RulesetMismatchWithItem_Throws()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         // Make the current item's native ruleset taiko (1).
         long itemId = room.Playlist[0].ID;
-        var edit = CreatePlaylistItem(100, 1);
+        MultiplayerPlaylistItem edit = CreatePlaylistItem(100, 1);
         edit.ID = itemId;
         edit.RulesetID = 1;
         await host.Hub.EditPlaylistItem(edit);
@@ -756,41 +756,41 @@ public class MultiplayerHubTests
         // A non-freestyle item rejects any user style selection (aligned with
         // the reference changeUserStyle).
         Assert.That(
-            async () => await guest.Hub.ChangeUserStyle(null, 3),
+            async () => await guest.Hub.ChangeUserStyle(beatmapId: null, 3),
             Throws.TypeOf<InvalidStateException>());
         Assert.That(
-            async () => await guest.Hub.ChangeUserStyle(null, 1),
+            async () => await guest.Hub.ChangeUserStyle(beatmapId: null, 1),
             Throws.TypeOf<InvalidStateException>());
     }
 
     [Test]
     public async Task ChangeUserStyle_FreestyleItemAllowsRulesetSelection()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
         TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
 
-        var room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
         await guest.Hub.JoinRoom(room.RoomID);
 
         // Make the current item freestyle.
         long itemId = room.Playlist[0].ID;
-        var freestyle = CreateFreestyleItem(itemId, 100);
+        MultiplayerPlaylistItem freestyle = CreateFreestyleItem(itemId, 100);
         await host.Hub.EditPlaylistItem(freestyle);
 
         // A freestyle item allows any ruleset selection.
-        Assert.DoesNotThrowAsync(async () => await guest.Hub.ChangeUserStyle(null, 3));
+        Assert.DoesNotThrowAsync(async () => await guest.Hub.ChangeUserStyle(beatmapId: null, 3));
         Assert.That(room.Users.First(u => u.UserID == 2).RulesetId, Is.EqualTo(3));
     }
 
     [Test]
     public async Task CreateRoom_WithInvalidMod_Throws()
     {
-        var environment = new MultiplayerHubTestEnvironment();
+        MultiplayerHubTestEnvironment environment = new();
         TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
 
-        var request = CreateRoomRequest(OsuMatchType.HeadToHead);
-        request.Playlist[0].RequiredMods = new[] { new APIMod { Acronym = "VN" } };
+        MultiplayerRoom request = CreateRoomRequest(OsuMatchType.HeadToHead);
+        request.Playlist[0].RequiredMods = [new APIMod { Acronym = "VN" }];
 
         Assert.That(
             async () => await host.Hub.CreateRoom(request),
@@ -804,8 +804,8 @@ public class MultiplayerHubTests
         BeatmapID = beatmapId,
         BeatmapChecksum = "checksum",
         RulesetID = 0,
-        RequiredMods = Array.Empty<APIMod>(),
-        AllowedMods = Array.Empty<APIMod>(),
+        RequiredMods = [],
+        AllowedMods = [],
         Freestyle = true,
         Expired = false,
         PlaylistOrder = 0,
@@ -819,8 +819,8 @@ public class MultiplayerHubTests
         BeatmapID = beatmapId,
         BeatmapChecksum = "checksum",
         RulesetID = 0,
-        RequiredMods = Array.Empty<APIMod>(),
-        AllowedMods = Array.Empty<APIMod>(),
+        RequiredMods = [],
+        AllowedMods = [],
         Freestyle = false,
         Expired = false,
         PlaylistOrder = 0,
@@ -847,8 +847,8 @@ public class MultiplayerHubTests
                     OwnerID = 1,
                     BeatmapID = 100,
                     RulesetID = 0,
-                    RequiredMods = Array.Empty<APIMod>(),
-                    AllowedMods = Array.Empty<APIMod>(),
+                    RequiredMods = [],
+                    AllowedMods = [],
                     Freestyle = false,
                     Expired = false,
                     PlaylistOrder = 0,
@@ -899,8 +899,8 @@ public class MultiplayerHubTests
             Router.EnsureConnection(connectionId);
             Router.AliasConnection(userId.ToString(), connectionId);
 
-            var groupManager = new FakeGroupManager(Router);
-            var hub = new MultiplayerHub(
+            FakeGroupManager groupManager = new(Router);
+            MultiplayerHub hub = new(
                 PlayerManager,
                 NullLogger<MultiplayerHub>.Instance,
                 RoomManager,
@@ -914,7 +914,7 @@ public class MultiplayerHubTests
 
             await hub.OnConnectedAsync();
 
-            var handle = new TestHubHandle(hub, connectionId, Router.GetRecorder(userId.ToString()), groupManager);
+            TestHubHandle handle = new(hub, connectionId, Router.GetRecorder(userId.ToString()), groupManager);
             handle.Recorder.Clear();
             handle.GroupManager.Reset();
             return handle;
@@ -932,19 +932,19 @@ public class MultiplayerHubTests
     /// </summary>
     private sealed class FakeBeatmapRepository : IBeatmapRepository
     {
-        private readonly List<Beatmap> beatmaps = new()
-        {
-            new Beatmap { Id = 100, BeatmapSetId = 1, Mode = 0, Checksum = "checksum", DifficultyRating = 4.2 },
-            new Beatmap { Id = 200, BeatmapSetId = 2, Mode = 0, Checksum = "checksum", DifficultyRating = 6.5 },
-        };
+        private readonly List<Beatmap> _beatmaps =
+        [
+            new() { Id = 100, BeatmapSetId = 1, Mode = 0, Checksum = "checksum", DifficultyRating = 4.2 },
+            new() { Id = 200, BeatmapSetId = 2, Mode = 0, Checksum = "checksum", DifficultyRating = 6.5 },
+        ];
 
         public Task<Beatmap?> GetByIdAsync(int beatmapId)
-            => Task.FromResult(beatmaps.FirstOrDefault(b => b.Id == beatmapId));
+            => Task.FromResult(_beatmaps.Find(b => b.Id == beatmapId));
 
         public Task<Beatmap?> GetByChecksumAsync(string checksum) => Task.FromResult<Beatmap?>(null);
 
         public Task<IReadOnlyList<Beatmap>> GetByBeatmapSetIdAsync(long beatmapSetId)
-            => Task.FromResult<IReadOnlyList<Beatmap>>(beatmaps.Where(b => b.BeatmapSetId == beatmapSetId).ToList());
+            => Task.FromResult<IReadOnlyList<Beatmap>>(_beatmaps.Where(b => b.BeatmapSetId == beatmapSetId).ToList());
 
         public Task<IReadOnlyList<Beatmap>> GetByMapperIdAsync(int mapperId)
             => Task.FromResult<IReadOnlyList<Beatmap>>([]);

@@ -17,10 +17,10 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
     [Test]
     public async Task GuestsCannotAddItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // In host-only queue mode a non-host cannot add playlist items.
         Assert.That(
@@ -35,15 +35,15 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
     [Test]
     public async Task HostMayAddManyItems()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.HostOnly });
 
         for (int i = 1; i < RealtimeConfig.DefaultGuestPlaylistLimit + 1; i++)
         {
-            await addItem();
+            await AddItem();
         }
 
-        async Task addItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
+        async Task AddItem() => await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
             BeatmapChecksum = "3333",
@@ -56,8 +56,8 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         // SettingsChanged broadcasts pass the live room settings reference (which
         // is mutated in place as the playlist advances), so capture the broadcast
         // playlist item ID at the time each broadcast occurs.
-        var settingsPlaylistItemIds = new List<long>();
-        var playlistItemChangedSnapshots = new List<(long Id, bool Expired)>();
+        List<long> settingsPlaylistItemIds = new();
+        List<(long Id, bool Expired)> playlistItemChangedSnapshots = new();
         Receiver.Setup(r => r.SettingsChanged(It.IsAny<MultiplayerRoomSettings>()))
                 .Callback<MultiplayerRoomSettings>(s => settingsPlaylistItemIds.Add(s.PlaylistItemId))
                 .CallBase();
@@ -65,19 +65,19 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
                 .Callback<MultiplayerPlaylistItem>(i => playlistItemChangedSnapshots.Add((i.ID, i.Expired)))
                 .CallBase();
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
         await LoadAndFinishGameplay(ContextUser);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
 
-        var oldItem = room.Playlist[0];
-        var newItem = room.Playlist[1];
+        MultiplayerPlaylistItem oldItem = room.Playlist[0];
+        MultiplayerPlaylistItem newItem = room.Playlist[1];
 
         // Room has new playlist item.
         Assert.That(newItem.ID, Is.Not.EqualTo(oldItem.ID));
@@ -89,9 +89,10 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         // broadcasts here (one from room initialisation and one from match
         // completion); g0v0 assigns the initial PlaylistItemId in the room
         // constructor without broadcasting, so only the completion broadcast occurs.
-        Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
+        long addedItemId = newItem.ID;
+        Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == addedItemId)), Times.Once);
         Assert.That(playlistItemChangedSnapshots, Does.Contain((oldItem.ID, true)));
-        Assert.That(settingsPlaylistItemIds, Is.EqualTo(new[] { newItem.ID }));
+        Assert.That(settingsPlaylistItemIds, Is.EqualTo([newItem.ID]));
 
         // And a second time...
         await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -99,7 +100,7 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         await Hub.StartMatch();
         await LoadAndFinishGameplay(ContextUser);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         Assert.That(room!.Playlist, Has.Count.EqualTo(3));
@@ -116,7 +117,7 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         // Players received callbacks (one SettingsChanged per completed match).
         Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == newItem.ID)), Times.Once);
         Assert.That(playlistItemChangedSnapshots, Does.Contain((oldItem.ID, true)));
-        Assert.That(settingsPlaylistItemIds, Is.EqualTo(new[] { room.Playlist[1].ID, room.Playlist[2].ID }));
+        Assert.That(settingsPlaylistItemIds, Is.EqualTo([room.Playlist[1].ID, room.Playlist[2].ID]));
     }
 
     [Test]
@@ -125,8 +126,8 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         // SettingsChanged broadcasts pass the live room settings reference (which
         // is mutated in place as the playlist advances), so capture the broadcast
         // playlist item ID at the time each broadcast occurs.
-        var settingsPlaylistItemIds = new List<long>();
-        var playlistItemChangedSnapshots = new List<(long Id, bool Expired)>();
+        List<long> settingsPlaylistItemIds = new();
+        List<(long Id, bool Expired)> playlistItemChangedSnapshots = new();
         Receiver.Setup(r => r.SettingsChanged(It.IsAny<MultiplayerRoomSettings>()))
                 .Callback<MultiplayerRoomSettings>(s => settingsPlaylistItemIds.Add(s.PlaylistItemId))
                 .CallBase();
@@ -135,7 +136,7 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
                 .CallBase();
 
         // Add another item in free-for-all mode.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
@@ -149,7 +150,7 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         await Hub.StartMatch();
         await LoadAndFinishGameplay(ContextUser);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
@@ -163,7 +164,7 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         // broadcast that g0v0 does not.
         Receiver.Verify(r => r.PlaylistItemAdded(It.IsAny<MultiplayerPlaylistItem>()), Times.Once);
         Assert.That(playlistItemChangedSnapshots, Does.Contain((room.Playlist[0].ID, true)));
-        Assert.That(settingsPlaylistItemIds, Is.EqualTo(new[] { room.Playlist[0].ID, room.Playlist[0].ID, room.Playlist[1].ID }));
+        Assert.That(settingsPlaylistItemIds, Is.EqualTo([room.Playlist[0].ID, room.Playlist[0].ID, room.Playlist[1].ID]));
 
         // Play the second item in host-only mode.
         await Hub.ChangeState(MultiplayerUserState.Idle);
@@ -171,7 +172,7 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         await Hub.StartMatch();
         await LoadAndFinishGameplay(ContextUser);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         // The second item is the last non-expired item, so completing it (in
@@ -183,13 +184,13 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
         // Players received callbacks (one SettingsChanged per completed match).
         Receiver.Verify(r => r.PlaylistItemAdded(It.Is<MultiplayerPlaylistItem>(i => i.ID == room.Playlist[2].ID)), Times.Once);
         Assert.That(playlistItemChangedSnapshots, Does.Contain((room.Playlist[1].ID, true)));
-        Assert.That(settingsPlaylistItemIds, Is.EqualTo(new[] { room.Playlist[0].ID, room.Playlist[0].ID, room.Playlist[1].ID, room.Playlist[2].ID }));
+        Assert.That(settingsPlaylistItemIds, Is.EqualTo([room.Playlist[0].ID, room.Playlist[0].ID, room.Playlist[1].ID, room.Playlist[2].ID]));
     }
 
     [Test]
     public async Task ItemLastInQueueWhenChangingToAllPlayersMode()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapID = 3333,
@@ -203,13 +204,13 @@ public class MultiplayerHostOnlyQueueTests : MultiplayerTestBase
 
         await Hub.ChangeSettings(new MultiplayerRoomSettings { QueueMode = QueueMode.AllPlayers });
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         Assert.That(room!.Playlist, Has.Count.EqualTo(2));
 
-        var firstItem = room.Playlist[0];
-        var secondItem = room.Playlist[1];
+        MultiplayerPlaylistItem firstItem = room.Playlist[0];
+        MultiplayerPlaylistItem secondItem = room.Playlist[1];
 
         // First item (played).
         Assert.That(firstItem, Is.Not.Null);

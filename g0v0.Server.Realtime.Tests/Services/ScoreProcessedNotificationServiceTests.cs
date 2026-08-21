@@ -37,9 +37,9 @@ public class ScoreProcessedNotificationServiceTests
         _receiverIpc = new InterProcessCommunicationClient(_transport, "realtime");
         _scoreRepository = new FakeScoreRepository();
 
-        var serviceCollection = new ServiceCollection();
+        ServiceCollection serviceCollection = new();
         serviceCollection.AddScoped<IScoreRepository>(_ => _scoreRepository);
-        var serviceProvider = serviceCollection.BuildServiceProvider();
+        ServiceProvider serviceProvider = serviceCollection.BuildServiceProvider();
         _scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
 
         _service = new ScoreProcessedNotificationService(
@@ -55,8 +55,8 @@ public class ScoreProcessedNotificationServiceTests
     [Test]
     public async Task RegisterForSingleScoreAsync_WhenScoreAlreadyProcessed_NotifyImmediately()
     {
-        var player = new TestPlayer(1);
-        var score = new DbScore { Id = 42, Processed = true };
+        TestPlayer player = new(1);
+        DbScore score = new() { Id = 42, Processed = true };
         _scoreRepository.SetScoreByToken(100, score);
 
         await _service.RegisterForSingleScoreAsync(player, 100);
@@ -67,8 +67,8 @@ public class ScoreProcessedNotificationServiceTests
     [Test]
     public async Task RegisterForSingleScoreAsync_WhenScoreNotProcessed_AwaitsIpcNotice()
     {
-        var player = new TestPlayer(1);
-        var score = new DbScore { Id = 42, Processed = false };
+        TestPlayer player = new(1);
+        DbScore score = new() { Id = 42, Processed = false };
         _scoreRepository.SetScoreByToken(100, score);
 
         await _service.RegisterForSingleScoreAsync(player, 100);
@@ -87,8 +87,8 @@ public class ScoreProcessedNotificationServiceTests
     [Test]
     public async Task RegisterForSingleScoreAsync_WhenScoreAppearsDuringPolling_AwaitsIpcNotice()
     {
-        var player = new TestPlayer(1);
-        var registrationTask = _service.RegisterForSingleScoreAsync(player, 100);
+        TestPlayer player = new(1);
+        Task registrationTask = _service.RegisterForSingleScoreAsync(player, 100);
 
         await Task.Delay(50);
         _scoreRepository.SetScoreByToken(100, new DbScore { Id = 42, Processed = false });
@@ -108,7 +108,7 @@ public class ScoreProcessedNotificationServiceTests
     [Test]
     public async Task RegisterForSingleScoreAsync_WhenScoreNotFound_TimeoutWithoutNotification()
     {
-        var player = new TestPlayer(1);
+        TestPlayer player = new(1);
 
         await _service.RegisterForSingleScoreAsync(player, 100);
 
@@ -118,13 +118,13 @@ public class ScoreProcessedNotificationServiceTests
     [Test]
     public async Task HandleScoreProcessed_FromNonLazerSource_Ignored()
     {
-        var player = new TestPlayer(1);
-        var score = new DbScore { Id = 42, Processed = false };
+        TestPlayer player = new(1);
+        DbScore score = new() { Id = 42, Processed = false };
         _scoreRepository.SetScoreByToken(100, score);
 
         await _service.RegisterForSingleScoreAsync(player, 100);
 
-        var gatewayIpc = new InterProcessCommunicationClient(_transport, "gateway");
+        InterProcessCommunicationClient gatewayIpc = new(_transport, "gateway");
         await gatewayIpc.SendNoticeAsync("realtime", "score_processed", new { score_id = 42 });
 
         Assert.That(player.ProcessedScoreIds, Is.Empty);
@@ -261,12 +261,9 @@ public class ScoreProcessedNotificationServiceTests
 
         public Task PublishAsync(string channel, string payload)
         {
-            if (!_subscriptions.TryGetValue(channel, out ConcurrentBag<Func<string, Task>>? handlers))
-            {
-                return Task.CompletedTask;
-            }
-
-            return Task.WhenAll(handlers.Select(handler => Task.Run(async () =>
+            return !_subscriptions.TryGetValue(channel, out ConcurrentBag<Func<string, Task>>? handlers)
+                ? Task.CompletedTask
+                : Task.WhenAll(handlers.Select(handler => Task.Run(async () =>
             {
                 try
                 {

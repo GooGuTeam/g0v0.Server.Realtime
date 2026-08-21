@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Realtime.Objects.Rooms;
 using Moq;
 using NUnit.Framework;
 using osu.Game.Online.API;
@@ -27,13 +28,13 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task AddItem()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
             Freestyle = true,
-            RequiredMods = new[] { new APIMod(new OsuModDoubleTime()) },
+            RequiredMods = [new APIMod(new OsuModDoubleTime())]
         });
 
         Assert.That(
@@ -42,7 +43,7 @@ public class FreestyleTests : MultiplayerTestBase
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
                 Freestyle = true,
-                AllowedMods = new[] { new APIMod(new OsuModDoubleTime()) },
+                AllowedMods = [new APIMod(new OsuModDoubleTime())]
             }),
             Throws.TypeOf<InvalidStateException>());
     }
@@ -54,34 +55,34 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task SetUserStyle()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         // Set beatmap style.
-        await Hub.ChangeUserStyle(12345, null);
+        await Hub.ChangeUserStyle(beatmapId: 12345, rulesetId: null);
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.EqualTo(12345));
             Assert.That(room.Users.First().RulesetId, Is.Null);
-            Receiver.Verify(client => client.UserStyleChanged(USERID, 12345, null), Times.Once);
+            Receiver.Verify(client => client.UserStyleChanged(UserId, 12345, null), Times.Once);
         });
 
         // Set ruleset style.
-        await Hub.ChangeUserStyle(null, 3);
+        await Hub.ChangeUserStyle(beatmapId: null, rulesetId: 3);
 
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.Null);
             Assert.That(room.Users.First().RulesetId, Is.EqualTo(3));
-            Receiver.Verify(client => client.UserStyleChanged(USERID, null, 3), Times.Once);
+            Receiver.Verify(client => client.UserStyleChanged(UserId, null, 3), Times.Once);
         });
 
         // Set beatmap and ruleset style.
@@ -91,7 +92,7 @@ public class FreestyleTests : MultiplayerTestBase
         {
             Assert.That(room.Users.First().BeatmapId, Is.EqualTo(12345));
             Assert.That(room.Users.First().RulesetId, Is.EqualTo(2));
-            Receiver.Verify(client => client.UserStyleChanged(USERID, 12345, 2), Times.Once);
+            Receiver.Verify(client => client.UserStyleChanged(UserId, 12345, 2), Times.Once);
         });
     }
 
@@ -101,17 +102,17 @@ public class FreestyleTests : MultiplayerTestBase
         // 12345 belongs to a different beatmap set than the current item (1234, set 1).
         BeatmapRepository!.Beatmaps.First(b => b.Id == 12345).BeatmapSetId = 2;
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         Assert.That(
-            async () => await Hub.ChangeUserStyle(12345, null),
+            async () => await Hub.ChangeUserStyle(beatmapId: 12345, rulesetId: null),
             Throws.TypeOf<InvalidStateException>());
         Receiver.Verify(client => client.UserStyleChanged(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
     }
@@ -122,17 +123,17 @@ public class FreestyleTests : MultiplayerTestBase
         // 12345 does not exist in the beatmap repository.
         BeatmapRepository!.MissingBeatmapIds.Add(12345);
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         Assert.That(
-            async () => await Hub.ChangeUserStyle(12345, null),
+            async () => await Hub.ChangeUserStyle(12345, rulesetId: null),
             Throws.TypeOf<InvalidStateException>());
         Receiver.Verify(client => client.UserStyleChanged(It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<int?>()), Times.Never);
     }
@@ -140,28 +141,28 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task SetUserStyle_InvalidRulesetIdFails()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         // Out of range.
-        Assert.That(async () => await Hub.ChangeUserStyle(null, -1), Throws.TypeOf<InvalidStateException>());
-        Assert.That(async () => await Hub.ChangeUserStyle(null, 4), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.ChangeUserStyle(beatmapId: null, rulesetId: -1), Throws.TypeOf<InvalidStateException>());
+        Assert.That(async () => await Hub.ChangeUserStyle(beatmapId: null, rulesetId: 4), Throws.TypeOf<InvalidStateException>());
 
         // Convertible (osu!standard item allows any ruleset).
-        await Hub.ChangeUserStyle(null, 0);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, null, 0), Times.Once);
-        await Hub.ChangeUserStyle(null, 1);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, null, 1), Times.Once);
-        await Hub.ChangeUserStyle(null, 2);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, null, 2), Times.Once);
-        await Hub.ChangeUserStyle(null, 3);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, null, 3), Times.Once);
+        await Hub.ChangeUserStyle(beatmapId: null, rulesetId: 0);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, null, 0), Times.Once);
+        await Hub.ChangeUserStyle(beatmapId: null, rulesetId: 1);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, null, 1), Times.Once);
+        await Hub.ChangeUserStyle(beatmapId: null, rulesetId: 2);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, null, 2), Times.Once);
+        await Hub.ChangeUserStyle(beatmapId: null, rulesetId: 3);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, null, 3), Times.Once);
 
         // Inconvertible: selecting a specific beatmap (12345, playmode 1 = taiko)
         // constrains the ruleset to the beatmap's native ruleset; this server
@@ -170,13 +171,13 @@ public class FreestyleTests : MultiplayerTestBase
         // non-matching ruleset is accepted. The osu!standard variant of this
         // assertion is exercised in <see cref="SetUserStyle"/>.
         await Hub.ChangeUserStyle(12345, 0);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, 12345, 0), Times.Once);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, 12345, 0), Times.Once);
         await Hub.ChangeUserStyle(12345, 1);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, 12345, 1), Times.Once);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, 12345, 1), Times.Once);
         await Hub.ChangeUserStyle(12345, 2);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, 12345, 2), Times.Once);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, 12345, 2), Times.Once);
         await Hub.ChangeUserStyle(12345, 3);
-        Receiver.Verify(client => client.UserStyleChanged(USERID, 12345, 3), Times.Once);
+        Receiver.Verify(client => client.UserStyleChanged(UserId, 12345, 3), Times.Once);
     }
 
     #endregion
@@ -186,14 +187,14 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task EditItem()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
             Freestyle = true,
-            RequiredMods = new[] { new APIMod(new OsuModDoubleTime()) },
+            RequiredMods = [new APIMod(new OsuModDoubleTime())]
         });
 
         Assert.That(
@@ -203,7 +204,7 @@ public class FreestyleTests : MultiplayerTestBase
                 BeatmapChecksum = "checksum",
                 BeatmapID = 1234,
                 Freestyle = true,
-                AllowedMods = new[] { new APIMod(new OsuModHardRock()) },
+                AllowedMods = [new APIMod(new OsuModHardRock())]
             }),
             Throws.TypeOf<InvalidStateException>());
     }
@@ -211,13 +212,13 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task EditItem_SameBeatmapSetPreservesUserStyle()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         // Set beatmap and ruleset style.
@@ -229,10 +230,10 @@ public class FreestyleTests : MultiplayerTestBase
             ID = 1,
             BeatmapChecksum = "checksum2",
             BeatmapID = 12345,
-            Freestyle = true,
+            Freestyle = true
         });
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.EqualTo(123456));
@@ -250,19 +251,19 @@ public class FreestyleTests : MultiplayerTestBase
         BeatmapRepository.Beatmaps.First(b => b.Id == 123456).BeatmapSetId = 3;
         BeatmapRepository.Beatmaps.First(b => b.Id == 123456).Mode = 3;
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         // Set beatmap + ruleset style.
         await Hub.ChangeUserStyle(1234, 1);
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.EqualTo(1234));
@@ -275,7 +276,7 @@ public class FreestyleTests : MultiplayerTestBase
             ID = 1,
             BeatmapChecksum = "checksum2",
             BeatmapID = 12345,
-            Freestyle = true,
+            Freestyle = true
         });
 
         Assert.Multiple(() =>
@@ -302,7 +303,7 @@ public class FreestyleTests : MultiplayerTestBase
             BeatmapChecksum = "checksum3",
             BeatmapID = 123456,
             RulesetID = 3,
-            Freestyle = true,
+            Freestyle = true
         });
 
         Assert.Multiple(() =>
@@ -318,13 +319,13 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task EditItem_DisableFreestyleResetsUserStyle()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         // Set beatmap and ruleset style.
@@ -335,15 +336,15 @@ public class FreestyleTests : MultiplayerTestBase
         {
             ID = 1,
             BeatmapChecksum = "checksum",
-            BeatmapID = 1234,
+            BeatmapID = 1234
         });
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.Null);
             Assert.That(room.Users.First().RulesetId, Is.Null);
-            Receiver.Verify(client => client.UserStyleChanged(USERID, null, null), Times.Once);
+            Receiver.Verify(client => client.UserStyleChanged(UserId, null, null), Times.Once);
         });
     }
 
@@ -354,21 +355,21 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task CurrentItemChanged_SameBeatmapSetPreservesUserStyle()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapChecksum = "checksum2",
             BeatmapID = 12345,
-            Freestyle = true,
+            Freestyle = true
         });
 
         await Hub.ChangeUserStyle(123456, 1);
@@ -378,7 +379,7 @@ public class FreestyleTests : MultiplayerTestBase
         await LoadAndFinishGameplay(ContextUser);
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.EqualTo(123456));
@@ -395,14 +396,14 @@ public class FreestyleTests : MultiplayerTestBase
         BeatmapRepository!.Beatmaps.First(b => b.Id == 12345).BeatmapSetId = 2;
         BeatmapRepository.Beatmaps.First(b => b.Id == 12345).Mode = 3;
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
@@ -410,7 +411,7 @@ public class FreestyleTests : MultiplayerTestBase
             BeatmapChecksum = "checksum2",
             BeatmapID = 12345,
             RulesetID = 3,
-            Freestyle = true,
+            Freestyle = true
         });
 
         await Hub.ChangeUserStyle(123456, 1);
@@ -420,7 +421,7 @@ public class FreestyleTests : MultiplayerTestBase
         await LoadAndFinishGameplay(ContextUser);
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.Null);
@@ -431,20 +432,20 @@ public class FreestyleTests : MultiplayerTestBase
     [Test]
     public async Task CurrentItemChanged_FreestyleDisabledResetsUserStyle()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
-            Freestyle = true,
+            Freestyle = true
         });
 
         await Hub.AddPlaylistItem(new MultiplayerPlaylistItem
         {
             BeatmapChecksum = "checksum",
-            BeatmapID = 1234,
+            BeatmapID = 1234
         });
 
         await Hub.ChangeUserStyle(12345, 1);
@@ -454,7 +455,7 @@ public class FreestyleTests : MultiplayerTestBase
         await LoadAndFinishGameplay(ContextUser);
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        var room = Hub.GetRoom(ROOMID)!;
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.First().BeatmapId, Is.Null);
@@ -473,25 +474,25 @@ public class FreestyleTests : MultiplayerTestBase
         // ruleset (HD+CS -> HD) and broadcasts UserModsChanged; our server's
         // ChangeUserStyle only updates the style and never re-validates mods, so
         // the mods stay HD+CS and no UserModsChanged is posted.
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.EditPlaylistItem(new MultiplayerPlaylistItem
         {
             ID = 1,
             BeatmapChecksum = "checksum",
             BeatmapID = 1234,
             Freestyle = true,
-            RequiredMods = new[] { new APIMod(new OsuModHardRock()) },
+            RequiredMods = [new APIMod(new OsuModHardRock())]
         });
 
         // Set user style + mods.
         await Hub.ChangeUserStyle(12345, 1);
-        await Hub.ChangeUserMods(new[] { new APIMod(new TaikoModHidden()), new APIMod(new TaikoModConstantSpeed()) });
-        var room = Hub.GetRoom(ROOMID)!;
+        await Hub.ChangeUserMods([new APIMod(new TaikoModHidden()), new APIMod(new TaikoModConstantSpeed())]);
+        IRoom room = Hub.GetRoom(RoomId)!;
         Assert.That(room.Users.Single().Mods.Select(m => m.Acronym), Is.EqualTo(HdCsAcronyms));
 
         // Try select invalid mod.
         Assert.That(
-            async () => await Hub.ChangeUserMods(new[] { new APIMod(new TaikoModEasy()) }),
+            async () => await Hub.ChangeUserMods([new APIMod(new TaikoModEasy())]),
             Throws.TypeOf<InvalidStateException>());
         Assert.That(room.Users.Single().Mods.Select(m => m.Acronym), Is.EqualTo(HdCsAcronyms));
 
@@ -503,8 +504,8 @@ public class FreestyleTests : MultiplayerTestBase
         {
             string[] expectedMods = ["HD"];
             Assert.That(room.Users.Single().Mods.Select(m => m.Acronym), Is.EqualTo(expectedMods));
-            Receiver.Verify(u => u.UserModsChanged(USERID, It.IsAny<IEnumerable<APIMod>>()), Times.Once);
-            Receiver.Verify(u => u.UserStyleChanged(USERID, 12345, 0), Times.Once);
+            Receiver.Verify(u => u.UserModsChanged(UserId, It.IsAny<IEnumerable<APIMod>>()), Times.Once);
+            Receiver.Verify(u => u.UserStyleChanged(UserId, 12345, 0), Times.Once);
         });
     }
 }

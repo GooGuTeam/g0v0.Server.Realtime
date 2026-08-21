@@ -13,14 +13,14 @@ namespace g0v0.Server.Realtime.Tests.Hubs;
 /// </summary>
 internal sealed class FakeRoomRepository : IRoomRepository
 {
-    private readonly List<Room> rooms = new();
-    private readonly List<Playlist> playlists = new();
-    private readonly List<RoomParticipatedUser> participants = new();
-    private long nextRoomId = 1;
-    private long nextPlaylistId = 1;
-    private long nextParticipantId = 1;
+    private readonly List<Room> _rooms = new();
+    private readonly List<Playlist> _playlists = new();
+    private readonly List<RoomParticipatedUser> _participants = new();
+    private long _nextRoomId = 1;
+    private long _nextPlaylistId = 1;
+    private long _nextParticipantId = 1;
 
-    public IReadOnlyList<Room> Rooms => rooms;
+    public IReadOnlyList<Room> Rooms => _rooms;
 
     /// <summary>
     /// Gets the playlist item IDs which are considered to have associated score tokens.
@@ -39,7 +39,7 @@ internal sealed class FakeRoomRepository : IRoomRepository
     /// <param name="roomId">The room ID.</param>
     /// <returns>The participant records.</returns>
     public IReadOnlyList<RoomParticipatedUser> GetParticipants(long roomId)
-        => participants.Where(p => p.RoomId == roomId).ToList();
+        => _participants.Where(p => p.RoomId == roomId).ToList();
 
     public async Task<Room> CreateRoom(
         MultiplayerRoom room,
@@ -49,9 +49,9 @@ internal sealed class FakeRoomRepository : IRoomRepository
     {
         // Respect an explicit room ID (used by join-or-create test flows which
         // reference a fixed room ID), otherwise allocate a fresh one.
-        long roomId = room.RoomID > 0 ? room.RoomID : nextRoomId++;
+        long roomId = room.RoomID > 0 ? room.RoomID : _nextRoomId++;
 
-        var dbRoom = new Room
+        Room dbRoom = new()
         {
             Id = roomId,
             Name = room.Settings.Name,
@@ -69,26 +69,26 @@ internal sealed class FakeRoomRepository : IRoomRepository
             Playlists = new List<Playlist>(),
         };
 
-        foreach (var item in room.Playlist)
+        foreach (MultiplayerPlaylistItem item in room.Playlist)
         {
             dbRoom.Playlists.Add(AddPlaylistInternal(item, dbRoom.Id, hostUserId));
         }
 
-        rooms.Add(dbRoom);
+        _rooms.Add(dbRoom);
         await Task.CompletedTask;
         return dbRoom;
     }
 
     public Task<Room?> GetRoom(long roomId)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId);
+        Room? room = _rooms.Find(r => r.Id == roomId);
         if (room == null)
         {
             return Task.FromResult<Room?>(null);
         }
 
         // Include playlist.
-        room.Playlists = playlists.Where(p => p.RoomId == roomId).ToList();
+        room.Playlists = _playlists.Where(p => p.RoomId == roomId).ToList();
         return Task.FromResult<Room?>(room);
     }
 
@@ -99,25 +99,20 @@ internal sealed class FakeRoomRepository : IRoomRepository
             throw new InvalidOperationException("Simulated AddUserToRoom failure.");
         }
 
-        var room = rooms.FirstOrDefault(r => r.Id == roomId);
-        if (room == null)
-        {
-            throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
-        }
-
+        Room? room = _rooms.Find(r => r.Id == roomId) ?? throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
         if (room.EndsAt != null)
         {
             throw new InvalidOperationException($"Room with ID {roomId} has ended.");
         }
 
-        var active = participants
+        List<RoomParticipatedUser> active = _participants
             .Where(p => p.RoomId == roomId && p.UserId == userId && p.LeftAt == null)
             .OrderBy(p => p.JoinedAt)
             .ToList();
 
         if (active.Count > 0)
         {
-            foreach (var extra in active.Skip(1))
+            foreach (RoomParticipatedUser? extra in active.Skip(1))
             {
                 extra.LeftAt = DateTimeOffset.UtcNow;
             }
@@ -126,9 +121,9 @@ internal sealed class FakeRoomRepository : IRoomRepository
         }
         else
         {
-            participants.Add(new RoomParticipatedUser
+            _participants.Add(new RoomParticipatedUser
             {
-                Id = nextParticipantId++,
+                Id = _nextParticipantId++,
                 RoomId = roomId,
                 UserId = userId,
                 JoinedAt = DateTimeOffset.UtcNow,
@@ -141,18 +136,13 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public async Task RemoveUserFromRoom(long roomId, int userId)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId);
-        if (room == null)
-        {
-            throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
-        }
-
+        Room? room = _rooms.Find(r => r.Id == roomId) ?? throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
         if (room.EndsAt != null)
         {
             return;
         }
 
-        var participant = participants.FirstOrDefault(p => p.RoomId == roomId && p.UserId == userId && p.LeftAt == null);
+        RoomParticipatedUser? participant = _participants.Find(p => p.RoomId == roomId && p.UserId == userId && p.LeftAt == null);
         if (participant != null)
         {
             participant.LeftAt = DateTimeOffset.UtcNow;
@@ -164,7 +154,7 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public Task UpdateRoomHost(long roomId, int? hostUserId)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId)
+        Room room = _rooms.Find(r => r.Id == roomId)
                    ?? throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
         room.HostId = hostUserId;
         return Task.CompletedTask;
@@ -172,7 +162,7 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public Task UpdateRoomSettings(long roomId, MultiplayerRoomSettings settings)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId)
+        Room room = _rooms.Find(r => r.Id == roomId)
                    ?? throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
         room.Name = settings.Name;
         room.Password = settings.Password;
@@ -186,9 +176,9 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public Task UpdateRoomStatus(long roomId, MultiplayerRoomState state)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId)
+        Room room = _rooms.Find(r => r.Id == roomId)
                    ?? throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
-        room.Status = state == MultiplayerRoomState.Playing || state == MultiplayerRoomState.WaitingForLoad
+        room.Status = state is MultiplayerRoomState.Playing or MultiplayerRoomState.WaitingForLoad
             ? RoomStatus.Playing
             : RoomStatus.Idle;
         return Task.CompletedTask;
@@ -196,7 +186,7 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public Task SetRoomEndDate(long roomId, DateTimeOffset? endDate)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId)
+        Room room = _rooms.Find(r => r.Id == roomId)
                    ?? throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
         room.EndsAt = endDate;
         return Task.CompletedTask;
@@ -204,13 +194,13 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public Task<Playlist> AddItemToPlaylist(MultiplayerPlaylistItem item, long roomId, int ownerId)
     {
-        var playlist = AddPlaylistInternal(item, roomId, ownerId);
+        Playlist playlist = AddPlaylistInternal(item, roomId, ownerId);
         return Task.FromResult(playlist);
     }
 
     public Task<Playlist> EditItemToPlaylist(MultiplayerPlaylistItem item, long roomId, int ownerId)
     {
-        var playlist = playlists.FirstOrDefault(p => p.Id == item.ID && p.RoomId == roomId)
+        Playlist playlist = _playlists.Find(p => p.Id == item.ID && p.RoomId == roomId)
                        ?? throw new InvalidOperationException($"Playlist item with ID {item.ID} does not exist in room {roomId}.");
         playlist.BeatmapId = item.BeatmapID;
         playlist.RulesetId = item.RulesetID;
@@ -226,9 +216,9 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public Task<Playlist> RemoveItemToPlaylist(long itemId, long roomId, int ownerId)
     {
-        var playlist = playlists.FirstOrDefault(p => p.Id == itemId && p.RoomId == roomId)
+        Playlist playlist = _playlists.Find(p => p.Id == itemId && p.RoomId == roomId)
                        ?? throw new InvalidOperationException($"Playlist item with ID {itemId} does not exist in room {roomId}.");
-        playlists.Remove(playlist);
+        _playlists.Remove(playlist);
         return Task.FromResult(playlist);
     }
 
@@ -237,17 +227,17 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     public Task DeleteRoom(long roomId)
     {
-        rooms.RemoveAll(r => r.Id == roomId);
-        playlists.RemoveAll(p => p.RoomId == roomId);
-        participants.RemoveAll(p => p.RoomId == roomId);
+        _rooms.RemoveAll(r => r.Id == roomId);
+        _playlists.RemoveAll(p => p.RoomId == roomId);
+        _participants.RemoveAll(p => p.RoomId == roomId);
         return Task.CompletedTask;
     }
 
     private Playlist AddPlaylistInternal(MultiplayerPlaylistItem item, long roomId, int ownerId)
     {
-        var playlist = new Playlist
+        Playlist playlist = new()
         {
-            Id = nextPlaylistId++,
+            Id = _nextPlaylistId++,
             RoomId = roomId,
             BeatmapId = item.BeatmapID,
             RulesetId = item.RulesetID,
@@ -259,16 +249,16 @@ internal sealed class FakeRoomRepository : IRoomRepository
             PlaylistOrder = item.PlaylistOrder,
             WinCondition = item.WinCondition,
         };
-        playlists.Add(playlist);
+        _playlists.Add(playlist);
         return playlist;
     }
 
     private async Task UpdateParticipantCount(long roomId)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId);
+        Room? room = _rooms.Find(r => r.Id == roomId);
         if (room != null)
         {
-            room.ParticipantCount = participants.Count(p => p.RoomId == roomId && p.LeftAt == null);
+            room.ParticipantCount = _participants.Count(p => p.RoomId == roomId && p.LeftAt == null);
         }
 
         await Task.CompletedTask;
@@ -276,13 +266,13 @@ internal sealed class FakeRoomRepository : IRoomRepository
 
     private async Task EndRoomIfEmpty(long roomId)
     {
-        var room = rooms.FirstOrDefault(r => r.Id == roomId);
+        Room? room = _rooms.Find(r => r.Id == roomId);
         if (room == null)
         {
             return;
         }
 
-        if (participants.Any(p => p.RoomId == roomId && p.LeftAt == null))
+        if (_participants.Exists(p => p.RoomId == roomId && p.LeftAt == null))
         {
             return;
         }

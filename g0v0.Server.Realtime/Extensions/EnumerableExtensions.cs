@@ -19,14 +19,11 @@ internal static class EnumerableExtensions
     /// <returns>The interleaved element groups.</returns>
     public static IEnumerable<IEnumerable<T>> Interleave<T>(this IEnumerable<IEnumerable<T>> collections)
     {
-        var enumerators = new List<IEnumerator<T>>();
+        List<IEnumerator<T>> enumerators = new();
 
         try
         {
-            foreach (var collection in collections)
-            {
-                enumerators.Add(collection.GetEnumerator());
-            }
+            enumerators.AddRange(collections.Select(collection => collection.GetEnumerator()));
 
             while (true)
             {
@@ -45,7 +42,7 @@ internal static class EnumerableExtensions
         }
         finally
         {
-            foreach (var enumerator in enumerators)
+            foreach (IEnumerator<T> enumerator in enumerators)
             {
                 enumerator.Dispose();
             }

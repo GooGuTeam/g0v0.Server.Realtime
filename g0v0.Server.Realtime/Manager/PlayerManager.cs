@@ -62,47 +62,49 @@ public class PlayerManager(
     {
         CancelMultiplayerDisconnectGrace(userId);
 
-        var cancellationSource = new CancellationTokenSource();
+        CancellationTokenSource cancellationSource = new();
         _disconnectGraceTimers[userId] = cancellationSource;
 
-        _ = Task.Run(async () =>
-        {
-            try
+        _ = Task.Run(
+            async () =>
             {
-                await Task.Delay(gracePeriod, cancellationSource.Token).ConfigureAwait(false);
-
-                var room = roomManager.GetRoom(roomId);
-                if (room == null)
-                {
-                    return;
-                }
-
-                await room.RoomLock.WaitAsync(cancellationSource.Token).ConfigureAwait(false);
                 try
                 {
-                    await room.LeaveRoom(userId);
+                    await Task.Delay(gracePeriod, cancellationSource.Token).ConfigureAwait(false);
+
+                    Objects.Rooms.IRoom? room = roomManager.GetRoom(roomId);
+                    if (room == null)
+                    {
+                        return;
+                    }
+
+                    await room.RoomLock.WaitAsync(cancellationSource.Token).ConfigureAwait(false);
+                    try
+                    {
+                        await room.LeaveRoom(userId);
+                    }
+                    finally
+                    {
+                        room.RoomLock.Release();
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Reconnected before the grace period elapsed.
                 }
                 finally
                 {
-                    room.RoomLock.Release();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Reconnected before the grace period elapsed.
-            }
-            finally
-            {
-                lock (_lock)
-                {
-                    if (_disconnectGraceTimers.TryGetValue(userId, out var current)
-                        && ReferenceEquals(current, cancellationSource))
+                    lock (_lock)
                     {
-                        _disconnectGraceTimers.Remove(userId);
+                        if (_disconnectGraceTimers.TryGetValue(userId, out CancellationTokenSource? current)
+                            && ReferenceEquals(current, cancellationSource))
+                        {
+                            _disconnectGraceTimers.Remove(userId);
+                        }
                     }
                 }
-            }
-        });
+            },
+            cancellationSource.Token);
     }
 
     /// <summary>
@@ -113,11 +115,12 @@ public class PlayerManager(
     {
         lock (_lock)
         {
-            if (_disconnectGraceTimers.TryGetValue(userId, out var cancellationSource))
+            if (!_disconnectGraceTimers.Remove(userId, out CancellationTokenSource? cancellationSource))
             {
-                _disconnectGraceTimers.Remove(userId);
-                cancellationSource.Cancel();
+                return;
             }
+
+            cancellationSource.Cancel();
         }
     }
 
@@ -135,7 +138,7 @@ public class PlayerManager(
         IPlayer? existingPlayer;
         lock (_lock)
         {
-            var identity = PlayerIdentity(player);
+            (int PlayerId, string PlayerServer) identity = PlayerIdentity(player);
             _pendingPlayers.Remove(identity);
 
             if (_players.TryGetValue(identity, out existingPlayer))
@@ -162,7 +165,7 @@ public class PlayerManager(
 
         await BroadcastPlayerOnline(player);
 
-        LogPlayerConnected(logger, player.PlayerId, player.Server, null);
+        LogPlayerConnected(logger, player.PlayerId, player.Server, arg4: null);
     }
 
     /// <summary>
@@ -176,7 +179,7 @@ public class PlayerManager(
         List<IPlayer> watchingStopped;
         lock (_lock)
         {
-            var identity = PlayerIdentity(player);
+            (int PlayerId, string PlayerServer) identity = PlayerIdentity(player);
             if (_players.TryGetValue(identity, out IPlayer? currentPlayer) && ReferenceEquals(currentPlayer, player))
             {
                 _players.Remove(identity);
@@ -195,14 +198,14 @@ public class PlayerManager(
                 .ToList();
         }
 
-        foreach (var watcher in watchingStopped)
+        foreach (IPlayer watcher in watchingStopped)
         {
             await watcher.OnWatchedStopped(player);
         }
 
         await BroadcastPlayerOffline(player, isKicked);
 
-        LogPlayerDisconnected(logger, player.PlayerId, player.Server, isKicked, null);
+        LogPlayerDisconnected(logger, player.PlayerId, player.Server, isKicked, arg5: null);
     }
 
     /// <summary>
@@ -219,22 +222,22 @@ public class PlayerManager(
     {
         lock (_lock)
         {
-            var identity = (playerId, server);
+            (int PlayerId, string Server) identity = (playerId, server);
             if (_players.TryGetValue(identity, out IPlayer? activePlayer))
             {
-                var player = (T)activePlayer;
+                T player = (T)activePlayer;
                 updatePlayer(player);
                 return player;
             }
 
             if (_pendingPlayers.TryGetValue(identity, out IPlayer? pendingPlayer))
             {
-                var player = (T)pendingPlayer;
+                T player = (T)pendingPlayer;
                 updatePlayer(player);
                 return player;
             }
 
-            var createdPlayer = playerFactory();
+            T createdPlayer = playerFactory();
             _pendingPlayers.Add(PlayerIdentity(createdPlayer), createdPlayer);
             return createdPlayer;
         }
@@ -252,7 +255,7 @@ public class PlayerManager(
     {
         lock (_lock)
         {
-            _players.TryGetValue((playerId, server), out var player);
+            _players.TryGetValue((playerId, server), out IPlayer? player);
             return (T?)player;
         }
     }
@@ -272,7 +275,7 @@ public class PlayerManager(
             players = _players.Values.Where(p => p.PlayerId == playerId).ToArray();
         }
 
-        foreach (var player in players)
+        foreach (IPlayer player in players)
         {
             if (player is T specifiedPlayer)
             {
@@ -280,7 +283,7 @@ public class PlayerManager(
             }
         }
 
-        return default;
+        return null;
     }
 
     /// <summary>
@@ -296,7 +299,7 @@ public class PlayerManager(
             players = _players.Values.Where(p => p.PlayerId == playerId).ToArray();
         }
 
-        foreach (var player in players)
+        foreach (IPlayer player in players)
         {
             yield return player;
         }
@@ -416,7 +419,7 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastUserBeganPlaying(IPlayer player)
     {
-        var watchers = GetWatchingPlayers(player).ToArray();
+        IPlayer[] watchers = GetWatchingPlayers(player).ToArray();
         logger.LogInformation(
             "Broadcasting spectator begin-play for player {UserId} ({Server}) to {WatcherCount} watcher(s). ScoreToken: {ScoreToken}.",
             player.PlayerId,
@@ -436,7 +439,7 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastUserFinishedPlaying(IPlayer player)
     {
-        var watchers = GetWatchingPlayers(player).ToArray();
+        IPlayer[] watchers = GetWatchingPlayers(player).ToArray();
         logger.LogInformation(
             "Broadcasting spectator finish-play for player {UserId} ({Server}) to {WatcherCount} watcher(s). ScoreToken: {ScoreToken}.",
             player.PlayerId,
@@ -457,7 +460,7 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastUserSentFrames(IPlayer player, FrameDataBundle frame)
     {
-        var watchers = GetWatchingPlayers(player).ToArray();
+        IPlayer[] watchers = GetWatchingPlayers(player).ToArray();
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug(
@@ -487,7 +490,7 @@ public class PlayerManager(
         {
             if (!_playerWatching.TryGetValue(source, out HashSet<IPlayer>? value))
             {
-                var players = new HashSet<IPlayer> { target };
+                HashSet<IPlayer> players = [target];
                 _playerWatching.Add(source, players);
                 added = true;
             }
@@ -589,7 +592,7 @@ public class PlayerManager(
         long roomId,
         MultiplayerRoomUserRole role = MultiplayerRoomUserRole.Player)
     {
-        var room = roomManager.GetRoom(roomId);
+        Objects.Rooms.IRoom? room = roomManager.GetRoom(roomId);
         if (room != null)
         {
             if (player.State.CurrentRoom != null)
@@ -597,7 +600,7 @@ public class PlayerManager(
                 throw new InvalidStateException("Player is already in a room.");
             }
 
-            var userCanJoin = await room.UserCanJoin(player.PlayerId);
+            bool userCanJoin = await room.UserCanJoin(player.PlayerId);
             if (!userCanJoin)
             {
                 throw new InvalidStateException("Player is not eligible to join this room.");
@@ -626,7 +629,7 @@ public class PlayerManager(
             return;
         }
 
-        var room = roomManager.GetRoom(roomId.Value);
+        Objects.Rooms.IRoom? room = roomManager.GetRoom(roomId.Value);
         if (room == null)
         {
             player.State.CurrentRoom = null;

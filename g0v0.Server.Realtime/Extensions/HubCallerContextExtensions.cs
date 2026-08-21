@@ -19,24 +19,24 @@ public static class HubCallerContextExtensions
     {
         try
         {
-            var httpContext = context.GetHttpContext();
+            HttpContext? httpContext = context.GetHttpContext();
 
             if (httpContext != null)
             {
-                if (httpContext.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
+                if (httpContext.Request.Headers.TryGetValue("Authorization", out Microsoft.Extensions.Primitives.StringValues authHeader) &&
                     !string.IsNullOrEmpty(authHeader))
                 {
                     const string bearerPrefix = "Bearer ";
-                    var headerValue = authHeader.ToString();
+                    string headerValue = authHeader.ToString();
 
                     if (headerValue.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
                     {
-                        var token = headerValue.Substring(bearerPrefix.Length).Trim();
+                        string token = headerValue[bearerPrefix.Length..].Trim();
 
-                        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-                        var jwtToken = handler.ReadJwtToken(token);
-                        var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub");
-                        var subValue = subClaim?.Value;
+                        System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler handler = new();
+                        System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtToken = handler.ReadJwtToken(token);
+                        System.Security.Claims.Claim? subClaim = jwtToken.Claims.FirstOrDefault(c => string.Equals(c.Type, "sub", StringComparison.Ordinal));
+                        string? subValue = subClaim?.Value;
 
                         if (!string.IsNullOrEmpty(subValue) && int.TryParse(subValue, out int userId))
                         {
@@ -52,11 +52,8 @@ public static class HubCallerContextExtensions
         }
 
         // Fallback to UserIdentifier (used by tests and legacy paths).
-        if (context.UserIdentifier != null && int.TryParse(context.UserIdentifier, out int fallbackUserId))
-        {
-            return fallbackUserId;
-        }
-
-        throw new InvalidOperationException("Unable to determine user ID from JWT or UserIdentifier.");
+        return context.UserIdentifier != null && int.TryParse(context.UserIdentifier, out int fallbackUserId)
+            ? fallbackUserId
+            : throw new InvalidOperationException("Unable to determine user ID from JWT or UserIdentifier.");
     }
 }

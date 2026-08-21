@@ -30,7 +30,7 @@ public class ScoreBufferTests
     [Test]
     public async Task TryAddAsync_WhenTokenIsNew_ShouldStoreScore()
     {
-        var score = new Score();
+        Score score = new();
 
         bool added = await _buffer.TryAddAsync(100, score);
         Score? result = await _buffer.DequeueAsync(100);
@@ -45,8 +45,8 @@ public class ScoreBufferTests
     [Test]
     public async Task TryAddAsync_WhenTokenAlreadyExists_ShouldReturnFalseAndKeepOriginalScore()
     {
-        var first = new Score();
-        var second = new Score();
+        Score first = new();
+        Score second = new();
         await _buffer.TryAddAsync(101, first);
 
         bool added = await _buffer.TryAddAsync(101, second);

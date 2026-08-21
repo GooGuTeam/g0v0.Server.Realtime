@@ -16,7 +16,7 @@ public class MatchSpectatingTests : MultiplayerTestBase
     [Test]
     public async Task CanTransitionBetweenIdleAndSpectating()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeState(MultiplayerUserState.Spectating);
         await Hub.ChangeState(MultiplayerUserState.Idle);
     }
@@ -24,7 +24,7 @@ public class MatchSpectatingTests : MultiplayerTestBase
     [Test]
     public async Task CanTransitionFromReadyToSpectating()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         await Hub.ChangeState(MultiplayerUserState.Spectating);
     }
@@ -32,37 +32,37 @@ public class MatchSpectatingTests : MultiplayerTestBase
     [Test]
     public async Task SpectatingUserStateDoesNotChange()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeState(MultiplayerUserState.Spectating);
 
         SetUserContext(ContextUser);
 
         await Hub.StartMatch();
         Receiver.Verify(r => r.LoadRequested(), Times.Once);
-        Clients.Verify(clients => clients.User(USERID2.ToString()).UserStateChanged(USERID2, MultiplayerUserState.WaitingForLoad), Times.Never);
+        Clients.Verify(clients => clients.User(UserId2.ToString()).UserStateChanged(UserId2, MultiplayerUserState.WaitingForLoad), Times.Never);
 
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
         UserReceiver.Verify(r => r.GameplayStarted(), Times.Once);
-        Clients.Verify(clients => clients.User(USERID2.ToString()).UserStateChanged(USERID2, MultiplayerUserState.Playing), Times.Never);
+        Clients.Verify(clients => clients.User(UserId2.ToString()).UserStateChanged(UserId2, MultiplayerUserState.Playing), Times.Never);
 
         await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
         Receiver.Verify(r => r.ResultsReady(), Times.Once);
-        Clients.Verify(clients => clients.User(USERID2.ToString()).UserStateChanged(USERID2, MultiplayerUserState.Results), Times.Never);
+        Clients.Verify(clients => clients.User(UserId2.ToString()).UserStateChanged(UserId2, MultiplayerUserState.Results), Times.Never);
     }
 
     [Test]
     public async Task SpectatingHostCanStartMatch()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeState(MultiplayerUserState.Spectating);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
@@ -73,13 +73,13 @@ public class MatchSpectatingTests : MultiplayerTestBase
     [Test]
     public async Task SpectatingUserReceivesLoadRequestedAfterGameplayStarted()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
         Receiver.Verify(r => r.LoadRequested(), Times.Once);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeState(MultiplayerUserState.Spectating);
         User2Receiver.Verify(r => r.LoadRequested(), Times.Once);
 

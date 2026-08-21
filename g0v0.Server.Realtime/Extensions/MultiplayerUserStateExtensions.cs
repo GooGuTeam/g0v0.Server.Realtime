@@ -33,7 +33,5 @@ public static class MultiplayerUserStateExtensions
     /// <param name="user">The user to check.</param>
     /// <returns><see langword="true"/> when the user is ready for gameplay.</returns>
     public static bool IsReadyForGameplay(this MultiplayerRoomUser user)
-        => user.Role == MultiplayerRoomUserRole.Player
-           && user.BeatmapAvailability.State == DownloadState.LocallyAvailable
-           && (user.State == MultiplayerUserState.Ready || user.State == MultiplayerUserState.Idle);
+        => user is { Role: MultiplayerRoomUserRole.Player, BeatmapAvailability.State: DownloadState.LocallyAvailable, State: MultiplayerUserState.Ready or MultiplayerUserState.Idle };
 }

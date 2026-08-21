@@ -18,7 +18,7 @@ public class RoomManager(
     IServiceScopeFactory scopeFactory,
     IRoomFacade roomFacade)
 {
-    private readonly ConcurrentDictionary<long, IRoom> rooms = new();
+    private readonly ConcurrentDictionary<long, IRoom> _rooms = new();
 
     /// <summary>
     /// Gets the room with the given ID.
@@ -27,7 +27,7 @@ public class RoomManager(
     /// <returns>The room, or <see langword="null"/> if not found.</returns>
     public IRoom? GetRoom(long roomId)
     {
-        return rooms.GetValueOrDefault(roomId);
+        return _rooms.GetValueOrDefault(roomId);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class RoomManager(
             roomBase.OnMatchTypeChanged = newType => ChangeMatchType(roomBase.RoomId, newType);
         }
 
-        rooms[room.RoomId] = room;
+        _rooms[room.RoomId] = room;
     }
 
     /// <summary>
@@ -57,7 +57,7 @@ public class RoomManager(
     public void RemoveRoom(long roomId)
     {
         // Disbanding is handled by room itself.
-        rooms.TryRemove(roomId, out _);
+        _rooms.TryRemove(roomId, out _);
     }
 
     /// <summary>
@@ -73,13 +73,13 @@ public class RoomManager(
         int hostUserId,
         bool tournamentMode = false)
     {
-        using var scope = scopeFactory.CreateScope();
-        var roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
+        using IServiceScope scope = scopeFactory.CreateScope();
+        IRoomRepository roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
 
         // Validate the playlist items' mods before persisting the room.
         if (roomFacade.RulesetManager != null)
         {
-            foreach (var item in room.Playlist)
+            foreach (osu.Game.Online.Rooms.MultiplayerPlaylistItem item in room.Playlist)
             {
                 if (item.Freestyle && item.AllowedMods.Any())
                 {
@@ -90,7 +90,7 @@ public class RoomManager(
             }
         }
 
-        var dbRoom = await roomRepository.CreateRoom(room, hostUserId, G0V0RoomCategory.Realtime, tournamentMode);
+        Room dbRoom = await roomRepository.CreateRoom(room, hostUserId, G0V0RoomCategory.Realtime, tournamentMode);
 
         IRoom roomInstance;
         try
@@ -125,14 +125,14 @@ public class RoomManager(
     /// <returns>The room, or <see langword="null"/> if it does not exist.</returns>
     public async Task<IRoom?> GetOrLoadRoom(long roomId)
     {
-        if (rooms.TryGetValue(roomId, out IRoom? existing))
+        if (_rooms.TryGetValue(roomId, out IRoom? existing))
         {
             return existing;
         }
 
-        using var scope = scopeFactory.CreateScope();
-        var roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
-        var dbRoom = await roomRepository.GetRoom(roomId);
+        using IServiceScope scope = scopeFactory.CreateScope();
+        IRoomRepository roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
+        Room? dbRoom = await roomRepository.GetRoom(roomId);
 
         if (dbRoom == null)
         {
@@ -150,7 +150,7 @@ public class RoomManager(
 
         if (dbRoom.EndsAt != null)
         {
-            await roomRepository.SetRoomEndDate(roomId, null);
+            await roomRepository.SetRoomEndDate(roomId, endDate: null);
         }
 
         IRoom roomInstance = CreateRoomInstance(dbRoom, dbRoom.Type);
@@ -175,12 +175,12 @@ public class RoomManager(
     /// <exception cref="InvalidStateException">The room does not exist or the match type is unsupported.</exception>
     public async Task<IRoom> ChangeMatchType(long roomId, OsuMatchType newType)
     {
-        if (!rooms.TryGetValue(roomId, out IRoom? existing))
+        if (!_rooms.TryGetValue(roomId, out IRoom? existing))
         {
             throw new InvalidStateException("Room not found.");
         }
 
-        var oldRoom = (RoomBase)existing;
+        RoomBase oldRoom = (RoomBase)existing;
 
         // The lock may already be held by the caller (e.g. when invoked through
         // OnMatchTypeChanged from ChangeRoomSettings, which runs inside the room
@@ -190,14 +190,14 @@ public class RoomManager(
         {
             // Update the database record in place (type field only); the record
             // itself is not deleted and recreated.
-            var updatedSettings = oldRoom.Settings;
+            MultiplayerRoomSettings updatedSettings = oldRoom.Settings;
             updatedSettings.MatchType = newType;
             await oldRoom.UpdateRoomSettings(updatedSettings);
 
             // Build the new instance from the same database room (same id/settings).
-            using var scope = scopeFactory.CreateScope();
-            var roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
-            var dbRoom = await roomRepository.GetRoom(roomId)
+            using IServiceScope scope = scopeFactory.CreateScope();
+            IRoomRepository roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
+            Room dbRoom = await roomRepository.GetRoom(roomId)
                          ?? throw new InvalidStateException("Room not found.");
 
             IRoom newInstance = CreateRoomInstance(dbRoom, newType);
@@ -207,7 +207,7 @@ public class RoomManager(
             await ((RoomBase)newInstance).CopyStateFrom(oldRoom);
 
             // Swap the registry entry and destroy the old instance.
-            rooms[roomId] = newInstance;
+            _rooms[roomId] = newInstance;
             oldRoom.OnDisbanded = null;
             oldRoom.OnMatchTypeChanged = null;
 
@@ -227,7 +227,7 @@ public class RoomManager(
     /// Gets all currently active rooms.
     /// </summary>
     /// <returns>All currently active rooms.</returns>
-    public IEnumerable<IRoom> GetAllRooms() => rooms.Values.ToArray();
+    public IEnumerable<IRoom> GetAllRooms() => _rooms.Values.ToArray();
 
     /// <summary>
     /// Creates a room instance of the given match type.

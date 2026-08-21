@@ -16,13 +16,13 @@ namespace g0v0.Server.Realtime.Services;
 /// </summary>
 public class ScoreUploader : IDisposable
 {
-    private readonly CancellationTokenSource cancellationSource;
-    private readonly CancellationToken cancellationToken;
+    private readonly CancellationTokenSource _cancellationSource;
+    private readonly CancellationToken _cancellationToken;
 
-    private readonly ConfigurationManager configManager;
-    private readonly IServiceScopeFactory scopeFactory;
-    private readonly ILogger<ScoreUploader> logger;
-    private readonly IStorageService scoreStorage;
+    private readonly ConfigurationManager _configManager;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly ILogger<ScoreUploader> _logger;
+    private readonly IStorageService _scoreStorage;
     private readonly Channel<ReplayUploadItem> _channel = Channel.CreateUnbounded<ReplayUploadItem>();
 
     private int _remainingUsages;
@@ -40,13 +40,13 @@ public class ScoreUploader : IDisposable
         ILogger<ScoreUploader> logger,
         IStorageService scoreStorage)
     {
-        this.configManager = configManager;
-        this.scopeFactory = scopeFactory;
-        this.logger = logger;
-        this.scoreStorage = scoreStorage;
+        this._configManager = configManager;
+        this._scopeFactory = scopeFactory;
+        this._logger = logger;
+        this._scoreStorage = scoreStorage;
 
-        cancellationSource = new CancellationTokenSource();
-        cancellationToken = cancellationSource.Token;
+        _cancellationSource = new CancellationTokenSource();
+        _cancellationToken = _cancellationSource.Token;
 
         for (int i = 0; i < configManager.Get<RealtimeConfig>().ReplayUploaderConcurrency; ++i)
         {
@@ -74,21 +74,21 @@ public class ScoreUploader : IDisposable
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task EnqueueAsync(long token, Score score)
     {
-        if (!configManager.Get<RealtimeConfig>().SaveReplays)
+        if (!_configManager.Get<RealtimeConfig>().SaveReplays)
         {
-            logger.LogDebug(
+            _logger.LogDebug(
                 "Skipping spectator replay enqueue because replay saving is disabled. ScoreToken: {ScoreToken}.",
                 token);
             return;
         }
 
-        using var scope = scopeFactory.CreateScope();
-        var beatmapRepository = scope.ServiceProvider.GetRequiredService<IBeatmapRepository>();
-        var beatmapChecksum = score.ScoreInfo.BeatmapInfo!.MD5Hash;
-        var beatmap = await beatmapRepository.GetByChecksumAsync(beatmapChecksum);
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        IBeatmapRepository beatmapRepository = scope.ServiceProvider.GetRequiredService<IBeatmapRepository>();
+        string beatmapChecksum = score.ScoreInfo.BeatmapInfo!.MD5Hash;
+        Common.Database.Models.Beatmap? beatmap = await beatmapRepository.GetByChecksumAsync(beatmapChecksum);
         if (beatmap == null)
         {
-            logger.LogWarning(
+            _logger.LogWarning(
                 "Skipping spectator replay enqueue because beatmap checksum {BeatmapChecksum} was not found. ScoreToken: {ScoreToken}.",
                 beatmapChecksum,
                 token);
@@ -97,13 +97,13 @@ public class ScoreUploader : IDisposable
 
         Interlocked.Increment(ref _remainingUsages);
 
-        var uploadCancellation = new CancellationTokenSource();
+        CancellationTokenSource uploadCancellation = new();
         uploadCancellation.CancelAfter(TimeSpan.FromMilliseconds(TimeoutInterval));
 
         await _channel.Writer.WriteAsync(
             new ReplayUploadItem(token, score, beatmap, uploadCancellation),
-            cancellationToken);
-        logger.LogInformation(
+            _cancellationToken);
+        _logger.LogInformation(
             "Enqueued spectator replay upload for token {ScoreToken}. BeatmapId: {BeatmapId}, RemainingUsages: {RemainingUsages}.",
             token,
             beatmap.Id,
@@ -113,21 +113,21 @@ public class ScoreUploader : IDisposable
     /// <inheritdoc/>
     public void Dispose()
     {
-        cancellationSource.Cancel();
-        cancellationSource.Dispose();
+        _cancellationSource.Cancel();
+        _cancellationSource.Dispose();
         GC.SuppressFinalize(this);
     }
 
     private async Task ReadLoop()
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!_cancellationToken.IsCancellationRequested)
         {
-            var item = await _channel.Reader.ReadAsync(cancellationToken);
+            ReplayUploadItem item = await _channel.Reader.ReadAsync(_cancellationToken);
 
             try
             {
-                using var scope = scopeFactory.CreateScope();
-                var scoreRepository = scope.ServiceProvider.GetRequiredService<IScoreRepository>();
+                using IServiceScope scope = _scopeFactory.CreateScope();
+                IScoreRepository scoreRepository = scope.ServiceProvider.GetRequiredService<IScoreRepository>();
                 Common.Database.Models.Score? dbScore = await scoreRepository.GetScoreByToken(item.Token);
 
                 // Timeout occurred, drop item.
@@ -136,11 +136,11 @@ public class ScoreUploader : IDisposable
                 {
                     if (dbScore == null)
                     {
-                        logger.LogError("Score upload timed out for token: {TokenId}", item.Token);
+                        _logger.LogError("Score upload timed out for token: {TokenId}", item.Token);
                     }
                     else
                     {
-                        logger.LogError(
+                        _logger.LogError(
                             "Score failed to upload successfully for token {ScoreToken}. ScoreId: {ScoreId}.",
                             item.Token,
                             dbScore.Id);
@@ -153,7 +153,7 @@ public class ScoreUploader : IDisposable
                 if (dbScore == null)
                 {
                     // Still waiting for score upload, queue for retry.
-                    logger.LogDebug(
+                    _logger.LogDebug(
                         "Score upload is still pending for spectator replay token {ScoreToken}. Queueing retry.",
                         item.Token);
                     QueueForRetry(item);
@@ -162,7 +162,7 @@ public class ScoreUploader : IDisposable
 
                 if (!dbScore.Passed)
                 {
-                    logger.LogInformation(
+                    _logger.LogInformation(
                         "Dropping spectator replay upload for failed score. ScoreToken: {ScoreToken}, ScoreId: {ScoreId}.",
                         item.Token,
                         dbScore.Id);
@@ -174,20 +174,20 @@ public class ScoreUploader : IDisposable
                 item.Score.ScoreInfo.Passed = dbScore.Passed;
 
                 // TODO: g0v0-server v1 doesn't store the beatmap version.
-                using (var outStream = new MemoryStream())
+                using (MemoryStream outStream = new())
                 {
                     new LegacyScoreEncoder(item.Score, new Beatmap { BeatmapVersion = 14 }).Encode(
                         outStream,
                         leaveOpen: true);
                     outStream.Seek(0, SeekOrigin.Begin);
-                    logger.LogInformation(
+                    _logger.LogInformation(
                         "Spectator replay upload completed for token {ScoreToken}. ScoreId: {ScoreId}.",
                         item.Token,
                         dbScore.Id);
 
                     // TODO: `_lazer_replay` is backward compatible with g0v0-server v1.
-                    var replayPath = $"replays/{dbScore.Id}_{dbScore.BeatmapId}_{dbScore.UserId}_lazer_replay.osr";
-                    await scoreStorage.WriteFileAsync(replayPath, outStream.GetBuffer(), "application/x-osu-replay");
+                    string replayPath = $"replays/{dbScore.Id}_{dbScore.BeatmapId}_{dbScore.UserId}_lazer_replay.osr";
+                    await _scoreStorage.WriteFileAsync(replayPath, outStream.GetBuffer(), "application/x-osu-replay", cancellationToken: _cancellationToken);
                 }
 
                 await scoreRepository.MarkScoreHasReplay(item.Score.ScoreInfo.OnlineID);
@@ -195,7 +195,7 @@ public class ScoreUploader : IDisposable
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Error during score upload");
+                _logger.LogError(e, "Error during score upload");
 
                 // Retry in the case of a transient failure.
                 // If things are really borked, items will still be dropped after the timeout interval.
@@ -209,18 +209,18 @@ public class ScoreUploader : IDisposable
                 async () =>
                 {
                     // retry after a short delay (to avoid super-tight database query loop)
-                    await Task.Delay(100, cancellationToken);
-                    await _channel.Writer.WriteAsync(item, cancellationToken);
+                    await Task.Delay(100, _cancellationToken);
+                    await _channel.Writer.WriteAsync(item, _cancellationToken);
                 },
-                cancellationToken).ContinueWith(
+                _cancellationToken).ContinueWith(
                 t =>
                 {
                     if (t.IsFaulted)
                     {
-                        logger.LogError(t.Exception, "Error attempting to re-queue score upload");
+                        _logger.LogError(t.Exception, "Error attempting to re-queue score upload");
                     }
                 },
-                cancellationToken);
+                _cancellationToken);
         }
 
         void DropItem(ReplayUploadItem item)
@@ -232,9 +232,9 @@ public class ScoreUploader : IDisposable
 
     private async Task MonitorLoop()
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!_cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(1000, cancellationToken);
+            await Task.Delay(1000, _cancellationToken);
         }
     }
 }

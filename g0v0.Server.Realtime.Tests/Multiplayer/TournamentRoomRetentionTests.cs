@@ -14,30 +14,30 @@ namespace g0v0.Server.Realtime.Tests.Multiplayer;
 [TestFixture]
 public class TournamentRoomRetentionTests : MultiplayerTestBase
 {
-    private string basePath = null!;
+    private string _basePath = null!;
 
     [SetUp]
     public void ConfigureRetentionPeriod()
     {
-        basePath = Path.Combine(Path.GetTempPath(), "g0v0-retention-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(basePath, "config"));
+        _basePath = Path.Combine(Path.GetTempPath(), "g0v0-retention-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(_basePath, "config"));
         File.WriteAllText(
-            Path.Combine(basePath, "config", "realtime.json"),
+            Path.Combine(_basePath, "config", "realtime.json"),
             "{\"TournamentRoomRetentionPeriod\": \"00:00:00.050\"}");
-        RoomFacade.ConfigManager = new ConfigurationManager(basePath);
+        RoomFacade.ConfigManager = new ConfigurationManager(_basePath);
     }
 
     [Test]
     public async Task EmptyTournamentRoomIsDestroyedAfterRetentionPeriod()
     {
-        var room = await RoomManager.CreateRoom(createTournamentRoom(), USERID, tournamentMode: true);
-        await room.JoinRoom(USERID);
+        Realtime.Objects.Rooms.IRoom room = await RoomManager.CreateRoom(CreateTournamentRoom(), UserId, tournamentMode: true);
+        await room.JoinRoom(UserId);
         long roomId = room.RoomId;
 
         Assert.That(RoomManager.GetRoom(roomId), Is.Not.Null);
 
         Console.WriteLine($"before leave: tournament={room.TournamentMode} users={room.Users.Count}");
-        await room.LeaveRoom(USERID);
+        await room.LeaveRoom(UserId);
         Console.WriteLine($"after leave: tournament={room.TournamentMode} endDate={room.EndDate}");
 
         // The room is retained and an end date is scheduled.
@@ -45,7 +45,7 @@ public class TournamentRoomRetentionTests : MultiplayerTestBase
         Assert.That(room.EndDate, Is.Not.Null);
 
         // After the retention period the in-memory room is destroyed.
-        await waitUntil(() => RoomManager.GetRoom(roomId) == null);
+        await WaitUntil(() => RoomManager.GetRoom(roomId) == null);
         Assert.That(RoomManager.GetRoom(roomId), Is.Null);
     }
 
@@ -53,21 +53,21 @@ public class TournamentRoomRetentionTests : MultiplayerTestBase
     public async Task RejoinCancelsEndDateDestruction()
     {
         // Lengthen the retention period for this test.
-        File.WriteAllText(
-            Path.Combine(basePath, "config", "realtime.json"),
+        await File.WriteAllTextAsync(
+            Path.Combine(_basePath, "config", "realtime.json"),
             "{\"TournamentRoomRetentionPeriod\": \"00:00:00.200\"}");
-        RoomFacade.ConfigManager = new ConfigurationManager(basePath);
+        RoomFacade.ConfigManager = new ConfigurationManager(_basePath);
 
-        var room = await RoomManager.CreateRoom(createTournamentRoom(), USERID, tournamentMode: true);
-        await room.JoinRoom(USERID);
+        Realtime.Objects.Rooms.IRoom room = await RoomManager.CreateRoom(CreateTournamentRoom(), UserId, tournamentMode: true);
+        await room.JoinRoom(UserId);
         long roomId = room.RoomId;
 
-        await room.LeaveRoom(USERID);
+        await room.LeaveRoom(UserId);
         Assert.That(room.EndDate, Is.Not.Null);
 
         // A user rejoins before the retention period elapses.
         await Task.Delay(50);
-        await room.JoinRoom(USERID);
+        await room.JoinRoom(UserId);
         Assert.That(room.EndDate, Is.Null);
 
         // Wait past the original retention period; the room must still exist.
@@ -75,7 +75,7 @@ public class TournamentRoomRetentionTests : MultiplayerTestBase
         Assert.That(RoomManager.GetRoom(roomId), Is.Not.Null);
     }
 
-    private static async Task waitUntil(Func<bool> condition)
+    private static async Task WaitUntil(Func<bool> condition)
     {
         for (int i = 0; i < 100 && !condition(); i++)
         {
@@ -83,7 +83,7 @@ public class TournamentRoomRetentionTests : MultiplayerTestBase
         }
     }
 
-    private static MultiplayerRoom createTournamentRoom() => new(ROOMID)
+    private static MultiplayerRoom CreateTournamentRoom() => new(RoomId)
     {
         Settings = new MultiplayerRoomSettings
         {
@@ -98,8 +98,8 @@ public class TournamentRoomRetentionTests : MultiplayerTestBase
                 OwnerID = 1234,
                 BeatmapID = 1234,
                 RulesetID = 0,
-                RequiredMods = Array.Empty<osu.Game.Online.API.APIMod>(),
-                AllowedMods = Array.Empty<osu.Game.Online.API.APIMod>(),
+                RequiredMods = [],
+                AllowedMods = [],
                 Freestyle = false,
                 Expired = false,
                 PlaylistOrder = 0,

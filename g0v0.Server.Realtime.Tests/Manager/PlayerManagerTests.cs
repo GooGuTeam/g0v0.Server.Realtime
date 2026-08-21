@@ -18,9 +18,9 @@ public class PlayerManagerTests
     [Test]
     public async Task AddPlayer_WhenPlayerIsOffline_DoesNotBroadcastOnlinePresence()
     {
-        var manager = CreateManager();
-        var observer = new TestPlayer(2, "test", manager, UserStatus.Online);
-        var offlinePlayer = new TestPlayer(1, "test", manager, UserStatus.Offline);
+        PlayerManager manager = CreateManager();
+        TestPlayer observer = new(2, "test", manager, UserStatus.Online);
+        TestPlayer offlinePlayer = new(1, "test", manager, UserStatus.Offline);
 
         await observer.Online();
         observer.ResetNotifications();
@@ -33,10 +33,10 @@ public class PlayerManagerTests
     [Test]
     public async Task AddPlayer_WhenSameServerPlayerExists_KicksExistingInstanceAndKeepsReplacement()
     {
-        var manager = CreateManager();
-        var observer = new TestPlayer(2, "test", manager, UserStatus.Online);
-        var first = new TestPlayer(1, "test", manager, UserStatus.Online);
-        var second = new TestPlayer(1, "test", manager, UserStatus.Online);
+        PlayerManager manager = CreateManager();
+        TestPlayer observer = new(2, "test", manager, UserStatus.Online);
+        TestPlayer first = new(1, "test", manager, UserStatus.Online);
+        TestPlayer second = new(1, "test", manager, UserStatus.Online);
 
         await observer.Online();
         await first.Online();
@@ -57,19 +57,19 @@ public class PlayerManagerTests
     [Test]
     public async Task GetOrCreatePlayer_WhenMultipleHubsConnect_ReusesPendingPlayerWithoutKicking()
     {
-        var manager = CreateManager();
-        var observer = new TestPlayer(2, "test", manager, UserStatus.Online);
+        PlayerManager manager = CreateManager();
+        TestPlayer observer = new(2, "test", manager, UserStatus.Online);
         await observer.Online();
         observer.ResetNotifications();
 
-        var metadataFacade = new PlayerFacade(manager);
-        var spectatorFacade = new PlayerFacade(manager);
-        var metadataPlayer = manager.GetOrCreatePlayer<LazerPlayer>(
+        PlayerFacade metadataFacade = new(manager);
+        PlayerFacade spectatorFacade = new(manager);
+        LazerPlayer metadataPlayer = manager.GetOrCreatePlayer<LazerPlayer>(
             1,
             "Lazer",
             () => new LazerPlayer(1, metadataFacade),
             player => player.Facade.ApplyNonNullDependenciesFrom(metadataFacade));
-        var spectatorPlayer = manager.GetOrCreatePlayer<LazerPlayer>(
+        LazerPlayer spectatorPlayer = manager.GetOrCreatePlayer<LazerPlayer>(
             1,
             "Lazer",
             () => new LazerPlayer(1, spectatorFacade),
@@ -91,9 +91,9 @@ public class PlayerManagerTests
     [Test]
     public async Task ChangePlayerStatusAsync_BroadcastsUpdatedStatusToOtherPlayers()
     {
-        var manager = CreateManager();
-        var observer = new TestPlayer(2, "test", manager, UserStatus.Online);
-        var subject = new TestPlayer(1, "test", manager, UserStatus.Online);
+        PlayerManager manager = CreateManager();
+        TestPlayer observer = new(2, "test", manager, UserStatus.Online);
+        TestPlayer subject = new(1, "test", manager, UserStatus.Online);
 
         await observer.Online();
         await subject.Online();
@@ -107,9 +107,9 @@ public class PlayerManagerTests
     [Test]
     public async Task UserWatchingPlayer_WhenTargetIsPlaying_ReplaysBeginPlayingToWatcher()
     {
-        var manager = CreateManager();
-        var watcher = new TestPlayer(2, "test", manager, UserStatus.Online);
-        var target = new TestPlayer(1, "test", manager, UserStatus.Online);
+        PlayerManager manager = CreateManager();
+        TestPlayer watcher = new(2, "test", manager, UserStatus.Online);
+        TestPlayer target = new(1, "test", manager, UserStatus.Online);
         target.State.SpectatorState = new SpectatorState
         {
             State = SpectatedUserState.Playing,
@@ -123,9 +123,9 @@ public class PlayerManagerTests
     [Test]
     public async Task UserStoppedWatchingPlayer_WhenWatcherWasRegistered_NotifiesTarget()
     {
-        var manager = CreateManager();
-        var watcher = new TestPlayer(2, "test", manager, UserStatus.Online);
-        var target = new TestPlayer(1, "test", manager, UserStatus.Online);
+        PlayerManager manager = CreateManager();
+        TestPlayer watcher = new(2, "test", manager, UserStatus.Online);
+        TestPlayer target = new(1, "test", manager, UserStatus.Online);
         await manager.UserWatchingPlayer(watcher, target);
 
         await manager.UserStoppedWatchingPlayer(watcher, target);

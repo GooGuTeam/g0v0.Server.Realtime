@@ -19,7 +19,7 @@ public class BeatmapAvailabilityTests : MultiplayerTestBase
     /// A second room ID used to verify availability broadcasts stay within the
     /// room the change was made in.
     /// </summary>
-    private const long ROOMID2 = 9999;
+    private const long RoomId2 = 9999;
 
     [Test]
     public void ClientCantChangeAvailabilityWhenNotJoinedRoom()
@@ -30,36 +30,36 @@ public class BeatmapAvailabilityTests : MultiplayerTestBase
     [Test]
     public async Task AvailabilityChangeBroadcastedOnlyOnChange()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await Hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
-        Receiver.Verify(b => b.UserBeatmapAvailabilityChanged(USERID, It.Is<BeatmapAvailability>(b2 => b2.State == DownloadState.Importing)), Times.Once);
+        Receiver.Verify(b => b.UserBeatmapAvailabilityChanged(UserId, It.Is<BeatmapAvailability>(b2 => b2.State == DownloadState.Importing)), Times.Once);
 
         // should not fire a second time.
         await Hub.ChangeBeatmapAvailability(BeatmapAvailability.Importing());
-        Receiver.Verify(b => b.UserBeatmapAvailabilityChanged(USERID, It.Is<BeatmapAvailability>(b2 => b2.State == DownloadState.Importing)), Times.Once);
+        Receiver.Verify(b => b.UserBeatmapAvailabilityChanged(UserId, It.Is<BeatmapAvailability>(b2 => b2.State == DownloadState.Importing)), Times.Once);
     }
 
     [Test]
     public async Task OnlyClientsInSameRoomReceiveAvailabilityChange()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID2);
+        await Hub.JoinRoom(RoomId2);
 
-        var user1Availability = BeatmapAvailability.Importing();
-        var user2Availability = BeatmapAvailability.Downloading(0.5f);
+        BeatmapAvailability user1Availability = BeatmapAvailability.Importing();
+        BeatmapAvailability user2Availability = BeatmapAvailability.Downloading(0.5f);
 
         SetUserContext(ContextUser);
         await Hub.ChangeBeatmapAvailability(user1Availability);
-        Assert.That(Hub.GetRoom(ROOMID)?.Users.Single().BeatmapAvailability.Equals(user1Availability), Is.True);
+        Assert.That(Hub.GetRoom(RoomId)?.Users.Single().BeatmapAvailability.Equals(user1Availability), Is.True);
 
         SetUserContext(ContextUser2);
         await Hub.ChangeBeatmapAvailability(user2Availability);
-        Assert.That(Hub.GetRoom(ROOMID2)?.Users.Single().BeatmapAvailability.Equals(user2Availability), Is.True);
+        Assert.That(Hub.GetRoom(RoomId2)?.Users.Single().BeatmapAvailability.Equals(user2Availability), Is.True);
 
-        Receiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(USERID, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Once);
-        Receiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(USERID2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Never);
+        Receiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(UserId, It.Is<BeatmapAvailability>(b => b.Equals(user1Availability))), Times.Once);
+        Receiver.Verify(c1 => c1.UserBeatmapAvailabilityChanged(UserId2, It.Is<BeatmapAvailability>(b => b.Equals(user2Availability))), Times.Never);
     }
 }

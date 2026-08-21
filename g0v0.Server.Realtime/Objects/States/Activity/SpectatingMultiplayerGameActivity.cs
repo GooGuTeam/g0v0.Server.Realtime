@@ -41,7 +41,7 @@ public class SpectatingMultiplayerGameActivity : IUserActivity
     /// <inheritdoc />
     public UserActivity? ToLazer()
     {
-        return new UserActivity.SpectatingMultiplayerGame()
+        return new UserActivity.SpectatingMultiplayerGame
         {
             BeatmapID = BeatmapId,
             BeatmapDisplayTitle = BeatmapDisplayTitle,

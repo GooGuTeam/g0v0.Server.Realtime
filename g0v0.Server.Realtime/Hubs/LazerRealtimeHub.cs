@@ -27,7 +27,7 @@ public class LazerRealtimeHub<T>(PlayerManager playerManager) : Hub<T>
     /// <exception cref="InvalidOperationException">Thrown when the current connection has no registered player.</exception>
     protected LazerPlayer GetPlayer()
     {
-        var player = playerManager.GetPlayer<LazerPlayer>(Context.GetUserId());
+        LazerPlayer? player = playerManager.GetPlayer<LazerPlayer>(Context.GetUserId());
 
         Debug.Assert(player != null, "player != null");
         return player ??

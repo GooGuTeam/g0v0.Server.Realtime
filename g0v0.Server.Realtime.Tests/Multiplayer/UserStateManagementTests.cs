@@ -18,10 +18,10 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task UserStateChangeNotifiesOtherUsers()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
-        Receiver.Verify(r => r.UserStateChanged(USERID, MultiplayerUserState.Ready), Times.Once);
+        Receiver.Verify(r => r.UserStateChanged(UserId, MultiplayerUserState.Ready), Times.Once);
     }
 
     [TestCase(MultiplayerUserState.WaitingForLoad)]
@@ -29,24 +29,24 @@ public class UserStateManagementTests : MultiplayerTestBase
     [TestCase(MultiplayerUserState.Results)]
     public async Task UserCantChangeStateToReservedStates(MultiplayerUserState reservedState)
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         Assert.That(async () => await Hub.ChangeState(reservedState), Throws.TypeOf<InvalidStateChangeException>());
     }
 
     [Test]
     public async Task StartingMatchWithNoReadyUsersFails()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         Assert.That(async () => await Hub.StartMatch(), Throws.TypeOf<InvalidStateException>());
     }
 
     [Test]
     public async Task StartingMatchWithHostNotReadyFails()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
@@ -56,17 +56,17 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task StartingAlreadyStartedMatchFails()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Open));
 
         await Hub.StartMatch();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
 
@@ -76,10 +76,10 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task AllUsersBackingOutFromLoadCancelsTransitionToPlay()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
 
@@ -87,7 +87,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
 
@@ -95,7 +95,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         SetUserContext(ContextUser2);
         await Hub.AbortGameplay();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Open));
     }
@@ -107,10 +107,10 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task AllUsersAbortingGameplayIndividuallyLogsGameAsAbortedAndExpiresPlaylistItem()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
 
@@ -118,9 +118,9 @@ public class UserStateManagementTests : MultiplayerTestBase
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
 
-        long playlistItemId = Hub.GetRoom(ROOMID)!.Playlist.Single(i => i.ID == Hub.GetRoom(ROOMID)!.Settings.PlaylistItemId).ID;
+        long playlistItemId = Hub.GetRoom(RoomId)!.Playlist.Single(i => i.ID == Hub.GetRoom(RoomId)!.Settings.PlaylistItemId).ID;
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
 
@@ -137,7 +137,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         SetUserContext(ContextUser2);
         await Hub.AbortGameplay();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Open));
 
@@ -147,10 +147,10 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task HostAbortingGameplayBeforeStartLogsGameAsAbortedAndExpiresPlaylistItem()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
 
@@ -158,9 +158,9 @@ public class UserStateManagementTests : MultiplayerTestBase
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
 
-        long playlistItemId = Hub.GetRoom(ROOMID)!.Playlist.Single(i => i.ID == Hub.GetRoom(ROOMID)!.Settings.PlaylistItemId).ID;
+        long playlistItemId = Hub.GetRoom(RoomId)!.Playlist.Single(i => i.ID == Hub.GetRoom(RoomId)!.Settings.PlaylistItemId).ID;
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
 
@@ -171,7 +171,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         SetUserContext(ContextUser);
         await Hub.AbortMatch();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Open));
 
@@ -181,10 +181,10 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task HostAbortingGameplayAfterStartLogsGameAsAbortedAndExpiresPlaylistItem()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
 
@@ -192,7 +192,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
 
@@ -206,14 +206,14 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Playing));
         Assert.That(room!.Users.Select(u => u.State).ToArray(), Is.All.EqualTo(MultiplayerUserState.Playing));
 
         await Hub.AbortMatch();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Open));
 
@@ -227,12 +227,12 @@ public class UserStateManagementTests : MultiplayerTestBase
     [TestCase(DownloadState.NotDownloaded)]
     public async Task UsersWithoutBeatmapWillNotEnterGameplay(DownloadState? state)
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         // user 2 is not ready and doesn't have the beatmap.
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         if (state.HasValue)
         {
             await Hub.ChangeBeatmapAvailability(new BeatmapAvailability(state.Value));
@@ -241,7 +241,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         SetUserContext(ContextUser);
         await Hub.StartMatch();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
@@ -252,7 +252,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Count(u => u.State == MultiplayerUserState.Playing), Is.EqualTo(1));
         Assert.That(room.Users.Count(u => u.State == MultiplayerUserState.Idle), Is.EqualTo(1));
@@ -261,18 +261,18 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task BothReadyAndIdleUsersTransitionToPlay()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         // user 2 is not ready but has the beatmap. should join gameplay.
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
         SetUserContext(ContextUser);
         await Hub.StartMatch();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
 
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
@@ -285,7 +285,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Count(u => u.State == MultiplayerUserState.Playing), Is.EqualTo(2));
     }
@@ -293,17 +293,17 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task UserDisconnectsDuringGameplayUpdatesRoomState()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser);
         await Hub.StartMatch();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.WaitingForLoad));
         Assert.That(room.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.WaitingForLoad));
@@ -315,7 +315,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Playing));
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Playing));
@@ -324,7 +324,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         SetUserContext(ContextUser);
         await Hub.AbortGameplay();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Playing));
 
@@ -332,7 +332,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         SetUserContext(ContextUser2);
         await Hub.LeaveRoom();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.State, Is.EqualTo(MultiplayerRoomState.Open));
     }
@@ -340,11 +340,11 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task OnlyFinishedUsersTransitionToResults()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await MarkCurrentUserReadyAndAvailable();
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
         SetUserContext(ContextUser);
@@ -352,7 +352,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.StartMatch();
         await LoadAndFinishGameplay(ContextUser, ContextUser2);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Count(u => u.State == MultiplayerUserState.Results), Is.EqualTo(2));
     }
@@ -360,22 +360,22 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task IdleUsersDoGetLoadRequest()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         await Hub.ChangeBeatmapAvailability(BeatmapAvailability.LocallyAvailable());
 
         SetUserContext(ContextUser);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Select(u => u.State), Is.All.EqualTo(MultiplayerUserState.Idle));
 
         // one user enters a ready state.
         await MarkCurrentUserReadyAndAvailable();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.Count(u => u.State == MultiplayerUserState.Idle), Is.EqualTo(1));
         Assert.That(room.Users.Count(u => u.State == MultiplayerUserState.Ready), Is.EqualTo(1));
@@ -387,7 +387,7 @@ public class UserStateManagementTests : MultiplayerTestBase
 
         Receiver.Verify(r => r.LoadRequested(), Times.Once);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users.All(u => u.State == MultiplayerUserState.WaitingForLoad), Is.True);
     }
@@ -402,7 +402,7 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task UserCanNotSwitchToIdleDuringGameplay()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
@@ -410,7 +410,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         // Test during WaitingForLoad state.
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users[0].State, Is.EqualTo(MultiplayerUserState.WaitingForLoad));
 
@@ -419,7 +419,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.ReadyForGameplay);
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users[0].State, Is.EqualTo(MultiplayerUserState.Playing));
 
@@ -427,7 +427,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.FinishedPlay);
         await Hub.ChangeState(MultiplayerUserState.Idle);
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users[0].State, Is.EqualTo(MultiplayerUserState.Idle));
     }
@@ -435,14 +435,14 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task UserSwitchedToIdleWhenAbortingGameplay()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         // Test during WaitingForLoad state.
         await MarkCurrentUserReadyAndAvailable();
         await Hub.StartMatch();
         await Hub.AbortGameplay();
 
-        var room = Hub.GetRoom(ROOMID);
+        Realtime.Objects.Rooms.IRoom? room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users[0].State, Is.EqualTo(MultiplayerUserState.Idle));
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Open));
@@ -453,7 +453,7 @@ public class UserStateManagementTests : MultiplayerTestBase
         await Hub.ChangeState(MultiplayerUserState.Loaded);
         await Hub.AbortGameplay();
 
-        room = Hub.GetRoom(ROOMID);
+        room = Hub.GetRoom(RoomId);
         Assert.That(room, Is.Not.Null);
         Assert.That(room!.Users[0].State, Is.EqualTo(MultiplayerUserState.Idle));
         Assert.That(room.State, Is.EqualTo(MultiplayerRoomState.Open));
@@ -462,7 +462,7 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task CanNotAbortGameplayInNonGameplayStates()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
         Assert.That(async () => await Hub.AbortGameplay(), Throws.TypeOf<InvalidStateException>());
 
         await MarkCurrentUserReadyAndAvailable();
@@ -478,13 +478,13 @@ public class UserStateManagementTests : MultiplayerTestBase
     [Test]
     public async Task KickUser()
     {
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser);
-        await Hub.KickUser(USERID2);
+        await Hub.KickUser(UserId2);
 
         UserReceiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Once);
         User2Receiver.Verify(r => r.UserKicked(It.IsAny<MultiplayerRoomUser>()), Times.Exactly(2));
@@ -504,15 +504,15 @@ public class UserStateManagementTests : MultiplayerTestBase
     {
         PlayerManager.MultiplayerDisconnectGracePeriod = TimeSpan.FromMilliseconds(50);
 
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
         SetUserContext(ContextUser2);
-        await Hub.JoinRoom(ROOMID);
+        await Hub.JoinRoom(RoomId);
 
-        await Hub.OnDisconnectedAsync(null);
+        await Hub.OnDisconnectedAsync(exception: null);
 
         // The user is still in the room during the grace period.
-        Assert.That(Hub.GetRoom(ROOMID)!.Users, Has.Count.EqualTo(2));
+        Assert.That(Hub.GetRoom(RoomId)!.Users, Has.Count.EqualTo(2));
 
         // After the grace period elapses without a reconnect, the user leaves the room.
         await Task.Delay(200);
