@@ -837,13 +837,13 @@ public class SpectatorHubTests
 
     private sealed class FakeUserRepository : IUserRepository
     {
-        private readonly ConcurrentDictionary<long, string> _usernames = new();
+        private readonly ConcurrentDictionary<int, string> _usernames = new();
 
-        public void SetUsername(long userId, string username) => _usernames[userId] = username;
+        public void SetUsername(int userId, string username) => _usernames[userId] = username;
 
-        public Task<User?> GetByIdAsync(long userId) => throw new NotSupportedException();
+        public Task<User?> GetByIdAsync(int userId) => throw new NotSupportedException();
 
-        public Task<string?> GetUsernameByIdAsync(long userId) =>
+        public Task<string?> GetUsernameByIdAsync(int userId) =>
             Task.FromResult(_usernames.TryGetValue(userId, out string? username) ? username : null);
 
         public Task<User?> GetByUsernameAsync(string username) => throw new NotSupportedException();
@@ -877,7 +877,7 @@ public class SpectatorHubTests
 
         public Task<IReadOnlyList<DbBeatmap>> GetByBeatmapSetIdAsync(long beatmapSetId) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<DbBeatmap>> GetByMapperIdAsync(long mapperId) => throw new NotSupportedException();
+        public Task<IReadOnlyList<DbBeatmap>> GetByMapperIdAsync(int mapperId) => throw new NotSupportedException();
 
         public Task CreateAsync(DbBeatmap beatmap) => throw new NotSupportedException();
 
@@ -892,11 +892,11 @@ public class SpectatorHubTests
 
         public Task<IReadOnlyList<Score>> GetByBeatmapIdAsync(int beatmapId) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<Score>> GetByUserIdAsync(long userId) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Score>> GetByUserIdAsync(int userId) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<Score>> GetRecentByUserIdAndModeAsync(long userId, int mode, int limit) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Score>> GetRecentByUserIdAndModeAsync(int userId, int mode, int limit) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<Score>> GetBestByUserIdAndModeAsync(long userId, int mode, int limit) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Score>> GetBestByUserIdAndModeAsync(int userId, int mode, int limit) => throw new NotSupportedException();
 
         public Task<Score?> GetScoreByToken(long scoreToken) => Task.FromResult<Score?>(null);
 

@@ -7,12 +7,15 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <NoWarn>SA0001;CS1591;CS0618</NoWarn> <!-- CS0618: tests deliberately cover the legacy V1 spectator API pathway. -->
+        <NoWarn>SA0001;CS1591;CS0618;MA0048</NoWarn> <!-- CS0618: tests deliberately cover the legacy V1 spectator API pathway. -->
     </PropertyGroup>
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.9" />
+        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.22" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+        <PackageReference Include="Moq" Version="4.20.72" />
         <PackageReference Include="NUnit" Version="4.5.1" />
         <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
         <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />

@@ -265,22 +265,22 @@ public class MetadataHubTests
 
     private sealed class FakeRelationshipRepository : IRelationshipRepository
     {
-        private readonly Dictionary<long, int[]> _friendIds = new();
+        private readonly Dictionary<int, int[]> _friendIds = new();
 
-        public void SetFriendIds(long userId, int[] friendIds) => _friendIds[userId] = friendIds;
+        public void SetFriendIds(int userId, int[] friendIds) => _friendIds[userId] = friendIds;
 
-        public Task<int[]> GetAllFriendIds(long userId)
+        public Task<int[]> GetAllFriendIds(int userId)
             => Task.FromResult(_friendIds.TryGetValue(userId, out int[]? ids) ? ids : []);
 
-        public Task<IReadOnlyList<Relationship>> GetByUserIdAsync(long userId) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Relationship>> GetByUserIdAsync(int userId) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<Relationship>> GetByTargetIdAsync(long targetId) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Relationship>> GetByTargetIdAsync(int targetId) => throw new NotSupportedException();
 
-        public Task<Relationship?> GetRelationshipAsync(long userId, long targetId) => throw new NotSupportedException();
+        public Task<Relationship?> GetRelationshipAsync(int userId, int targetId) => throw new NotSupportedException();
 
-        public Task<bool> IsFollowingAsync(long userId, long targetId) => throw new NotSupportedException();
+        public Task<bool> IsFollowingAsync(int userId, int targetId) => throw new NotSupportedException();
 
-        public Task<bool> IsBlockedAsync(long userId, long targetId) => throw new NotSupportedException();
+        public Task<bool> IsBlockedAsync(int userId, int targetId) => throw new NotSupportedException();
 
         public Task CreateAsync(Relationship relationship) => throw new NotSupportedException();
 

@@ -189,6 +189,10 @@ public class ScoreProcessedNotificationServiceTests
 
         public Task OnWatchedStopped(IPlayer source) => Task.CompletedTask;
 
+        public Task JoinRoom(long roomId) => Task.CompletedTask;
+
+        public Task LeaveRoom(long roomId) => Task.CompletedTask;
+
         public Task OnScoreProcessed(long scoreId)
         {
             ProcessedScoreIds.Add(scoreId);
@@ -235,11 +239,11 @@ public class ScoreProcessedNotificationServiceTests
 
         public Task<IReadOnlyList<DbScore>> GetByBeatmapIdAsync(int beatmapId) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<DbScore>> GetByUserIdAsync(long userId) => throw new NotSupportedException();
+        public Task<IReadOnlyList<DbScore>> GetByUserIdAsync(int userId) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<DbScore>> GetRecentByUserIdAndModeAsync(long userId, int mode, int limit) => throw new NotSupportedException();
+        public Task<IReadOnlyList<DbScore>> GetRecentByUserIdAndModeAsync(int userId, int mode, int limit) => throw new NotSupportedException();
 
-        public Task<IReadOnlyList<DbScore>> GetBestByUserIdAndModeAsync(long userId, int mode, int limit) => throw new NotSupportedException();
+        public Task<IReadOnlyList<DbScore>> GetBestByUserIdAndModeAsync(int userId, int mode, int limit) => throw new NotSupportedException();
 
         public Task CreateAsync(DbScore score) => throw new NotSupportedException();
 
