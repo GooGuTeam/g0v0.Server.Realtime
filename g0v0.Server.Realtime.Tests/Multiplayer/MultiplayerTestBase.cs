@@ -7,6 +7,7 @@
 #pragma warning disable SA1201 // Elements should appear in the correct order
 #pragma warning disable SA1202 // Elements should be ordered by access
 
+using System.Collections.Concurrent;
 using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
@@ -109,7 +110,10 @@ public abstract class MultiplayerTestBase
         FakeMultiplayerScopeFactory scopeFactory = new(RoomRepository, BeatmapRepository, RelationshipRepository, UserRepository);
 
         RulesetManager rulesetManager = new(Path.GetTempPath());
-        InterProcessCommunicationClient ipcClient = new(new NoOpMultiplayerTransport(), "realtime-tests");
+        NoOpMultiplayerTransport ipcTransport = new();
+        InterProcessCommunicationClient ipcClient = new(ipcTransport, "realtime-tests");
+        InterProcessCommunicationClient lazerIpcClient = new(ipcTransport, "lazer");
+        RegisterLazerMultiplayerResponders(lazerIpcClient);
         PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, ipcClient);
         IRulesetHashValidator rulesetHashValidator = new RulesetHashValidator(
             rulesetManager,
@@ -121,9 +125,10 @@ public abstract class MultiplayerTestBase
         {
             RulesetManager = rulesetManager,
             RulesetHashValidator = rulesetHashValidator,
+            IpcClient = ipcClient,
         };
         RoomFacade = roomFacade;
-        RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, scopeFactory, roomFacade);
+        RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, scopeFactory, ipcClient, roomFacade);
 
         Clients = new Mock<IHubClients<IMultiplayerClient>>();
         Groups = new Mock<IGroupManager>();
@@ -214,6 +219,13 @@ public abstract class MultiplayerTestBase
                 }
             }
         }
+    }
+
+    private static void RegisterLazerMultiplayerResponders(InterProcessCommunicationClient lazerIpcClient)
+    {
+        lazerIpcClient.RegisterResponder<object, object>("create_mp_channel", _ => new { channel_id = 1 });
+        lazerIpcClient.RegisterResponder<object, object>("make_user_join_mp_channel", _ => new { });
+        lazerIpcClient.RegisterResponder<object, object>("make_user_leave_mp_channel", _ => new { });
     }
 
     protected void CreateUser(int userId, out Mock<HubCallerContext> context, out Mock<DelegatingMultiplayerClient> client)
@@ -560,15 +572,17 @@ internal sealed class FakeUserRepository : IUserRepository
 /// </summary>
 internal sealed class NoOpMultiplayerTransport : IInterProcessCommunicationTransport
 {
+    private readonly ConcurrentDictionary<string, ConcurrentBag<Func<string, Task>>> _subscriptions = new(StringComparer.Ordinal);
+
+    public Task PublishAsync(string channel, string payload)
+        => !_subscriptions.TryGetValue(channel, out ConcurrentBag<Func<string, Task>>? handlers)
+            ? Task.CompletedTask
+            : Task.WhenAll(handlers.Select(handler => handler(payload)));
+
     public void Subscribe(string channel, Func<string, Task> handler)
     {
+        _subscriptions.GetOrAdd(channel, _ => []).Add(handler);
     }
-
-    public void Unsubscribe(string channel)
-    {
-    }
-
-    public Task PublishAsync(string channel, string payload) => Task.CompletedTask;
 }
 
 /// <summary>

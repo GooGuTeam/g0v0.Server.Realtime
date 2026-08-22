@@ -90,6 +90,7 @@ public static class Program
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
             RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
+            IpcClient = serviceProvider.GetRequiredService<InterProcessCommunicationClient>(),
         });
         builder.Services.AddSingleton<RoomManager>();
 

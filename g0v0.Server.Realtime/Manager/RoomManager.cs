@@ -1,10 +1,12 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Collections.Concurrent;
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Objects.Rooms;
+using Newtonsoft.Json;
 using osu.Game.Online.Multiplayer;
 using OsuMatchType = osu.Game.Online.Rooms.MatchType;
 
@@ -16,6 +18,7 @@ namespace g0v0.Server.Realtime.Manager;
 public class RoomManager(
     ILogger<RoomManager> logger,
     IServiceScopeFactory scopeFactory,
+    InterProcessCommunicationClient ipcClient,
     IRoomFacade roomFacade)
 {
     private readonly ConcurrentDictionary<long, IRoom> _rooms = new();
@@ -107,6 +110,22 @@ public class RoomManager(
             throw;
         }
 
+        CreateChannelResult? result = await ipcClient.RequestAsync<CreateChannelResult>(
+            ServerIdentify.Lazer,
+            "create_mp_channel",
+            new
+            {
+                room_id = dbRoom.Id
+            });
+        if (result == null)
+        {
+            logger.LogWarning("Failed to create multiplayer channel for room {RoomId}.", dbRoom.Id);
+        }
+        else
+        {
+            roomInstance.ChannelId = result.ChannelId;
+        }
+
         AddRoom(roomInstance);
         logger.LogInformation(
             "Created room {RoomId} of type {MatchType} hosted by {HostUserId}.",
@@ -157,6 +176,25 @@ public class RoomManager(
 
         await ((RoomBase)roomInstance).InitializeMatchState();
 
+        if (roomInstance.ChannelId == 0)
+        {
+            CreateChannelResult? result = await ipcClient.RequestAsync<CreateChannelResult>(
+                ServerIdentify.Lazer,
+                "create_mp_channel",
+                new
+                {
+                    room_id = dbRoom.Id
+                });
+            if (result == null)
+            {
+                logger.LogWarning("Failed to create multiplayer channel for room {RoomId}.", dbRoom.Id);
+            }
+            else
+            {
+                roomInstance.ChannelId = result.ChannelId;
+            }
+        }
+
         AddRoom(roomInstance);
         logger.LogInformation("Loaded room {RoomId} from database.", roomInstance.RoomId);
 
@@ -180,6 +218,11 @@ public class RoomManager(
             throw new InvalidStateException("Room not found.");
         }
 
+        if (newType is not (OsuMatchType.HeadToHead or OsuMatchType.TeamVersus))
+        {
+            throw new InvalidStateException("Invalid match type selected.");
+        }
+
         RoomBase oldRoom = (RoomBase)existing;
 
         // The lock may already be held by the caller (e.g. when invoked through
@@ -198,7 +241,7 @@ public class RoomManager(
             using IServiceScope scope = scopeFactory.CreateScope();
             IRoomRepository roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
             Room dbRoom = await roomRepository.GetRoom(roomId)
-                         ?? throw new InvalidStateException("Room not found.");
+                          ?? throw new InvalidStateException("Room not found.");
 
             IRoom newInstance = CreateRoomInstance(dbRoom, newType);
 
@@ -206,10 +249,10 @@ public class RoomManager(
             // initialise the new match-type specific state.
             await ((RoomBase)newInstance).CopyStateFrom(oldRoom);
 
-            // Swap the registry entry and destroy the old instance.
-            _rooms[roomId] = newInstance;
+            // Swap the registry entry and wire callbacks on the replacement.
             oldRoom.OnDisbanded = null;
             oldRoom.OnMatchTypeChanged = null;
+            AddRoom(newInstance);
 
             logger.LogInformation("Room {RoomId} changed match type to {MatchType}.", roomId, newType);
             return newInstance;
@@ -244,5 +287,11 @@ public class RoomManager(
             OsuMatchType.HeadToHead => new HeadToHeadRoom(dbRoom, roomFacade),
             _ => throw new InvalidStateException($"Unsupported match type '{matchType}'."),
         };
+    }
+
+    private class CreateChannelResult
+    {
+        [JsonProperty("channel_id")]
+        public int ChannelId { get; set; }
     }
 }

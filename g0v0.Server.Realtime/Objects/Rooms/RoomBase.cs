@@ -8,6 +8,7 @@
 #pragma warning disable SA1214 // Readonly fields should appear before non-readonly fields
 
 using System.Collections.Concurrent;
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Fetching;
@@ -37,6 +38,9 @@ public abstract class RoomBase : IRoom
 {
     private const int HighestOfficialRulesetId = 3;
 
+    private const string MakeUserJoinChannelCommand = "make_user_join_mp_channel";
+    private const string MakeUserLeaveChannelCommand = "make_user_leave_mp_channel";
+
     /// <inheritdoc />
     public long RoomId { get; }
 
@@ -62,7 +66,7 @@ public abstract class RoomBase : IRoom
     public IList<MultiplayerCountdown> ActiveCountdowns { get; } = new List<MultiplayerCountdown>();
 
     /// <inheritdoc />
-    public int ChannelId { get; }
+    public int ChannelId { get; set; }
 
     /// <inheritdoc />
     public bool TournamentMode { get; }
@@ -251,11 +255,11 @@ public abstract class RoomBase : IRoom
         return BannedUsers.Contains(userId)
             ? RoomJoinResult.Rejected("You are banned from this room.")
             : EndDate != null && DateTimeOffset.UtcNow >= EndDate
-            ? RoomJoinResult.Rejected("The room is no longer available.")
-            : !string.IsNullOrEmpty(Settings.Password)
-              && !string.Equals(Settings.Password, password, StringComparison.Ordinal)
-                ? RoomJoinResult.Rejected(RoomJoinResult.InvalidPasswordReason)
-                : await UserCanJoin(userId);
+                ? RoomJoinResult.Rejected("The room is no longer available.")
+                : !string.IsNullOrEmpty(Settings.Password)
+                  && !string.Equals(Settings.Password, password, StringComparison.Ordinal)
+                    ? RoomJoinResult.Rejected(RoomJoinResult.InvalidPasswordReason)
+                    : await UserCanJoin(userId);
     }
 
     /// <inheritdoc />
@@ -307,6 +311,15 @@ public abstract class RoomBase : IRoom
             }
 
             await WithRepository(repo => repo.AddUserToRoom(RoomId, userId));
+            if (Facade.IpcClient != null)
+            {
+                await Facade.IpcClient.RequestAsync<object>(ServerIdentify.Lazer, MakeUserJoinChannelCommand, new
+                {
+                    user_id = user.UserID,
+                    channel_id = ChannelId,
+                });
+            }
+
             await HandleUserJoined(user);
         }
         catch
@@ -329,6 +342,22 @@ public abstract class RoomBase : IRoom
             // Compensate the previously broadcast UserJoined so existing clients
             // do not retain a ghost member.
             await Facade.EventDispatcher.PostUserLeftAsync(RoomId, user);
+
+            try
+            {
+                if (Facade.IpcClient != null)
+                {
+                    await Facade.IpcClient.RequestAsync<object>(ServerIdentify.Lazer, MakeUserLeaveChannelCommand, new
+                    {
+                        user_id = user.UserID,
+                        channel_id = ChannelId,
+                    });
+                }
+            }
+            catch (InterProcessCommunicationRemoteException)
+            {
+                // Ignore it because the user maybe was not in room.
+            }
 
             // RemoveUserInternal may have scheduled a fresh end-date destruction
             // for an empty room; cancel it and restore the previous timer.
@@ -1403,6 +1432,7 @@ public abstract class RoomBase : IRoom
         Host = other.Host;
         State = other.State;
         Settings = other.Settings;
+        ChannelId = other.ChannelId;
 
         Playlist.Clear();
         foreach (MultiplayerPlaylistItem item in other.Playlist)
@@ -1533,6 +1563,15 @@ public abstract class RoomBase : IRoom
     {
         Users.Remove(user);
         await WithRepository(repo => repo.RemoveUserFromRoom(RoomId, user.UserID));
+        if (Facade.IpcClient != null)
+        {
+            await Facade.IpcClient.RequestAsync<object>(ServerIdentify.Lazer, MakeUserLeaveChannelCommand, new
+            {
+                user_id = user.UserID,
+                channel_id = ChannelId,
+            });
+        }
+
         await HandleUserLeft(user);
 
         if (Host?.UserID == user.UserID)

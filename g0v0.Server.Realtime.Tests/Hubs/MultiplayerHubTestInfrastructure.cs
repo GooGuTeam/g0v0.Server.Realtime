@@ -4,6 +4,7 @@
 #pragma warning disable MA0048 // File name must match type name
 #pragma warning disable SA1402 // File may only contain a single type
 
+using System.Collections.Concurrent;
 using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Hubs;
@@ -481,13 +482,15 @@ internal sealed class TestHubCallerContext(string connectionId, string userIdent
 
 internal sealed class RecordingTransport : IInterProcessCommunicationTransport
 {
-    public Task PublishAsync(string channel, string payload) => Task.CompletedTask;
+    private readonly ConcurrentDictionary<string, ConcurrentBag<Func<string, Task>>> _subscriptions = new(StringComparer.Ordinal);
+
+    public Task PublishAsync(string channel, string payload)
+        => !_subscriptions.TryGetValue(channel, out ConcurrentBag<Func<string, Task>>? handlers)
+            ? Task.CompletedTask
+            : Task.WhenAll(handlers.Select(handler => handler(payload)));
 
     public void Subscribe(string channel, Func<string, Task> handler)
     {
-    }
-
-    public void Unsubscribe(string channel)
-    {
+        _subscriptions.GetOrAdd(channel, _ => []).Add(handler);
     }
 }

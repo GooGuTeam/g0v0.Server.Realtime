@@ -41,6 +41,9 @@ public class MultiplayerHubTests
             Assert.That(room.Users, Has.Count.EqualTo(1));
             Assert.That(room.Users[0].UserID, Is.EqualTo(1));
             Assert.That(room.Host?.UserID, Is.EqualTo(1));
+            Assert.That(room.ChannelID, Is.EqualTo(1));
+            Assert.That(environment.CreateChannelRequestCount, Is.EqualTo(1));
+            Assert.That(environment.JoinChannelRequestCount, Is.EqualTo(1));
 
             // The host joins before subscribing to the room's event group, so
             // they do not receive their own UserJoined (which would play the
@@ -75,6 +78,7 @@ public class MultiplayerHubTests
         Assert.Multiple(() =>
         {
             Assert.That(joined.Users, Has.Count.EqualTo(2));
+            Assert.That(environment.JoinChannelRequestCount, Is.EqualTo(2));
 
             // The host (already subscribed) receives the guest's UserJoined.
             Assert.That(host.Recorder.UserJoinedEvents, Has.Count.EqualTo(1));
@@ -468,6 +472,7 @@ public class MultiplayerHubTests
             Assert.That(room.Users.Any(u => u.UserID == 2), Is.False);
             Assert.That(host.Recorder.UserLeftEvents, Has.Count.EqualTo(1));
             Assert.That(host.Recorder.UserLeftEvents[0].UserID, Is.EqualTo(2));
+            Assert.That(environment.LeaveChannelRequestCount, Is.EqualTo(1));
             Assert.That(environment.PlayerManager.GetPlayer<LazerPlayer>(2)?.State.CurrentRoom, Is.Null);
         });
     }
@@ -1040,7 +1045,10 @@ public class MultiplayerHubTests
             IBeatmapRepository? beatmapRepository = null,
             IRulesetHashValidator? rulesetHashValidator = null)
         {
-            IpcClient = new InterProcessCommunicationClient(new RecordingTransport(), "realtime-tests");
+            IpcTransport = new RecordingTransport();
+            IpcClient = new InterProcessCommunicationClient(IpcTransport, "realtime-tests");
+            LazerIpcClient = new InterProcessCommunicationClient(IpcTransport, "lazer");
+            RegisterLazerMultiplayerResponders();
             PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, IpcClient);
             RoomRepository = new FakeRoomRepository();
             Router = new MultiplayerClientRouter();
@@ -1052,8 +1060,9 @@ public class MultiplayerHubTests
                 NullLogger<MultiplayerEventDispatcher>.Instance), NullLogger<RoomFacade>.Instance)
             {
                 RulesetManager = RulesetManager,
+                IpcClient = IpcClient,
             };
-            RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, ScopeFactory, RoomFacade);
+            RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, ScopeFactory, IpcClient, RoomFacade);
             RulesetHashValidator = rulesetHashValidator ?? new RulesetHashValidator(
                 RulesetManager,
                 IpcClient,
@@ -1078,11 +1087,21 @@ public class MultiplayerHubTests
 
         public IServiceScopeFactory ScopeFactory { get; }
 
+        public RecordingTransport IpcTransport { get; }
+
         public InterProcessCommunicationClient IpcClient { get; }
+
+        public InterProcessCommunicationClient LazerIpcClient { get; }
 
         public MultiplayerClientRouter Router { get; }
 
         public FakeHubContext HubContext { get; }
+
+        public int CreateChannelRequestCount { get; private set; }
+
+        public int JoinChannelRequestCount { get; private set; }
+
+        public int LeaveChannelRequestCount { get; private set; }
 
         public async Task<TestHubHandle> ConnectAsync(int userId, string connectionId)
         {
@@ -1108,6 +1127,25 @@ public class MultiplayerHubTests
             handle.Recorder.Clear();
             handle.GroupManager.Reset();
             return handle;
+        }
+
+        private void RegisterLazerMultiplayerResponders()
+        {
+            LazerIpcClient.RegisterResponder<object, object>("create_mp_channel", _ =>
+            {
+                CreateChannelRequestCount++;
+                return new { channel_id = 1 };
+            });
+            LazerIpcClient.RegisterResponder<object, object>("make_user_join_mp_channel", _ =>
+            {
+                JoinChannelRequestCount++;
+                return new { };
+            });
+            LazerIpcClient.RegisterResponder<object, object>("make_user_leave_mp_channel", _ =>
+            {
+                LeaveChannelRequestCount++;
+                return new { };
+            });
         }
     }
 

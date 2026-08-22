@@ -51,8 +51,11 @@ public class MultiplayerIntegrationTests
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton<FakeRoomRepository>(_roomRepository);
         builder.Services.AddSingleton<IRoomRepository>(_roomRepository);
-        builder.Services.AddSingleton(
-            new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));
+        RecordingTransport ipcTransport = new();
+        InterProcessCommunicationClient realtimeIpcClient = new(ipcTransport, "realtime-tests");
+        InterProcessCommunicationClient lazerIpcClient = new(ipcTransport, "lazer");
+        RegisterLazerMultiplayerResponders(lazerIpcClient);
+        builder.Services.AddSingleton(realtimeIpcClient);
         builder.Services.AddSingleton<PlayerManager>();
         builder.Services.AddSingleton<MultiplayerEventDispatcher>();
         builder.Services.AddSingleton(new RulesetManager(Path.GetTempPath()));
@@ -64,6 +67,7 @@ public class MultiplayerIntegrationTests
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
             RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
+            IpcClient = serviceProvider.GetRequiredService<InterProcessCommunicationClient>(),
         });
         builder.Services.AddSingleton<RoomManager>();
 
@@ -262,6 +266,7 @@ public class MultiplayerIntegrationTests
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
             RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
+            IpcClient = serviceProvider.GetRequiredService<InterProcessCommunicationClient>(),
         });
         builder.Services.AddSingleton<RoomManager>();
         builder.Services.AddSingleton<PlayerManager>();
@@ -309,6 +314,13 @@ public class MultiplayerIntegrationTests
         }
 
         Assert.That(joinException, Is.TypeOf<HubException>());
+    }
+
+    private static void RegisterLazerMultiplayerResponders(InterProcessCommunicationClient lazerIpcClient)
+    {
+        lazerIpcClient.RegisterResponder<object, object>("create_mp_channel", _ => new { channel_id = 1 });
+        lazerIpcClient.RegisterResponder<object, object>("make_user_join_mp_channel", _ => new { });
+        lazerIpcClient.RegisterResponder<object, object>("make_user_leave_mp_channel", _ => new { });
     }
 
     private async Task<HubConnection> ConnectAsync(

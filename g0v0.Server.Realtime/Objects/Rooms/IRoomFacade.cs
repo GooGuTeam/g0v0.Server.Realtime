@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Services;
@@ -41,4 +42,9 @@ public interface IRoomFacade
     /// Gets or sets the validator used to check multiplayer client ruleset hashes.
     /// </summary>
     IRulesetHashValidator? RulesetHashValidator { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inter-process communication client.
+    /// </summary>
+    InterProcessCommunicationClient? IpcClient { get; set; }
 }

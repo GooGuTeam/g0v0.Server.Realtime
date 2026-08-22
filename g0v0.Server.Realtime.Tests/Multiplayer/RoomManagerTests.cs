@@ -115,13 +115,50 @@ public class RoomManagerTests : MultiplayerTestBase
     {
         IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
         long roomId = room.RoomId;
+        room.ChannelId = 12345;
 
         IRoom changed = await RoomManager.ChangeMatchType(roomId, OsuMatchType.TeamVersus);
 
         Assert.That(changed, Is.TypeOf<TeamVersusRoom>());
         Assert.That(changed.RoomId, Is.EqualTo(roomId));
+        Assert.That(changed.ChannelId, Is.EqualTo(12345));
         Assert.That(RoomManager.GetRoom(roomId), Is.SameAs(changed));
         Assert.That(RoomManager.GetRoom(roomId)!.Settings.MatchType, Is.EqualTo(OsuMatchType.TeamVersus));
+    }
+
+    [Test]
+    public async Task ChangeMatchType_ReplacesInstanceCreatedByPreviousChange()
+    {
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
+        long roomId = room.RoomId;
+
+        IRoom teamVersus = await RoomManager.ChangeMatchType(roomId, OsuMatchType.TeamVersus);
+        await teamVersus.ChangeRoomSettings(new MultiplayerRoomSettings
+        {
+            Name = teamVersus.Settings.Name,
+            MatchType = OsuMatchType.HeadToHead,
+            QueueMode = teamVersus.Settings.QueueMode,
+            MaxParticipants = teamVersus.Settings.MaxParticipants,
+        });
+
+        IRoom? changedBack = RoomManager.GetRoom(roomId);
+        Assert.That(changedBack, Is.TypeOf<HeadToHeadRoom>());
+        Assert.That(changedBack!.Settings.MatchType, Is.EqualTo(OsuMatchType.HeadToHead));
+    }
+
+    [Test]
+    public async Task ChangeMatchType_UnsupportedMatchType_ThrowsWithoutChangingRoom()
+    {
+        IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
+        long roomId = room.RoomId;
+
+        Assert.That(
+            async () => await RoomManager.ChangeMatchType(roomId, OsuMatchType.Playlists),
+            Throws.TypeOf<InvalidStateException>());
+
+        Assert.That(RoomManager.GetRoom(roomId), Is.SameAs(room));
+        Assert.That(room.Settings.MatchType, Is.EqualTo(OsuMatchType.HeadToHead));
+        Assert.That(RoomRepository.Rooms.First(r => r.Id == roomId).Type, Is.EqualTo(OsuMatchType.HeadToHead));
     }
 
     [Test]

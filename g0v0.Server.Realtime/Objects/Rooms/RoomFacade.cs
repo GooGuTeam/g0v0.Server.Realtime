@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Services;
@@ -45,4 +46,7 @@ public class RoomFacade : IRoomFacade
 
     /// <inheritdoc />
     public IRulesetHashValidator? RulesetHashValidator { get; set; }
+
+    /// <inheritdoc/>
+    public InterProcessCommunicationClient? IpcClient { get; set; }
 }

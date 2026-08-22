@@ -52,9 +52,9 @@ public interface IRoom
     IList<MultiplayerCountdown> ActiveCountdowns { get; }
 
     /// <summary>
-    /// Gets the chat channel ID associated with the room.
+    /// Gets or sets the chat channel ID associated with the room.
     /// </summary>
-    int ChannelId { get; }
+    int ChannelId { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the room is a tournament room.
