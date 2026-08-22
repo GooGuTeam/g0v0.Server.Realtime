@@ -1,25 +1,39 @@
-﻿**/.dockerignore
-**/.env
+# VCS
 **/.git
 **/.gitignore
+**/.gitattributes
+
+# IDE / tooling
+**/.idea
+**/.vs
+**/.vscode
 **/.project
 **/.settings
 **/.toolstarget
-**/.vs
-**/.vscode
-**/.idea
 **/*.*proj.user
-**/*.dbmdl
-**/*.jfm
-**/azds.yaml
+**/*.DotSettings.user
+
+# Build outputs (realtime + sibling Common)
 **/bin
-**/charts
-**/docker-compose*
-**/Dockerfile*
+**/obj
+**/artifacts
+**/TestResults
+**/packages
+
+# Runtime data - mounted as volumes, never baked into the image.
+# Config files may contain secrets (DB passwords, JWT keys); storage/ may hold replays.
+**/config/
+**/storage/
+**/rulesets/
+
+# Misc
+**/.env
 **/node_modules
 **/npm-debug.log
-**/obj
+**/azds.yaml
+**/docker-compose*
+**/Dockerfile*
+**/charts
 **/secrets.dev.yaml
 **/values.dev.yaml
-LICENSE
-README.md
+*.swp

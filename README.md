@@ -148,6 +148,47 @@ Then you can run the server and connect to it with lazer. The url path is same a
 - Spectator Url: `/signalr/spectator`
 - Metadata Url: `/signalr/metadata`
 
+## Docker
+
+The Docker image is published to GitHub Packages
+([ghcr.io/GooGuTeam/g0v0.Server.Realtime](https://github.com/GooGuTeam/g0v0.Server.Realtime/pkgs/container/g0v0.Server.Realtime))
+on every push to `main` and version tags (`v*`) by the `.github/workflows/docker-image.yml` workflow.
+
+### Building the image
+
+The realtime project references the sibling repo [g0v0.Server.Common](https://github.com/GooGuTeam/g0v0.Server.Common)
+via `ProjectReference`, so the image is built with a named build context for it:
+
+```bash
+# From the g0v0.Server.Realtime repo root
+docker buildx build \
+  --build-context common=/path/to/g0v0.Server.Common \
+  -f g0v0.Server.Realtime/Dockerfile \
+  -t ghcr.io/googuteam/g0v0.server.realtime:latest .
+```
+
+### Running the container
+
+The image runs as a non-root user (`$APP_UID`) on port `8080`. Runtime data lives in three volumes that must be mounted:
+
+| Volume          | Purpose                                                                                 |
+|-----------------|-----------------------------------------------------------------------------------------|
+| `/app/config`   | JSON configuration files (`general.json`, `game.json`, `realtime.json`, `storage.json`) |
+| `/app/rulesets` | Custom osu! ruleset DLLs (loaded at startup; optional)                                  |
+| `/app/storage`  | Local file storage (spectator replays etc.)                                             |
+
+```bash
+docker run --rm -p 8080:8080 \
+  -v /host/path/config:/app/config:ro \
+  -v /host/path/rulesets:/app/rulesets:ro \
+  -v /host/path/storage:/app/storage \
+  ghcr.io/googuteam/g0v0.server.realtime:latest
+```
+
+Config files are read from `{ContentRoot}/config/` — see [Configure the realtime server](#configure-the-realtime-server)
+for the schema. The config, rulesets and storage directories are **not** baked into the image (and are excluded from the
+build context by `.dockerignore`), so secrets such as DB passwords and JWT keys stay on the host.
+
 ## License
 
 g0v0 server v2 series is licensed under the [MIT licence](https://opensource.org/licenses/MIT). Please
