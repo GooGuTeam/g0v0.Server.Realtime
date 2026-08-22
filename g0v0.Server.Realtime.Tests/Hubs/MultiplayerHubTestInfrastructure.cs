@@ -196,8 +196,6 @@ internal sealed class RecordingMultiplayerClient : IMultiplayerClient
 
     public List<MultiplayerPlaylistItem> PlaylistItemAddedEvents { get; } = [];
 
-    public List<long> PlaylistItemRemovedEvents { get; } = [];
-
     public List<MultiplayerPlaylistItem> PlaylistItemChangedEvents { get; } = [];
 
     public List<(int UserId, int? BeatmapId, int? RulesetId)> UserStyleChangedEvents { get; } = [];
@@ -216,7 +214,6 @@ internal sealed class RecordingMultiplayerClient : IMultiplayerClient
         ResultsReadyEvents.Clear();
         SettingsChangedEvents.Clear();
         PlaylistItemAddedEvents.Clear();
-        PlaylistItemRemovedEvents.Clear();
         PlaylistItemChangedEvents.Clear();
         UserStyleChangedEvents.Clear();
         EventLog.Clear();
@@ -307,7 +304,6 @@ internal sealed class RecordingMultiplayerClient : IMultiplayerClient
 
     public Task PlaylistItemRemoved(long playlistItemId)
     {
-        PlaylistItemRemovedEvents.Add(playlistItemId);
         EventLog.Add(nameof(PlaylistItemRemoved));
         return Task.CompletedTask;
     }

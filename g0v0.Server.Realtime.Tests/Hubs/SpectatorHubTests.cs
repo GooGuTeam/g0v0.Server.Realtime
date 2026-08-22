@@ -773,8 +773,6 @@ public class SpectatorHubTests
 
     private sealed class RecordingSpectatorClient : ISpectatorClient
     {
-        public List<(int UserId, SpectatorState State)> BeganPlayingEvents { get; } = [];
-
         public List<(int UserId, SpectatorState State)> FinishedPlayingEvents { get; } = [];
 
         public List<(int UserId, FrameDataBundle Data)> SentFramesEvents { get; } = [];
@@ -797,7 +795,6 @@ public class SpectatorHubTests
 
         public Task UserBeganPlaying(int userId, SpectatorState state)
         {
-            BeganPlayingEvents.Add((userId, state));
             return Task.CompletedTask;
         }
 

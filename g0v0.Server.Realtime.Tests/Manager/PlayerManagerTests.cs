@@ -158,8 +158,6 @@ public class PlayerManagerTests
 
         public List<(int PlayerId, bool IsKicked)> OfflineNotifications { get; } = [];
 
-        public List<(int PlayerId, IUserActivity Activity)> ActivityNotifications { get; } = [];
-
         public List<(int PlayerId, UserStatus? Status)> StatusNotifications { get; } = [];
 
         public List<int> BeganPlayingNotifications { get; } = [];
@@ -180,7 +178,6 @@ public class PlayerManagerTests
 
         public override Task OnPlayerChangeActivity(IPlayer player, IUserActivity activity)
         {
-            ActivityNotifications.Add((player.PlayerId, activity));
             return Task.CompletedTask;
         }
 
@@ -214,7 +211,6 @@ public class PlayerManagerTests
         {
             OnlineNotifications.Clear();
             OfflineNotifications.Clear();
-            ActivityNotifications.Clear();
             StatusNotifications.Clear();
             BeganPlayingNotifications.Clear();
             WatchedStoppedNotifications.Clear();
