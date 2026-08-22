@@ -3,6 +3,7 @@
 using g0v0.Server.Common.Communication;
 using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Objects.Players;
+using g0v0.Server.Realtime.Objects.Rooms;
 using g0v0.Server.Realtime.Objects.States.Activity;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
@@ -342,7 +343,7 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOnline(IPlayer player)
     {
-        await ipcClient.SendNoticeAsync("lazer", "user_online_status_changed", new { user_id = player.PlayerId });
+        await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
 
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
@@ -363,7 +364,7 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOffline(IPlayer player, bool isKicked = false)
     {
-        await ipcClient.SendNoticeAsync("lazer", "user_online_status_changed", new { user_id = player.PlayerId });
+        await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
 
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
@@ -600,13 +601,13 @@ public class PlayerManager(
                 throw new InvalidStateException("Player is already in a room.");
             }
 
-            bool userCanJoin = await room.UserCanJoin(player.PlayerId);
-            if (!userCanJoin)
+            RoomJoinResult joinResult = await room.JoinRoom(player.PlayerId, role);
+            if (!joinResult.Success)
             {
-                throw new InvalidStateException("Player is not eligible to join this room.");
+                throw new InvalidStateException(
+                    joinResult.Reason ?? "Player is not eligible to join this room.");
             }
 
-            await room.JoinRoom(player.PlayerId, role);
             player.State.CurrentRoom = roomId;
         }
         else
