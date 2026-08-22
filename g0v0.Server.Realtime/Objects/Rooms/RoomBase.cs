@@ -10,6 +10,7 @@
 using System.Collections.Concurrent;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
+using g0v0.Server.Common.Fetching;
 using g0v0.Server.Realtime.Extensions;
 using osu.Game.Online;
 using osu.Game.Online.API;
@@ -141,13 +142,35 @@ public abstract class RoomBase : IRoom
     }
 
     /// <summary>
+    /// Executes the supplied operation with a scoped beatmap repository and the osu! fetcher.
+    /// Falls back to the plain repository lookup when no fetcher is registered.
+    /// </summary>
+    /// <param name="operation">The operation to run with the repository and fetcher.</param>
+    /// <param name="lookup">The fallback operation used when no fetcher is registered.</param>
+    /// <returns>The operation result, or <see langword="null"/> when no beatmap repository is registered.</returns>
+    private async Task<Beatmap?> WithBeatmapRepositoryAndFetcher(Func<IBeatmapRepository, IFetcher, Task<Beatmap?>> operation, Func<IBeatmapRepository, Task<Beatmap?>> lookup)
+    {
+        using IServiceScope scope = Facade.ScopeFactory.CreateScope();
+        IBeatmapRepository? repository = scope.ServiceProvider.GetService<IBeatmapRepository>();
+        if (repository == null)
+        {
+            return null;
+        }
+
+        IFetcher? fetcher = scope.ServiceProvider.GetService<IFetcher>();
+        return fetcher == null ? await lookup(repository) : await operation(repository, fetcher);
+    }
+
+    /// <summary>
     /// Resolves the star rating for a beatmap from the beatmap repository.
     /// </summary>
     /// <param name="beatmapId">The beatmap ID.</param>
     /// <returns>The star rating, or <c>0</c> when the beatmap is unknown.</returns>
     private async Task<double> GetStarRating(int beatmapId)
     {
-        Beatmap? beatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(beatmapId));
+        Beatmap? beatmap = await WithBeatmapRepositoryAndFetcher(
+            async (repo, fetcher) => await repo.GetOrFetchByIdAsync(beatmapId, fetcher),
+            repo => repo.GetByIdAsync(beatmapId));
         return beatmap?.DifficultyRating ?? 0;
     }
 
@@ -552,11 +575,17 @@ public abstract class RoomBase : IRoom
         }
 
         bool repositoryRegistered = false;
-        Beatmap? itemBeatmap = await WithBeatmapRepository(repo =>
-        {
-            repositoryRegistered = true;
-            return repo.GetByIdAsync(CurrentItem.BeatmapID);
-        });
+        Beatmap? itemBeatmap = await WithBeatmapRepositoryAndFetcher(
+            async (repo, fetcher) =>
+            {
+                repositoryRegistered = true;
+                return await repo.GetOrFetchByIdAsync(CurrentItem.BeatmapID, fetcher);
+            },
+            repo =>
+            {
+                repositoryRegistered = true;
+                return repo.GetByIdAsync(CurrentItem.BeatmapID);
+            });
 
         // Validation is skipped when no beatmap repository is registered.
         if (!repositoryRegistered)
@@ -564,7 +593,9 @@ public abstract class RoomBase : IRoom
             return;
         }
 
-        Beatmap? userBeatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(beatmapId.Value)) ?? throw new InvalidStateException("Invalid beatmap selected.");
+        Beatmap? userBeatmap = await WithBeatmapRepositoryAndFetcher(
+            async (repo, fetcher) => await repo.GetOrFetchByIdAsync(beatmapId.Value, fetcher),
+            repo => repo.GetByIdAsync(beatmapId.Value)) ?? throw new InvalidStateException("Invalid beatmap selected.");
         if (userBeatmap.BeatmapSetId != itemBeatmap?.BeatmapSetId)
         {
             throw new InvalidStateException("Selected beatmap is not from the same beatmap set.");
@@ -635,7 +666,9 @@ public abstract class RoomBase : IRoom
         }
         else
         {
-            Beatmap? itemBeatmap = await WithBeatmapRepository(repo => repo.GetByIdAsync(currentItem.BeatmapID));
+            Beatmap? itemBeatmap = await WithBeatmapRepositoryAndFetcher(
+                async (repo, fetcher) => await repo.GetOrFetchByIdAsync(currentItem.BeatmapID, fetcher),
+                repo => repo.GetByIdAsync(currentItem.BeatmapID));
             IReadOnlyList<Beatmap>? validDifficulties = itemBeatmap == null
                 ? null
                 : await WithBeatmapRepository(repo => repo.GetByBeatmapSetIdAsync(itemBeatmap.BeatmapSetId));
@@ -875,11 +908,17 @@ public abstract class RoomBase : IRoom
     private async Task ValidatePlaylistItemBeatmap(MultiplayerPlaylistItem item)
     {
         bool repositoryRegistered = false;
-        Beatmap? beatmap = await WithBeatmapRepository(repo =>
-        {
-            repositoryRegistered = true;
-            return repo.GetByIdAsync(item.BeatmapID);
-        });
+        Beatmap? beatmap = await WithBeatmapRepositoryAndFetcher(
+            async (repo, fetcher) =>
+            {
+                repositoryRegistered = true;
+                return await repo.GetOrFetchByIdAsync(item.BeatmapID, fetcher);
+            },
+            repo =>
+            {
+                repositoryRegistered = true;
+                return repo.GetByIdAsync(item.BeatmapID);
+            });
 
         // Validation is skipped when no beatmap repository is registered.
         if (!repositoryRegistered)

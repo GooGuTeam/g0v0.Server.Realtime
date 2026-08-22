@@ -943,6 +943,12 @@ public class MultiplayerHubTests
 
         public Task<Beatmap?> GetByChecksumAsync(string checksum) => Task.FromResult<Beatmap?>(null);
 
+        public Task<Beatmap> GetOrFetchByIdAsync(int beatmapId, g0v0.Server.Common.Fetching.IFetcher fetcher, CancellationToken cancellationToken = default)
+            => Task.FromResult(_beatmaps.Find(b => b.Id == beatmapId) ?? new Beatmap { Id = beatmapId, BeatmapSetId = beatmapId, Mode = 0, Checksum = "checksum", DifficultyRating = 4.2 });
+
+        public Task<Beatmap> GetOrFetchByChecksumAsync(string checksum, g0v0.Server.Common.Fetching.IFetcher fetcher, CancellationToken cancellationToken = default)
+            => Task.FromResult(_beatmaps.Find(b => string.Equals(b.Checksum, checksum, StringComparison.Ordinal)) ?? new Beatmap { Id = 0, BeatmapSetId = 0, Mode = 0, Checksum = checksum, DifficultyRating = 4.2 });
+
         public Task<IReadOnlyList<Beatmap>> GetByBeatmapSetIdAsync(int beatmapSetId)
             => Task.FromResult<IReadOnlyList<Beatmap>>(_beatmaps.Where(b => b.BeatmapSetId == beatmapSetId).ToList());
 

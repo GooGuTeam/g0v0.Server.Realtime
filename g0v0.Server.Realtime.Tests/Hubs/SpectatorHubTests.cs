@@ -869,6 +869,12 @@ public class SpectatorHubTests
         public Task<DbBeatmap?> GetByChecksumAsync(string checksum) =>
             Task.FromResult(_beatmapsByChecksum.TryGetValue(checksum, out DbBeatmap? value) ? value : null);
 
+        public Task<DbBeatmap> GetOrFetchByIdAsync(int beatmapId, g0v0.Server.Common.Fetching.IFetcher fetcher, CancellationToken cancellationToken = default)
+            => Task.FromResult(_beatmapsById.TryGetValue(beatmapId, out DbBeatmap? value) ? value : throw new NotSupportedException());
+
+        public Task<DbBeatmap> GetOrFetchByChecksumAsync(string checksum, g0v0.Server.Common.Fetching.IFetcher fetcher, CancellationToken cancellationToken = default)
+            => Task.FromResult(_beatmapsByChecksum.TryGetValue(checksum, out DbBeatmap? value) ? value : throw new NotSupportedException());
+
         public Task<IReadOnlyList<DbBeatmap>> GetByBeatmapSetIdAsync(int beatmapSetId) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<DbBeatmap>> GetByMapperIdAsync(int mapperId) => throw new NotSupportedException();

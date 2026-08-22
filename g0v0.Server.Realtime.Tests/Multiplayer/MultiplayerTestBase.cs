@@ -436,6 +436,12 @@ internal sealed class FakeBeatmapRepository : IBeatmapRepository
     public Task<Beatmap?> GetByChecksumAsync(string checksum)
         => Task.FromResult(Beatmaps.Find(b => string.Equals(b.Checksum, checksum, StringComparison.Ordinal)));
 
+    public async Task<Beatmap> GetOrFetchByIdAsync(int beatmapId, g0v0.Server.Common.Fetching.IFetcher fetcher, CancellationToken cancellationToken = default)
+        => await GetByIdAsync(beatmapId) ?? throw new InvalidOperationException($"Beatmap {beatmapId} is missing.");
+
+    public async Task<Beatmap> GetOrFetchByChecksumAsync(string checksum, g0v0.Server.Common.Fetching.IFetcher fetcher, CancellationToken cancellationToken = default)
+        => await GetByChecksumAsync(checksum) ?? throw new InvalidOperationException($"Beatmap {checksum} is missing.");
+
     public Task<IReadOnlyList<Beatmap>> GetByBeatmapSetIdAsync(int beatmapSetId)
         => Task.FromResult<IReadOnlyList<Beatmap>>(Beatmaps.Where(b => b.BeatmapSetId == beatmapSetId).ToList());
 
