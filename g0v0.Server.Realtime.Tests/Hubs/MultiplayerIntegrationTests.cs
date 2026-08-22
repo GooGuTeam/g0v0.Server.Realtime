@@ -4,12 +4,14 @@
 #pragma warning disable SA1402
 #pragma warning disable SA1204
 
+using System.Text.Json;
 using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Rooms;
+using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -54,12 +56,14 @@ public class MultiplayerIntegrationTests
         builder.Services.AddSingleton<PlayerManager>();
         builder.Services.AddSingleton<MultiplayerEventDispatcher>();
         builder.Services.AddSingleton(new RulesetManager(Path.GetTempPath()));
+        builder.Services.AddSingleton<IRulesetHashValidator, RulesetHashValidator>();
         builder.Services.AddSingleton<IRoomFacade>(serviceProvider => new RoomFacade(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             serviceProvider.GetRequiredService<MultiplayerEventDispatcher>(),
             serviceProvider.GetService<ILogger<RoomFacade>>())
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
+            RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
         });
         builder.Services.AddSingleton<RoomManager>();
 
@@ -250,12 +254,14 @@ public class MultiplayerIntegrationTests
         builder.Services.AddSingleton(new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));
         builder.Services.AddSingleton<MultiplayerEventDispatcher>();
         builder.Services.AddSingleton(new RulesetManager(Path.GetTempPath()));
+        builder.Services.AddSingleton<IRulesetHashValidator, RulesetHashValidator>();
         builder.Services.AddSingleton<IRoomFacade>(serviceProvider => new RoomFacade(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             serviceProvider.GetRequiredService<MultiplayerEventDispatcher>(),
             serviceProvider.GetService<ILogger<RoomFacade>>())
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
+            RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
         });
         builder.Services.AddSingleton<RoomManager>();
         builder.Services.AddSingleton<PlayerManager>();
@@ -305,12 +311,21 @@ public class MultiplayerIntegrationTests
         Assert.That(joinException, Is.TypeOf<HubException>());
     }
 
-    private async Task<HubConnection> ConnectAsync(int userId)
+    private async Task<HubConnection> ConnectAsync(
+        int userId,
+        IReadOnlyDictionary<string, string>? rulesetHashes = null)
     {
         HubConnection connection = new HubConnectionBuilder()
             .WithUrl(
                 new Uri(_server.BaseAddress, $"/signalr/multiplayer?userId={userId}"),
-                options => options.HttpMessageHandlerFactory = _ => _server.CreateHandler())
+                options =>
+                {
+                    options.HttpMessageHandlerFactory = _ => _server.CreateHandler();
+                    if (rulesetHashes != null)
+                    {
+                        options.Headers["X-Osu-Ruleset-Hashes"] = JsonSerializer.Serialize(rulesetHashes);
+                    }
+                })
             .AddMessagePackProtocol(options =>
             {
                 options.SerializerOptions = SignalRUnionWorkaroundResolver.OPTIONS;

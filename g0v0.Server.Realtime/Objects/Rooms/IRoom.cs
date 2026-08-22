@@ -94,23 +94,27 @@ public interface IRoom
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="password">The room password.</param>
-    /// <returns><see langword="true"/> when the user may join.</returns>
-    Task<bool> UserCanJoinWithPassword(int userId, string password);
+    /// <returns>The join eligibility and rejection reason.</returns>
+    Task<RoomJoinResult> UserCanJoinWithPassword(int userId, string password);
 
     /// <summary>
     /// Determines whether a user may join the room.
     /// </summary>
     /// <param name="userId">The user ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task<bool> UserCanJoin(int userId);
+    /// <returns>The join eligibility and rejection reason.</returns>
+    Task<RoomJoinResult> UserCanJoin(int userId);
 
     /// <summary>
     /// Adds a user to the room.
     /// </summary>
     /// <param name="userId">The user ID.</param>
     /// <param name="role">The role to join with.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task JoinRoom(int userId, MultiplayerRoomUserRole role = MultiplayerRoomUserRole.Player);
+    /// <param name="password">The supplied room password, or <see langword="null"/> for trusted internal joins.</param>
+    /// <returns>The join result. A failed result leaves the room unchanged.</returns>
+    Task<RoomJoinResult> JoinRoom(
+        int userId,
+        MultiplayerRoomUserRole role = MultiplayerRoomUserRole.Player,
+        string? password = null);
 
     /// <summary>
     /// Removes a user from the room.

@@ -16,7 +16,8 @@ namespace g0v0.Server.Realtime.Services;
 public sealed class ScoreProcessedNotificationService
 {
     private const string ScoreProcessedNoticeName = "score_processed";
-    private const string LazerServerIdentifier = "lazer";
+
+    private static readonly string LazerServerIdentifier = InterProcessCommunicationClient.GetServerIdentifier(ServerIdentify.Lazer);
 
     private static readonly Action<ILogger, long, TimeSpan, Exception?> LogScoreLookupTimedOut =
         LoggerMessage.Define<long, TimeSpan>(

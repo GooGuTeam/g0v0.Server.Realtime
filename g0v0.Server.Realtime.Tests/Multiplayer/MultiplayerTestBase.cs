@@ -14,9 +14,11 @@ using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Rooms;
+using g0v0.Server.Realtime.Services;
 using g0v0.Server.Realtime.Tests.Hubs;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -106,13 +108,21 @@ public abstract class MultiplayerTestBase
         UserRepository = EnableRelationshipValidation ? new FakeUserRepository() : null;
         FakeMultiplayerScopeFactory scopeFactory = new(RoomRepository, BeatmapRepository, RelationshipRepository, UserRepository);
 
+        RulesetManager rulesetManager = new(Path.GetTempPath());
+        InterProcessCommunicationClient ipcClient = new(new NoOpMultiplayerTransport(), "realtime-tests");
+        PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, ipcClient);
+        IRulesetHashValidator rulesetHashValidator = new RulesetHashValidator(
+            rulesetManager,
+            ipcClient,
+            PlayerManager,
+            new MemoryCache(new MemoryCacheOptions()),
+            NullLogger<RulesetHashValidator>.Instance);
         RoomFacade roomFacade = new(scopeFactory, null!, NullLogger<RoomFacade>.Instance)
         {
-            RulesetManager = new RulesetManager(Path.GetTempPath()),
+            RulesetManager = rulesetManager,
+            RulesetHashValidator = rulesetHashValidator,
         };
         RoomFacade = roomFacade;
-
-        PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, new InterProcessCommunicationClient(new NoOpMultiplayerTransport(), "realtime-tests"));
         RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, scopeFactory, roomFacade);
 
         Clients = new Mock<IHubClients<IMultiplayerClient>>();
@@ -173,7 +183,11 @@ public abstract class MultiplayerTestBase
         MultiplayerEventDispatcher eventDispatcher = new(hubContext.Object, NullLogger<MultiplayerEventDispatcher>.Instance);
         roomFacade.EventDispatcher = eventDispatcher;
 
-        Hub = new TestMultiplayerHub(PlayerManager, RoomManager, eventDispatcher, scopeFactory);
+        Hub = new TestMultiplayerHub(
+            PlayerManager,
+            RoomManager,
+            eventDispatcher,
+            scopeFactory);
 
         CreateUser(UserId, out Mock<HubCallerContext> contextUser, out Mock<DelegatingMultiplayerClient> userReceiver);
         ContextUser = contextUser;
@@ -272,7 +286,12 @@ public class TestMultiplayerHub : MultiplayerHub
         RoomManager roomManager,
         MultiplayerEventDispatcher eventDispatcher,
         IServiceScopeFactory scopeFactory)
-        : base(playerManager, NullLogger<MultiplayerHub>.Instance, roomManager, eventDispatcher, scopeFactory)
+        : base(
+            playerManager,
+            NullLogger<MultiplayerHub>.Instance,
+            roomManager,
+            eventDispatcher,
+            scopeFactory)
     {
         this._roomManager = roomManager;
     }

@@ -31,7 +31,9 @@ public class MaxParticipantsAndSlotsTests : MultiplayerTestBase
         SetUserContext(contextUser3);
 
         // Expected to fail due to participant limit imposed.
-        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.TypeOf<InvalidPasswordException>());
+        Assert.That(
+            async () => await Hub.JoinRoom(RoomId),
+            Throws.TypeOf<InvalidStateException>().With.Message.EqualTo("The room is full."));
 
         SetUserContext(contextUser1);
 

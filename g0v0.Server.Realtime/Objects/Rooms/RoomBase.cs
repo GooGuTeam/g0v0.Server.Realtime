@@ -12,6 +12,7 @@ using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Fetching;
 using g0v0.Server.Realtime.Extensions;
+using g0v0.Server.Realtime.Services;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
@@ -34,6 +35,8 @@ namespace g0v0.Server.Realtime.Objects.Rooms;
 /// </remarks>
 public abstract class RoomBase : IRoom
 {
+    private const int HighestOfficialRulesetId = 3;
+
     /// <inheritdoc />
     public long RoomId { get; }
 
@@ -211,39 +214,65 @@ public abstract class RoomBase : IRoom
     }
 
     /// <inheritdoc />
-    public abstract Task<bool> UserCanJoin(int userId);
+    public virtual async Task<RoomJoinResult> UserCanJoin(int userId)
+    {
+        if (Facade.RulesetHashValidator == null)
+        {
+            return RoomJoinResult.Allowed;
+        }
+
+        List<RulesetHashValidationFailure> failures = [];
+        foreach (MultiplayerPlaylistItem item in Playlist)
+        {
+            RulesetHashValidationFailure? failure = await Facade.RulesetHashValidator.ValidatePlayerAsync(
+                item.RulesetID,
+                userId);
+            if (failure != null)
+            {
+                failures.Add(failure);
+            }
+        }
+
+        return failures.Count == 0
+            ? RoomJoinResult.Allowed
+            : RoomJoinResult.Rejected(
+                "You have one or more outdated or invalid rulesets to join room: "
+                + string.Join(", ", failures.Select(failure =>
+                    $"(name: {failure.RulesetName}, server-ver: {failure.ServerVersion})")));
+    }
 
     /// <inheritdoc />
     public abstract MultiplayerPlaylistItem CurrentItem { get; }
 
     /// <inheritdoc />
-    public virtual Task<bool> UserCanJoinWithPassword(int userId, string password)
+    public virtual async Task<RoomJoinResult> UserCanJoinWithPassword(int userId, string password)
     {
         // TODO: add user restriction check
-        if (BannedUsers.Contains(userId))
-        {
-            return Task.FromResult(false);
-        }
-
-        // An expired room (end date reached but destruction pending) rejects joins.
-        return EndDate != null && DateTimeOffset.UtcNow >= EndDate
-            ? Task.FromResult(false)
-            : !string.IsNullOrEmpty(Settings.Password) && !string.Equals(Settings.Password, password, StringComparison.Ordinal)
-                ? Task.FromResult(false)
-                : UserCanJoin(userId);
+        return BannedUsers.Contains(userId)
+            ? RoomJoinResult.Rejected("You are banned from this room.")
+            : EndDate != null && DateTimeOffset.UtcNow >= EndDate
+            ? RoomJoinResult.Rejected("The room is no longer available.")
+            : !string.IsNullOrEmpty(Settings.Password)
+              && !string.Equals(Settings.Password, password, StringComparison.Ordinal)
+                ? RoomJoinResult.Rejected(RoomJoinResult.InvalidPasswordReason)
+                : await UserCanJoin(userId);
     }
 
     /// <inheritdoc />
-    public async Task JoinRoom(int userId, MultiplayerRoomUserRole role = MultiplayerRoomUserRole.Player)
+    public async Task<RoomJoinResult> JoinRoom(
+        int userId,
+        MultiplayerRoomUserRole role = MultiplayerRoomUserRole.Player,
+        string? password = null)
     {
         if (Users.Any(u => u.UserID == userId))
         {
-            throw new InvalidStateException($"User {userId} is already in the room.");
+            return RoomJoinResult.Rejected($"User {userId} is already in the room.");
         }
 
-        if (!await UserCanJoinWithPassword(userId, Settings.Password))
+        RoomJoinResult eligibility = await UserCanJoinWithPassword(userId, password ?? Settings.Password);
+        if (!eligibility.Success)
         {
-            throw new InvalidStateException($"User {userId} cannot join room.");
+            return eligibility;
         }
 
         // A join cancels any pending end-date destruction of the room.
@@ -317,6 +346,8 @@ public abstract class RoomBase : IRoom
 
             throw;
         }
+
+        return RoomJoinResult.Allowed;
     }
 
     /// <inheritdoc />
@@ -513,6 +544,11 @@ public abstract class RoomBase : IRoom
         if (user.Role == MultiplayerRoomUserRole.Referee)
         {
             throw new InvalidStateException("Referees do not participate in the match and cannot set their own style.");
+        }
+
+        if (rulesetId > HighestOfficialRulesetId)
+        {
+            await EnsureAllUsersSupportRulesetAsync(rulesetId.Value);
         }
 
         if (rulesetId != null)
@@ -885,6 +921,11 @@ public abstract class RoomBase : IRoom
             throw new InvalidStateException("Cannot enqueue freestyle item with mods.");
         }
 
+        if (item.RulesetID > HighestOfficialRulesetId)
+        {
+            await EnsureAllUsersSupportRulesetAsync(item.RulesetID);
+        }
+
         if (Facade.RulesetManager != null)
         {
             item.EnsureModsValid(Facade.RulesetManager);
@@ -894,6 +935,34 @@ public abstract class RoomBase : IRoom
 
         await AddPlaylistItemInternal(item, user.UserID);
         await UpdateRoomStateIfRequired();
+    }
+
+    private async Task EnsureAllUsersSupportRulesetAsync(int rulesetId)
+    {
+        if (Facade.RulesetHashValidator == null)
+        {
+            return;
+        }
+
+        foreach (MultiplayerRoomUser roomUser in Users)
+        {
+            RulesetHashValidationFailure? failure = await Facade.RulesetHashValidator.ValidatePlayerAsync(
+                rulesetId,
+                roomUser.UserID);
+            if (failure == null)
+            {
+                continue;
+            }
+
+            using IServiceScope scope = Facade.ScopeFactory.CreateScope();
+            IUserRepository? userRepository = scope.ServiceProvider.GetService<IUserRepository>();
+            string? username = userRepository == null
+                ? null
+                : await userRepository.GetUsernameByIdAsync(roomUser.UserID);
+            throw new InvalidStateException(
+                $"User {username ?? "unknown"} has non-existent or outdated rulesets: "
+                + $"(name: {failure.RulesetName}, server-ver: {failure.ServerVersion})");
+        }
     }
 
     /// <summary>
@@ -983,6 +1052,11 @@ public abstract class RoomBase : IRoom
         if (item.Freestyle && item.AllowedMods.Any())
         {
             throw new InvalidStateException("Cannot enqueue freestyle item with mods.");
+        }
+
+        if (item.RulesetID > HighestOfficialRulesetId)
+        {
+            await EnsureAllUsersSupportRulesetAsync(item.RulesetID);
         }
 
         if (Facade.RulesetManager != null)

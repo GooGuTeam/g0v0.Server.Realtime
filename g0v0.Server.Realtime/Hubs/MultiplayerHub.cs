@@ -6,6 +6,11 @@ using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.Rooms;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
+using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
@@ -41,6 +46,7 @@ public class MultiplayerHub(
                 {
                     RoomManager = roomManager,
                 });
+        player.State.RulesetHashes = ReadClientRulesetHashes();
         await player.HubConnected(nameof(MultiplayerHub));
 
         // A reconnect cancels any pending disconnect grace timer.
@@ -91,7 +97,12 @@ public class MultiplayerHub(
         // Join the room before subscribing to its event group so the joining
         // client does not receive its own UserJoined (which would play the
         // player-joined sound on the client).
-        await mpRoom.JoinRoom(player.PlayerId);
+        RoomJoinResult joinResult = await mpRoom.JoinRoom(player.PlayerId);
+        if (!joinResult.Success)
+        {
+            await mpRoom.Disband();
+            throw new InvalidStateException(joinResult.Reason ?? "Player is not eligible to join this room.");
+        }
 
         try
         {
@@ -159,19 +170,18 @@ public class MultiplayerHub(
         }
 
         IRoom room = await roomManager.GetOrLoadRoom(roomId)
-                   ?? throw new InvalidStateException("Room not found.");
+                     ?? throw new InvalidStateException("Room not found.");
 
         await room.RoomLock.WaitAsync();
         try
         {
-            if (!await room.UserCanJoinWithPassword(player.PlayerId, password))
-            {
-                throw new InvalidPasswordException();
-            }
-
-            // Join the room before subscribing to its event group so the joining
-            // client does not receive its own UserJoined.
-            await room.JoinRoom(player.PlayerId);
+            // Join performs password, room-state, capacity and ruleset checks
+            // before mutating any room state.
+            RoomJoinResult joinResult = await room.JoinRoom(
+                player.PlayerId,
+                MultiplayerRoomUserRole.Player,
+                password);
+            ThrowIfJoinRejected(joinResult);
 
             try
             {
@@ -395,14 +405,16 @@ public class MultiplayerHub(
         LazerPlayer player = GetPlayer();
         long? roomId = player.State.CurrentRoom ?? throw new NotJoinedRoomException();
         IRoom room = roomManager.GetRoom(roomId.Value)
-                   ?? throw new NotJoinedRoomException();
+                     ?? throw new NotJoinedRoomException();
 
         await room.RoomLock.WaitAsync();
         try
         {
-            if (!await room.UserCanJoinWithPassword(userId, room.Settings.Password))
+            RoomJoinResult eligibility = await room.UserCanJoinWithPassword(userId, room.Settings.Password);
+            if (!eligibility.Success)
             {
-                throw new InvalidStateException("Player is not eligible to join this room.");
+                throw new InvalidStateException(
+                    eligibility.Reason ?? "Player is not eligible to join this room.");
             }
 
             await CheckUserToUserPermissionsAsync(player.PlayerId, userId);
@@ -415,12 +427,53 @@ public class MultiplayerHub(
         }
     }
 
+    private Dictionary<string, string> ReadClientRulesetHashes()
+    {
+        IFeatureCollection? features = Context.Features;
+        if (features == null
+            || Context.GetHttpContext()?.Request.Headers.TryGetValue(
+                HubClientConnector.RULESET_HASH_HEADER,
+                out StringValues headerValue) != true)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        try
+        {
+            Dictionary<string, string>? parsed =
+                JsonConvert.DeserializeObject<Dictionary<string, string>>(headerValue.ToString());
+            return parsed == null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(parsed, StringComparer.Ordinal);
+        }
+        catch (JsonException exception)
+        {
+            logger.LogWarning(exception, "Ignoring malformed {HeaderName} multiplayer header.", HubClientConnector.RULESET_HASH_HEADER);
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+    }
+
+    private void ThrowIfJoinRejected(RoomJoinResult result)
+    {
+        if (result.Success)
+        {
+            return;
+        }
+
+        if (string.Equals(result.Reason, RoomJoinResult.InvalidPasswordReason, StringComparison.Ordinal))
+        {
+            throw new InvalidPasswordException();
+        }
+
+        throw new InvalidStateException(result.Reason ?? "Player is not eligible to join this room.");
+    }
+
     private async Task InRoomRoomCommand(Func<IRoom, Task> command)
     {
         LazerPlayer player = GetPlayer();
         long? roomId = player.State.CurrentRoom ?? throw new NotJoinedRoomException();
         IRoom room = roomManager.GetRoom(roomId.Value)
-                   ?? throw new NotJoinedRoomException();
+                     ?? throw new NotJoinedRoomException();
 
         await room.RoomLock.WaitAsync();
         try

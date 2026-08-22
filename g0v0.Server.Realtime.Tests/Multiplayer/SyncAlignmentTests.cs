@@ -341,6 +341,6 @@ public class SyncAlignmentTests : MultiplayerTestBase
         SetUserContext(ContextUser2);
         Assert.That(
             async () => await Hub.JoinRoom(RoomId),
-            Throws.TypeOf<InvalidPasswordException>());
+            Throws.TypeOf<InvalidStateException>().With.Message.EqualTo("The room is no longer available."));
     }
 }

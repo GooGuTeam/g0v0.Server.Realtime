@@ -2,6 +2,7 @@
 
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
+using g0v0.Server.Realtime.Services;
 using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Objects.Rooms;
@@ -41,4 +42,7 @@ public class RoomFacade : IRoomFacade
 
     /// <inheritdoc />
     public RulesetManager? RulesetManager { get; set; }
+
+    /// <inheritdoc />
+    public IRulesetHashValidator? RulesetHashValidator { get; set; }
 }

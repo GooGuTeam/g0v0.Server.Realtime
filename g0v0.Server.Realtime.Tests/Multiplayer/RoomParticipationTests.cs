@@ -84,9 +84,9 @@ public class RoomParticipationTests : MultiplayerTestBase
 
         SetUserContext(ContextUser2);
 
-        // Note: unlike the reference (which expects InvalidStateException), this server
-        // folds the ban check into password eligibility and reports it as InvalidPasswordException.
-        Assert.That(async () => await Hub.JoinRoom(RoomId), Throws.TypeOf<InvalidPasswordException>());
+        Assert.That(
+            async () => await Hub.JoinRoom(RoomId),
+            Throws.TypeOf<InvalidStateException>().With.Message.EqualTo("You are banned from this room."));
     }
 
     [Test]

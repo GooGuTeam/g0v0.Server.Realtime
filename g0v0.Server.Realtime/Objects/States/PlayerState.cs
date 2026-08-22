@@ -50,6 +50,12 @@ public class PlayerState(IUserActivity userActivity)
     public long? CurrentRoom { get; set; }
 
     /// <summary>
+    /// Gets or sets the client ruleset hashes keyed by ruleset short name.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> RulesetHashes { get; set; } =
+        new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
     /// Converts the current state into lazer presence payload format.
     /// </summary>
     /// <returns>The lazer presence payload, or <see langword="null"/> when the player should appear offline.</returns>

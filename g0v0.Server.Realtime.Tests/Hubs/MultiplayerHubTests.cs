@@ -10,6 +10,8 @@ using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.Rooms;
+using g0v0.Server.Realtime.Services;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
@@ -102,6 +104,60 @@ public class MultiplayerHubTests
         Assert.That(
             async () => await guest.Hub.JoinRoomWithPassword(room.RoomID, "wrong"),
             Throws.TypeOf<InvalidPasswordException>());
+    }
+
+    [Test]
+    public async Task RoomJoin_WithInvalidRulesetHash_ReturnsReasonWithoutChangingRoom()
+    {
+        IRulesetHashValidator validator = new StubRulesetHashValidator((rulesetId, hashes) =>
+            rulesetId == 4 && !hashes.ContainsKey("custom")
+                ? new RulesetHashValidationFailure("custom", "20250101")
+                : null);
+        MultiplayerHubTestEnvironment environment = new(rulesetHashValidator: validator);
+        TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
+        await environment.ConnectAsync(2, "conn-guest");
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        room.Playlist[0].RulesetID = 4;
+        room.Playlist[0].Expired = true;
+        IRoom roomInstance = environment.RoomManager.GetRoom(room.RoomID)!;
+
+        RoomJoinResult result = await roomInstance.JoinRoom(2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Reason, Does.Contain("custom"));
+            Assert.That(result.Reason, Does.Contain("server-ver: 20250101"));
+            Assert.That(room.Users, Has.Count.EqualTo(1));
+            Assert.That(room.Users[0].UserID, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task JoinRoom_WithInvalidRulesetHash_RejectsUserWithoutChangingRoom()
+    {
+        IRulesetHashValidator validator = new StubRulesetHashValidator((rulesetId, hashes) =>
+            rulesetId == 4 && !hashes.ContainsKey("custom")
+                ? new RulesetHashValidationFailure("custom", "20250101")
+                : null);
+        MultiplayerHubTestEnvironment environment = new(rulesetHashValidator: validator);
+        TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
+        TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        room.Playlist[0].RulesetID = 4;
+        room.Playlist[0].Expired = true;
+
+        Assert.That(
+            async () => await guest.Hub.JoinRoom(room.RoomID),
+            Throws.TypeOf<InvalidStateException>()
+                .With.Message.Contain("custom")
+                .And.Message.Contain("server-ver: 20250101"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(room.Users, Has.Count.EqualTo(1));
+            Assert.That(room.Users[0].UserID, Is.EqualTo(1));
+            Assert.That(environment.PlayerManager.GetPlayer<LazerPlayer>(2)?.State.CurrentRoom, Is.Null);
+        });
     }
 
     [Test]
@@ -436,6 +492,73 @@ public class MultiplayerHubTests
         Assert.That(environment.RoomRepository.Rooms.First(r => r.Id == room.RoomID).EndsAt, Is.Not.Null);
     }
 
+    [TestCase(false, TestName = "AddPlaylistItem_WithOfficialRuleset_DoesNotCheckHashes")]
+    [TestCase(true, TestName = "EditPlaylistItem_WithOfficialRuleset_DoesNotCheckHashes")]
+    public async Task ChangePlaylistItem_WithOfficialRuleset_DoesNotCheckHashes(bool editExistingItem)
+    {
+        StubRulesetHashValidator validator = new((_, _) => null);
+        MultiplayerHubTestEnvironment environment = new(rulesetHashValidator: validator);
+        TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
+        TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        await guest.Hub.JoinRoom(room.RoomID);
+
+        int validationCountBeforeChange = validator.PlayerValidationCount;
+        MultiplayerPlaylistItem item = CreatePlaylistItem(100, 1);
+        if (editExistingItem)
+        {
+            item.ID = room.Playlist[0].ID;
+            await host.Hub.EditPlaylistItem(item);
+        }
+        else
+        {
+            await host.Hub.AddPlaylistItem(item);
+        }
+
+        Assert.That(validator.PlayerValidationCount, Is.EqualTo(validationCountBeforeChange));
+    }
+
+    [TestCase(false, TestName = "AddPlaylistItem_WhenExistingUserHasInvalidRulesetHash_Throws")]
+    [TestCase(true, TestName = "EditPlaylistItem_WhenExistingUserHasInvalidRulesetHash_Throws")]
+    public async Task ChangePlaylistItem_WhenExistingUserHasInvalidRulesetHash_Throws(bool editExistingItem)
+    {
+        IRulesetHashValidator validator = new StubRulesetHashValidator((rulesetId, _) =>
+            rulesetId == 4
+                ? new RulesetHashValidationFailure("custom", "20250101")
+                : null);
+        MultiplayerHubTestEnvironment environment = new(rulesetHashValidator: validator);
+        TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
+        TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        await guest.Hub.JoinRoom(room.RoomID);
+
+        MultiplayerPlaylistItem item = CreatePlaylistItem(100, 1);
+        item.RulesetID = 4;
+        if (editExistingItem)
+        {
+            item.ID = room.Playlist[0].ID;
+        }
+
+        Assert.That(
+            async () =>
+            {
+                if (editExistingItem)
+                {
+                    await host.Hub.EditPlaylistItem(item);
+                }
+                else
+                {
+                    await host.Hub.AddPlaylistItem(item);
+                }
+            },
+            Throws.TypeOf<InvalidStateException>().With.Message.Contain("custom"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(room.Playlist, Has.Count.EqualTo(1));
+            Assert.That(room.Playlist[0].RulesetID, Is.Zero);
+        });
+    }
+
     [Test]
     public async Task AddPlaylistItem_GuestLimit_Throws()
     {
@@ -737,6 +860,30 @@ public class MultiplayerHubTests
     }
 
     [Test]
+    public async Task ChangeUserStyle_WithCustomRulesetUnsupportedByRoomUser_ReturnsUserToCaller()
+    {
+        IRulesetHashValidator validator = new StubRulesetHashValidator(
+            (_, _) => null,
+            (rulesetId, playerId) => rulesetId == 4 && playerId == 2
+                ? new RulesetHashValidationFailure("custom", "20250101")
+                : null);
+        MultiplayerHubTestEnvironment environment = new(rulesetHashValidator: validator);
+        TestHubHandle host = await environment.ConnectAsync(1, "conn-host");
+        TestHubHandle guest = await environment.ConnectAsync(2, "conn-guest");
+        MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
+        await guest.Hub.JoinRoom(room.RoomID);
+        room.Playlist[0].Freestyle = true;
+
+        Assert.That(
+            async () => await host.Hub.ChangeUserStyle(beatmapId: null, 4),
+            Throws.TypeOf<InvalidStateException>()
+                .With.Message.Contain("User unknown")
+                .And.Message.Contain("custom")
+                .And.Message.Contain("server-ver: 20250101"));
+        Assert.That(room.Users.First(user => user.UserID == 1).RulesetId, Is.Null);
+    }
+
+    [Test]
     public async Task ChangeUserStyle_RulesetMismatchWithItem_Throws()
     {
         MultiplayerHubTestEnvironment environment = new();
@@ -858,9 +1005,39 @@ public class MultiplayerHubTests
         };
     }
 
+    private sealed class StubRulesetHashValidator(
+        Func<int, IReadOnlyDictionary<string, string>, RulesetHashValidationFailure?> validate,
+        Func<int, int, RulesetHashValidationFailure?>? validatePlayer = null)
+        : IRulesetHashValidator
+    {
+        private static readonly Dictionary<string, string> EmptyRulesetHashes = new(StringComparer.Ordinal);
+
+        public int PlayerValidationCount { get; private set; }
+
+        public Task<RulesetHashValidationFailure?> ValidateAsync(
+            int rulesetId,
+            IReadOnlyDictionary<string, string> clientHashes,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(validate(rulesetId, clientHashes));
+        }
+
+        public Task<RulesetHashValidationFailure?> ValidatePlayerAsync(
+            int rulesetId,
+            int playerId,
+            CancellationToken cancellationToken = default)
+        {
+            PlayerValidationCount++;
+            return Task.FromResult(validatePlayer?.Invoke(rulesetId, playerId)
+                ?? validate(rulesetId, EmptyRulesetHashes));
+        }
+    }
+
     private sealed class MultiplayerHubTestEnvironment
     {
-        public MultiplayerHubTestEnvironment(IBeatmapRepository? beatmapRepository = null)
+        public MultiplayerHubTestEnvironment(
+            IBeatmapRepository? beatmapRepository = null,
+            IRulesetHashValidator? rulesetHashValidator = null)
         {
             IpcClient = new InterProcessCommunicationClient(new RecordingTransport(), "realtime-tests");
             PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, IpcClient);
@@ -868,13 +1045,21 @@ public class MultiplayerHubTests
             Router = new MultiplayerClientRouter();
 
             ScopeFactory = new FakeScopeFactory(RoomRepository, beatmapRepository);
+            RulesetManager = new RulesetManager(Path.GetTempPath());
             RoomFacade = new RoomFacade(ScopeFactory, new MultiplayerEventDispatcher(
                 new FakeHubContext(Router),
                 NullLogger<MultiplayerEventDispatcher>.Instance), NullLogger<RoomFacade>.Instance)
             {
-                RulesetManager = new RulesetManager(Path.GetTempPath()),
+                RulesetManager = RulesetManager,
             };
             RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, ScopeFactory, RoomFacade);
+            RulesetHashValidator = rulesetHashValidator ?? new RulesetHashValidator(
+                RulesetManager,
+                IpcClient,
+                PlayerManager,
+                new MemoryCache(new MemoryCacheOptions()),
+                NullLogger<RulesetHashValidator>.Instance);
+            ((RoomFacade)RoomFacade).RulesetHashValidator = RulesetHashValidator;
             HubContext = new FakeHubContext(Router);
         }
 
@@ -885,6 +1070,10 @@ public class MultiplayerHubTests
         public RoomManager RoomManager { get; }
 
         public IRoomFacade RoomFacade { get; }
+
+        public RulesetManager RulesetManager { get; }
+
+        public IRulesetHashValidator RulesetHashValidator { get; }
 
         public IServiceScopeFactory ScopeFactory { get; }
 

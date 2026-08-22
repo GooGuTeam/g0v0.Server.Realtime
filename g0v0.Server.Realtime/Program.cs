@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.MySQL;
 using g0v0.Server.Common.Database.PostgreSQL;
@@ -69,13 +70,14 @@ public static class Program
         }
 
         builder.Services.AddOAuthAuthentication();
-        builder.Services.AddRedis("realtime");
+        builder.Services.AddRedis(ServerIdentify.Realtime);
         builder.Services.AddCache();
         builder.Services.AddFetcher();
         builder.Services.AddStorage();
         builder.Services.AddMemoryCache();
         builder.Services.AddBackgroundTaskRunner();
         builder.Services.AddSingleton<RulesetManager>();
+        builder.Services.AddSingleton<IRulesetHashValidator, RulesetHashValidator>();
         builder.Services.AddSingleton<PlayerManager>();
         builder.Services.AddSingleton<ScoreBuffer>();
         builder.Services.AddSingleton<ScoreUploader>();
@@ -87,6 +89,7 @@ public static class Program
             serviceProvider.GetService<ILogger<RoomFacade>>())
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
+            RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
         });
         builder.Services.AddSingleton<RoomManager>();
 

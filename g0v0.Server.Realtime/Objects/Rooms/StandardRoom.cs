@@ -59,8 +59,13 @@ public abstract class StandardRoom : RoomBase
     }
 
     /// <inheritdoc />
-    public override Task<bool> UserCanJoin(int userId)
-        => Task.FromResult(Settings.MaxParticipants == null || Users.Count < Settings.MaxParticipants);
+    public override async Task<RoomJoinResult> UserCanJoin(int userId)
+    {
+        RoomJoinResult baseResult = await base.UserCanJoin(userId);
+        return !baseResult.Success || Settings.MaxParticipants == null || Users.Count < Settings.MaxParticipants
+            ? baseResult
+            : RoomJoinResult.Rejected("The room is full.");
+    }
 
     /// <inheritdoc />
     protected override Task HandleUserJoined(MultiplayerRoomUser user)

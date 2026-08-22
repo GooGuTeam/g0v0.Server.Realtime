@@ -2,6 +2,7 @@
 
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
+using g0v0.Server.Realtime.Services;
 using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Objects.Rooms;
@@ -35,4 +36,9 @@ public interface IRoomFacade
     /// Gets or sets the ruleset manager used to validate mod selections.
     /// </summary>
     RulesetManager? RulesetManager { get; set; }
+
+    /// <summary>
+    /// Gets or sets the validator used to check multiplayer client ruleset hashes.
+    /// </summary>
+    IRulesetHashValidator? RulesetHashValidator { get; set; }
 }
