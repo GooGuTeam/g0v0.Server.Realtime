@@ -45,17 +45,13 @@ public class MultiplayerHub(
                 new PlayerFacade(PlayerManager)
                 {
                     RoomManager = roomManager,
+                    Logger = logger,
                 });
         player.State.RulesetHashes = ReadClientRulesetHashes();
         await player.HubConnected(nameof(MultiplayerHub));
 
         // A reconnect cancels any pending disconnect grace timer.
         PlayerManager.CancelMultiplayerDisconnectGrace(player.PlayerId);
-
-        logger.LogInformation(
-            "Multiplayer hub connected for player {UserId} ({Server}).",
-            player.PlayerId,
-            player.Server);
     }
 
     /// <inheritdoc />
@@ -64,7 +60,7 @@ public class MultiplayerHub(
         LazerPlayer? player = PlayerManager.GetPlayer<LazerPlayer>(Context.GetUserId(), "Lazer");
         if (player != null)
         {
-            await player.HubDisconnected(nameof(MultiplayerHub));
+            await player.HubDisconnected(nameof(MultiplayerHub), exception);
 
             // Keep the user in their room across brief connection drops: start a
             // grace timer which removes them only if they do not reconnect in time.

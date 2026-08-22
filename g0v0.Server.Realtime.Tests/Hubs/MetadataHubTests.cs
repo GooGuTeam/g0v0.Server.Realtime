@@ -242,7 +242,7 @@ public class MetadataHubTests
             Router.EnsureConnection(connectionId);
 
             FakeGroupManager groupManager = new(Router);
-            MetadataHub hub = new(PlayerManager, RelationshipRepository, HubContext)
+            MetadataHub hub = new(PlayerManager, RelationshipRepository, HubContext, NullLogger<MetadataHub>.Instance)
             {
                 Context = new TestHubCallerContext(connectionId, userId.ToString()),
                 Clients = new FakeHubCallerClients(Router, connectionId),

@@ -154,6 +154,14 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task HubConnected(string hubName)
     {
+        if (Facade.Logger != null)
+        {
+            Facade.Logger.LogInformation(
+                "{Hub} connected for player {UserId} (Lazer).",
+                hubName,
+                PlayerId);
+        }
+
         bool shouldGoOnline;
         lock (_hubConnectionLock)
         {
@@ -183,9 +191,29 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// Marks a specific hub as disconnected for this player and removes the player when no realtime hubs remain.
     /// </summary>
     /// <param name="hubName">The disconnected hub name.</param>
+    /// <param name="exception">The exception that caused the disconnection, if any.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task HubDisconnected(string hubName)
+    public async Task HubDisconnected(string hubName, Exception? exception)
     {
+        if (Facade.Logger != null)
+        {
+            if (exception == null)
+            {
+                Facade.Logger.LogInformation(
+                    "{Hub} disconnected for player {UserId} (Lazer).",
+                    hubName,
+                    PlayerId);
+            }
+            else
+            {
+                Facade.Logger.LogWarning(
+                    exception,
+                    "{Hub} disconnected with an error for player {UserId} (Lazer).",
+                    hubName,
+                    PlayerId);
+            }
+        }
+
         bool shouldGoOffline;
         lock (_hubConnectionLock)
         {

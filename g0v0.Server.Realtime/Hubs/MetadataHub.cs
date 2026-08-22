@@ -17,7 +17,8 @@ namespace g0v0.Server.Realtime.Hubs;
 public class MetadataHub(
     PlayerManager playerManager,
     IRelationshipRepository relationshipRepository,
-    IHubContext<MetadataHub, IMetadataClient> hubContext)
+    IHubContext<MetadataHub, IMetadataClient> hubContext,
+    ILogger<MetadataHub> logger)
     : LazerRealtimeHub<IMetadataClient>(playerManager), IMetadataServer
 {
     internal const string OnlinePresenceWatchersGroup = "metadata:online-presence-watchers";
@@ -27,7 +28,10 @@ public class MetadataHub(
     {
         await base.OnConnectedAsync();
 
-        LazerPlayer player = GetOrCreatePlayer(new PlayerFacade(PlayerManager));
+        LazerPlayer player = GetOrCreatePlayer(new PlayerFacade(PlayerManager)
+        {
+            Logger = logger
+        });
         string connectionId = Context.ConnectionId;
 
         await player.HubConnected(nameof(MetadataHub));
@@ -52,7 +56,7 @@ public class MetadataHub(
         player.OnPlayerChangeActivityForMetadataHub = null;
         player.OnPlayerChangeStatusForMetadataHub = null;
 
-        await player.HubDisconnected(nameof(MetadataHub));
+        await player.HubDisconnected(nameof(MetadataHub), exception);
     }
 
     /// <inheritdoc />
@@ -122,8 +126,8 @@ public class MetadataHub(
                 UserStatus.Offline => false,
                 UserStatus.DoNotDisturb or UserStatus.Online => true,
                 _ => throw new ArgumentOutOfRangeException(
-                                    paramName: nameof(state),
-                                    message: $"Unexpected user status {state.UserStatus}"),
+                    paramName: nameof(state),
+                    message: $"Unexpected user status {state.UserStatus}"),
             };
     }
 
