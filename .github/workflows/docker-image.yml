@@ -59,7 +59,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./g0v0.Server.Realtime
-        file: ./g0v0.Server.Realtime/Dockerfile
+        file: ./g0v0.Server.Realtime/g0v0.Server.Realtime/Dockerfile
         build-contexts: |
           common=./g0v0.Server.Common
         push: ${{ github.event_name != 'pull_request' }}
