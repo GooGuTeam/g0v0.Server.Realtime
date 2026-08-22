@@ -436,7 +436,7 @@ internal sealed class FakeBeatmapRepository : IBeatmapRepository
     public Task<Beatmap?> GetByChecksumAsync(string checksum)
         => Task.FromResult(Beatmaps.Find(b => string.Equals(b.Checksum, checksum, StringComparison.Ordinal)));
 
-    public Task<IReadOnlyList<Beatmap>> GetByBeatmapSetIdAsync(long beatmapSetId)
+    public Task<IReadOnlyList<Beatmap>> GetByBeatmapSetIdAsync(int beatmapSetId)
         => Task.FromResult<IReadOnlyList<Beatmap>>(Beatmaps.Where(b => b.BeatmapSetId == beatmapSetId).ToList());
 
     public Task<IReadOnlyList<Beatmap>> GetByMapperIdAsync(int mapperId)

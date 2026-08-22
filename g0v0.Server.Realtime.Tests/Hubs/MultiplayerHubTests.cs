@@ -943,7 +943,7 @@ public class MultiplayerHubTests
 
         public Task<Beatmap?> GetByChecksumAsync(string checksum) => Task.FromResult<Beatmap?>(null);
 
-        public Task<IReadOnlyList<Beatmap>> GetByBeatmapSetIdAsync(long beatmapSetId)
+        public Task<IReadOnlyList<Beatmap>> GetByBeatmapSetIdAsync(int beatmapSetId)
             => Task.FromResult<IReadOnlyList<Beatmap>>(_beatmaps.Where(b => b.BeatmapSetId == beatmapSetId).ToList());
 
         public Task<IReadOnlyList<Beatmap>> GetByMapperIdAsync(int mapperId)

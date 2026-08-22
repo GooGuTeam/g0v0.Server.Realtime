@@ -70,6 +70,8 @@ public static class Program
 
         builder.Services.AddOAuthAuthentication();
         builder.Services.AddRedis("realtime");
+        builder.Services.AddCache();
+        builder.Services.AddFetcher();
         builder.Services.AddStorage();
         builder.Services.AddMemoryCache();
         builder.Services.AddBackgroundTaskRunner();
