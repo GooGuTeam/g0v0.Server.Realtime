@@ -59,7 +59,10 @@ files and fill in the values according to your environment from g0v0-server v1.
   "JwtAudience": "5",
   "JwtIssuer": null,
   "RedisHost": "localhost:6379",
-  "UseLegacyDatabase": true
+  "UseLegacyDatabase": true,
+  "FetcherClientId": 0,
+  "FetcherClientSecret": "",
+  "FetcherBeatmapRawCacheExpireHours": 24
 }
 ```
 
@@ -78,6 +81,9 @@ Mapping from v1 `.env`:
 | `JWT_AUDIENCE`   | `JwtAudience`       | JWT audience                     |
 | `JWT_ISSUER`     | `JwtIssuer`         | JWT issuer                       |
 | —                | `UseLegacyDatabase` | `true` for MySQL (v1 compatible) |
+| `FETCHER_CLIENT_ID`     | `FetcherClientId`                 | osu! API client ID used by the Fetcher service       |
+| `FETCHER_CLIENT_SECRET` | `FetcherClientSecret`             | osu! API client secret used by the Fetcher service   |
+| —                       | `FetcherBeatmapRawCacheExpireHours` | Raw beatmap cache duration in hours (default `24`) |
 
 #### `config/game.json` — Game Features
 
