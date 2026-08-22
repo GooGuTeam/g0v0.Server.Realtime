@@ -1,8 +1,7 @@
 # g0v0.Server.Realtime
 
-This project is a part of g0v0 server v2.
-It is the realtime server for g0v0 server series which provides realtime services like spectating, chatting,
-multiplaying, online status and so on.
+This project is a part of g0v0 server v2. It is the realtime server for g0v0 server series which provides realtime
+services like spectating, chatting, multiplaying, online status and so on.
 
 ## Current Status
 
@@ -104,15 +103,23 @@ Properties marked with `[Reloadable]` support hot-reload at runtime.
 {
   "SaveReplays": true,
   "ReplayUploaderConcurrency": 4,
-  "MaxStartedScores": 2
+  "MaxStartedScores": 2,
+  "HostPlaylistLimit": 50,
+  "GuestPlaylistLimit": 3,
+  "MultiplayerDisconnectGracePeriod": "00:00:30",
+  "TournamentRoomRetentionPeriod": "00:30:00"
 }
 ```
 
-| Key                         | Type | Default | Description                                                                  |
-|-----------------------------|------|---------|------------------------------------------------------------------------------|
-| `SaveReplays`               | bool | `true`  | Whether to persist spectator replays (hot-reloadable)                        |
-| `ReplayUploaderConcurrency` | int  | `4`     | Number of concurrent replay upload workers                                   |
-| `MaxStartedScores`          | int  | `2`     | Max concurrent started scores per spectator play session (hot-reloadable)    |
+| Key                                | Type     | Default    | Description                                                                           |
+|------------------------------------|----------|------------|---------------------------------------------------------------------------------------|
+| `SaveReplays`                      | bool     | `true`     | Whether to persist spectator replays (hot-reloadable)                                 |
+| `ReplayUploaderConcurrency`        | int      | `4`        | Number of concurrent replay upload workers (read once at startup; restart required)   |
+| `MaxStartedScores`                 | int      | `2`        | Max concurrent started scores per spectator play session (hot-reloadable)             |
+| `HostPlaylistLimit`                | int      | `50`       | Max playlist items a host or referee may enqueue (restart required)                   |
+| `GuestPlaylistLimit`               | int      | `3`        | Max playlist items a guest may enqueue (restart required)                             |
+| `MultiplayerDisconnectGracePeriod` | TimeSpan | `00:00:30` | How long a disconnected user is kept in their room before removal (hot-reloadable)    |
+| `TournamentRoomRetentionPeriod`    | TimeSpan | `00:30:00` | How long an empty tournament room is retained before being destroyed (hot-reloadable) |
 
 #### `config/storage.json` — Storage Backend
 
