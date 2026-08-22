@@ -1010,6 +1010,7 @@ public class MultiplayerHubTests
         Func<int, int, RulesetHashValidationFailure?>? validatePlayer = null)
         : IRulesetHashValidator
     {
+        // ReSharper disable once CollectionNeverUpdated.Local
         private static readonly Dictionary<string, string> EmptyRulesetHashes = new(StringComparer.Ordinal);
 
         public int PlayerValidationCount { get; private set; }

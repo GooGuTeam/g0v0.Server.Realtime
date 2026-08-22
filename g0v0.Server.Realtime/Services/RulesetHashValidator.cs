@@ -93,7 +93,6 @@ public sealed class RulesetHashValidator(
         }
 
         if (string.IsNullOrWhiteSpace(entry.LatestVersion)
-            || entry.Versions == null
             || !entry.Versions.TryGetValue(entry.LatestVersion, out string? currentHash)
             || string.IsNullOrWhiteSpace(currentHash))
         {

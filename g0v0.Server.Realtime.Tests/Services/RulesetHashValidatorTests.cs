@@ -26,7 +26,7 @@ public class RulesetHashValidatorTests
         _requestCount = 0;
         _metadata = new Dictionary<string, RulesetVersionEntry>(StringComparer.Ordinal)
         {
-            ["custom"] = new RulesetVersionEntry
+            ["custom"] = new()
             {
                 LatestVersion = "20250101",
                 Versions = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -143,11 +143,6 @@ public class RulesetHashValidatorTests
         public void Subscribe(string channel, Func<string, Task> handler)
         {
             _subscriptions.GetOrAdd(channel, _ => []).Add(handler);
-        }
-
-        public void Unsubscribe(string channel)
-        {
-            _subscriptions.TryRemove(channel, out _);
         }
     }
 }

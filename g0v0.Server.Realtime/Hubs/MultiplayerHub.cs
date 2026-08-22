@@ -345,13 +345,13 @@ public class MultiplayerHub(
             // The host must be ready or spectating, and at least one user must be
             // ready.
             return room.Host != null
-                && room.Host.State != MultiplayerUserState.Spectating
-                && room.Host.State != MultiplayerUserState.Ready
-                && room.Host.Role != MultiplayerRoomUserRole.Referee
+                   && room.Host.State != MultiplayerUserState.Spectating
+                   && room.Host.State != MultiplayerUserState.Ready
+                   && room.Host.Role != MultiplayerRoomUserRole.Referee
                 ? throw new InvalidStateException("Can't start match when the host is not ready.")
                 : room.Users.All(u => u.State != MultiplayerUserState.Ready)
-                ? throw new InvalidStateException("Can't start match when no users are ready.")
-                : room.StartMatch();
+                    ? throw new InvalidStateException("Can't start match when no users are ready.")
+                    : room.StartMatch();
         });
     }
 
@@ -430,6 +430,9 @@ public class MultiplayerHub(
     private Dictionary<string, string> ReadClientRulesetHashes()
     {
         IFeatureCollection? features = Context.Features;
+
+        // Use this to make test pass
+        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
         if (features == null
             || Context.GetHttpContext()?.Request.Headers.TryGetValue(
                 HubClientConnector.RULESET_HASH_HEADER,
