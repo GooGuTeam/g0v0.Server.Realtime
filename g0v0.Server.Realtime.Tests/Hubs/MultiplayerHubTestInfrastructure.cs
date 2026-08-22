@@ -395,8 +395,6 @@ internal sealed class FakeGroupManager(MultiplayerClientRouter router) : IGroupM
 {
     public List<(string ConnectionId, string GroupName)> AddedGroups { get; } = [];
 
-    public List<(string ConnectionId, string GroupName)> RemovedGroups { get; } = [];
-
     public Task AddToGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
     {
         AddedGroups.Add((connectionId, groupName));
@@ -406,7 +404,6 @@ internal sealed class FakeGroupManager(MultiplayerClientRouter router) : IGroupM
 
     public Task RemoveFromGroupAsync(string connectionId, string groupName, CancellationToken cancellationToken = default)
     {
-        RemovedGroups.Add((connectionId, groupName));
         router.RemoveFromGroup(connectionId, groupName);
         return Task.CompletedTask;
     }
@@ -414,7 +411,6 @@ internal sealed class FakeGroupManager(MultiplayerClientRouter router) : IGroupM
     public void Reset()
     {
         AddedGroups.Clear();
-        RemovedGroups.Clear();
     }
 }
 
