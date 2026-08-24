@@ -27,6 +27,21 @@ namespace g0v0.Server.Realtime.Tests.Hubs;
 public class MultiplayerHubTests
 {
     [Test]
+    public async Task OnConnectedAsync_WhenSameUserReconnects_RequestsOldConnectionDisconnect()
+    {
+        MultiplayerHubTestEnvironment environment = new();
+        TestHubHandle first = await environment.ConnectAsync(1, "conn-first");
+
+        TestHubHandle second = await environment.ConnectAsync(1, "conn-second");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.Recorder.DisconnectRequestCount, Is.EqualTo(1));
+            Assert.That(second.Recorder.DisconnectRequestCount, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task CreateRoom_AsHost_ReturnsSnapshotAndJoinsGroup()
     {
         MultiplayerHubTestEnvironment environment = new();

@@ -161,6 +161,19 @@ public class PlayerManager(
 
         if (existingPlayer != null)
         {
+            try
+            {
+                await existingPlayer.OnPlayerOffline(existingPlayer, isKicked: true);
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(
+                    exception,
+                    "Failed to notify replaced player {UserId} ({Server}) about being kicked.",
+                    existingPlayer.PlayerId,
+                    existingPlayer.Server);
+            }
+
             await existingPlayer.Offline(isKicked: true);
         }
 

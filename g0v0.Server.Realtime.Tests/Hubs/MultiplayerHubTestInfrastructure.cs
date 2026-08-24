@@ -203,6 +203,8 @@ internal sealed class RecordingMultiplayerClient : IMultiplayerClient
 
     public List<string> EventLog { get; } = [];
 
+    public int DisconnectRequestCount { get; private set; }
+
     public void Clear()
     {
         RoomStates.Clear();
@@ -218,6 +220,7 @@ internal sealed class RecordingMultiplayerClient : IMultiplayerClient
         PlaylistItemChangedEvents.Clear();
         UserStyleChangedEvents.Clear();
         EventLog.Clear();
+        DisconnectRequestCount = 0;
     }
 
     public Task RoomStateChanged(MultiplayerRoomState state)
@@ -322,7 +325,11 @@ internal sealed class RecordingMultiplayerClient : IMultiplayerClient
 
     public Task UserRoleChanged(int userId, MultiplayerRoomUserRole newRole) => Task.CompletedTask;
 
-    public Task DisconnectRequested() => Task.CompletedTask;
+    public Task DisconnectRequested()
+    {
+        DisconnectRequestCount++;
+        return Task.CompletedTask;
+    }
 
     public Task ServerShuttingDown() => Task.CompletedTask;
 }

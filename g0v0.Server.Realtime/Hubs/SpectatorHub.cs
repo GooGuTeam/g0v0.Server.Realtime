@@ -65,7 +65,11 @@ public class SpectatorHub(
                     Logger = logger,
                 });
 
-        await player.HubConnected(nameof(SpectatorHub));
+        string connectionId = Context.ConnectionId;
+        player.DisconnectSpectatorHubConnection = staleConnectionId =>
+            hub.Clients.Client(staleConnectionId).DisconnectRequested();
+
+        await player.HubConnected(nameof(SpectatorHub), connectionId);
 
         player.OnUserBeganPlayingForSpectatorHub = p =>
         {
@@ -227,15 +231,11 @@ public class SpectatorHub(
     {
         await base.OnDisconnectedAsync(exception);
 
-        LazerPlayer player = GetPlayer();
-
-        player.OnUserBeganPlayingForSpectatorHub = null;
-        player.OnUserFinishedPlayingForSpectatorHub = null;
-        player.OnUserSentFramesForSpectatorHub = null;
-        player.OnWatchedForSpectatorHub = null;
-        player.OnWatchedStoppedForSpectatorHub = null;
-
-        await player.HubDisconnected(nameof(SpectatorHub), exception);
+        LazerPlayer? player = PlayerManager.GetPlayer<LazerPlayer>(Context.GetUserId(), "Lazer");
+        if (player != null)
+        {
+            await player.HubDisconnected(nameof(SpectatorHub), Context.ConnectionId, exception);
+        }
     }
 
     /// <inheritdoc/>

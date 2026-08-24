@@ -15,9 +15,9 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
 {
     private readonly object _hubConnectionLock = new();
 
-    private bool _metadataConnected;
-    private bool _spectatorConnected;
-    private bool _multiplayerConnected;
+    private string _metadataConnectionId = string.Empty;
+    private string _spectatorConnectionId = string.Empty;
+    private string _multiplayerConnectionId = string.Empty;
 
     /// <inheritdoc />
     public override string Server => "Lazer";
@@ -28,6 +28,11 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// Gets or sets the current friend IDs tracked by the metadata hub connection.
     /// </summary>
     public int[] FriendIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the metadata hub stale connection disconnect callback.
+    /// </summary>
+    public Func<string, Task>? DisconnectMetadataHubConnection { get; set; }
 
     /// <summary>
     /// Gets or sets the metadata hub online callback.
@@ -83,9 +88,21 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// </summary>
     public Func<long, Task>? OnScoreProcessedForSpectatorHub { get; set; }
 
+    /// <summary>
+    /// Gets or sets the spectator hub stale connection disconnect callback.
+    /// </summary>
+    public Func<string, Task>? DisconnectSpectatorHubConnection { get; set; }
+
     #endregion
 
-    private bool IsConnectedToAnyHub => _metadataConnected || _spectatorConnected || _multiplayerConnected;
+    #region MultiplayerHub
+
+    /// <summary>
+    /// Gets or sets the multiplayer hub stale connection disconnect callback.
+    /// </summary>
+    public Func<string, Task>? DisconnectMultiplayerHubConnection { get; set; }
+
+    #endregion
 
     /// <inheritdoc />
     public override Task OnPlayerOnline(IPlayer player)
@@ -94,9 +111,17 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     }
 
     /// <inheritdoc />
-    public override Task OnPlayerOffline(IPlayer player, bool isKicked = false)
+    public override async Task OnPlayerOffline(IPlayer player, bool isKicked = false)
     {
-        return OnPlayerOfflineForMetadataHub != null ? OnPlayerOfflineForMetadataHub(player, isKicked) : Task.CompletedTask;
+        if (isKicked && ReferenceEquals(player, this))
+        {
+            await DisconnectCurrentHubConnections();
+        }
+
+        if (OnPlayerOfflineForMetadataHub != null)
+        {
+            await OnPlayerOfflineForMetadataHub(player, isKicked);
+        }
     }
 
     /// <inheritdoc />
@@ -151,8 +176,9 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// Marks a specific hub as connected for this player.
     /// </summary>
     /// <param name="hubName">The connected hub name.</param>
+    /// <param name="connectionId">The connection ID.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task HubConnected(string hubName)
+    public async Task HubConnected(string hubName, string connectionId)
     {
         if (Facade.Logger != null)
         {
@@ -162,23 +188,40 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
                 PlayerId);
         }
 
+        string replacedConnectionId;
+        Func<string, Task>? disconnectReplacedConnection;
         bool shouldGoOnline;
         lock (_hubConnectionLock)
         {
-            shouldGoOnline = !IsConnectedToAnyHub;
+            shouldGoOnline = !HasAnyHubConnection();
 
             switch (hubName)
             {
                 case "MetadataHub":
-                    _metadataConnected = true;
+                    replacedConnectionId = _metadataConnectionId;
+                    disconnectReplacedConnection = DisconnectMetadataHubConnection;
+                    _metadataConnectionId = connectionId;
                     break;
                 case "SpectatorHub":
-                    _spectatorConnected = true;
+                    replacedConnectionId = _spectatorConnectionId;
+                    disconnectReplacedConnection = DisconnectSpectatorHubConnection;
+                    _spectatorConnectionId = connectionId;
                     break;
                 case "MultiplayerHub":
-                    _multiplayerConnected = true;
+                    replacedConnectionId = _multiplayerConnectionId;
+                    disconnectReplacedConnection = DisconnectMultiplayerHubConnection;
+                    _multiplayerConnectionId = connectionId;
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(hubName), hubName, "Unknown hub name.");
             }
+        }
+
+        if (!string.IsNullOrEmpty(replacedConnectionId) &&
+            !string.Equals(replacedConnectionId, connectionId, StringComparison.Ordinal) &&
+            disconnectReplacedConnection != null)
+        {
+            await DisconnectReplacedHubConnection(hubName, replacedConnectionId, disconnectReplacedConnection);
         }
 
         if (shouldGoOnline)
@@ -191,9 +234,10 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// Marks a specific hub as disconnected for this player and removes the player when no realtime hubs remain.
     /// </summary>
     /// <param name="hubName">The disconnected hub name.</param>
+    /// <param name="connectionId">The disconnected connection ID.</param>
     /// <param name="exception">The exception that caused the disconnection, if any.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task HubDisconnected(string hubName, Exception? exception)
+    /// <returns>Whether the disconnected connection was the current connection for the hub.</returns>
+    public async Task<bool> HubDisconnected(string hubName, string connectionId, Exception? exception)
     {
         if (Facade.Logger != null)
         {
@@ -214,28 +258,122 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
             }
         }
 
-        bool shouldGoOffline;
+        bool disconnectedCurrentConnection;
+        bool shouldGoOffline = false;
         lock (_hubConnectionLock)
         {
-            switch (hubName)
+            disconnectedCurrentConnection = IsCurrentHubConnection(hubName, connectionId);
+            if (disconnectedCurrentConnection)
             {
-                case "MetadataHub":
-                    _metadataConnected = false;
-                    break;
-                case "SpectatorHub":
-                    _spectatorConnected = false;
-                    break;
-                case "MultiplayerHub":
-                    _multiplayerConnected = false;
-                    break;
+                ClearHubConnection(hubName);
+                shouldGoOffline = !HasAnyHubConnection();
             }
+        }
 
-            shouldGoOffline = !IsConnectedToAnyHub;
+        if (!disconnectedCurrentConnection)
+        {
+            return false;
         }
 
         if (shouldGoOffline)
         {
             await Offline(isKicked: false);
         }
+
+        return true;
+    }
+
+    private bool HasAnyHubConnection() =>
+        !string.IsNullOrEmpty(_metadataConnectionId) ||
+        !string.IsNullOrEmpty(_spectatorConnectionId) ||
+        !string.IsNullOrEmpty(_multiplayerConnectionId);
+
+    private void ClearHubConnection(string hubName)
+    {
+        switch (hubName)
+        {
+            case "MetadataHub":
+                _metadataConnectionId = string.Empty;
+                DisconnectMetadataHubConnection = null;
+                OnPlayerOnlineForMetadataHub = null;
+                OnPlayerOfflineForMetadataHub = null;
+                OnPlayerChangeActivityForMetadataHub = null;
+                OnPlayerChangeStatusForMetadataHub = null;
+                break;
+            case "SpectatorHub":
+                _spectatorConnectionId = string.Empty;
+                DisconnectSpectatorHubConnection = null;
+                OnUserBeganPlayingForSpectatorHub = null;
+                OnUserFinishedPlayingForSpectatorHub = null;
+                OnUserSentFramesForSpectatorHub = null;
+                OnWatchedForSpectatorHub = null;
+                OnWatchedStoppedForSpectatorHub = null;
+                OnScoreProcessedForSpectatorHub = null;
+                break;
+            case "MultiplayerHub":
+                _multiplayerConnectionId = string.Empty;
+                DisconnectMultiplayerHubConnection = null;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(hubName), hubName, "Unknown hub name.");
+        }
+    }
+
+    private async Task DisconnectCurrentHubConnections()
+    {
+        List<(string HubName, string ConnectionId, Func<string, Task> DisconnectConnection)> hubConnections = [];
+        lock (_hubConnectionLock)
+        {
+            if (!string.IsNullOrEmpty(_metadataConnectionId) && DisconnectMetadataHubConnection != null)
+            {
+                hubConnections.Add(("MetadataHub", _metadataConnectionId, DisconnectMetadataHubConnection));
+            }
+
+            if (!string.IsNullOrEmpty(_spectatorConnectionId) && DisconnectSpectatorHubConnection != null)
+            {
+                hubConnections.Add(("SpectatorHub", _spectatorConnectionId, DisconnectSpectatorHubConnection));
+            }
+
+            if (!string.IsNullOrEmpty(_multiplayerConnectionId) && DisconnectMultiplayerHubConnection != null)
+            {
+                hubConnections.Add(("MultiplayerHub", _multiplayerConnectionId, DisconnectMultiplayerHubConnection));
+            }
+        }
+
+        foreach ((string hubName, string connectionId, Func<string, Task> disconnectConnection) in hubConnections)
+        {
+            await DisconnectReplacedHubConnection(hubName, connectionId, disconnectConnection);
+        }
+    }
+
+    private async Task DisconnectReplacedHubConnection(
+        string hubName,
+        string connectionId,
+        Func<string, Task> disconnectConnection)
+    {
+        try
+        {
+            await disconnectConnection(connectionId);
+        }
+        catch (Exception exception)
+        {
+            Facade.Logger?.LogWarning(
+                exception,
+                "Failed to request stale {Hub} connection {ConnectionId} to disconnect for player {UserId} (Lazer).",
+                hubName,
+                connectionId,
+                PlayerId);
+        }
+    }
+
+    private bool IsCurrentHubConnection(string hubName, string connectionId)
+    {
+        return hubName switch
+        {
+            "MetadataHub" => string.Equals(_metadataConnectionId, connectionId, StringComparison.Ordinal),
+            "SpectatorHub" => string.Equals(_spectatorConnectionId, connectionId, StringComparison.Ordinal),
+            "MultiplayerHub" => string.Equals(_multiplayerConnectionId, connectionId, StringComparison.Ordinal),
+            _ => throw new ArgumentOutOfRangeException(nameof(hubName), hubName, "Unknown hub name."),
+        };
     }
 }

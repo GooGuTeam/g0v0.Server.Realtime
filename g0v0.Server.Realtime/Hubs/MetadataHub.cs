@@ -33,8 +33,10 @@ public class MetadataHub(
             Logger = logger
         });
         string connectionId = Context.ConnectionId;
+        player.DisconnectMetadataHubConnection = staleConnectionId =>
+            hubContext.Clients.Client(staleConnectionId).DisconnectRequested();
 
-        await player.HubConnected(nameof(MetadataHub));
+        await player.HubConnected(nameof(MetadataHub), connectionId);
 
         player.OnPlayerOnlineForMetadataHub = p => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
         player.OnPlayerOfflineForMetadataHub = (p, _) => BroadcastUserPresenceUpdate(hubContext, connectionId, p);
@@ -50,13 +52,11 @@ public class MetadataHub(
     {
         await base.OnDisconnectedAsync(exception);
 
-        LazerPlayer player = GetPlayer();
-        player.OnPlayerOnlineForMetadataHub = null;
-        player.OnPlayerOfflineForMetadataHub = null;
-        player.OnPlayerChangeActivityForMetadataHub = null;
-        player.OnPlayerChangeStatusForMetadataHub = null;
-
-        await player.HubDisconnected(nameof(MetadataHub), exception);
+        LazerPlayer? player = PlayerManager.GetPlayer<LazerPlayer>(Context.GetUserId(), "Lazer");
+        if (player != null)
+        {
+            await player.HubDisconnected(nameof(MetadataHub), Context.ConnectionId, exception);
+        }
     }
 
     /// <inheritdoc />

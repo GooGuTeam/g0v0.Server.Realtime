@@ -55,6 +55,37 @@ public class PlayerManagerTests
     }
 
     [Test]
+    public async Task AddPlayer_WhenReplacingLazerPlayer_RequestsExistingConnectionsDisconnect()
+    {
+        PlayerManager manager = CreateManager();
+        LazerPlayer first = new(1, new PlayerFacade(manager));
+        LazerPlayer second = new(1, new PlayerFacade(manager));
+        int firstDisconnectRequests = 0;
+        int secondDisconnectRequests = 0;
+        first.DisconnectMetadataHubConnection = connectionId =>
+        {
+            Assert.That(connectionId, Is.EqualTo("metadata-old"));
+            firstDisconnectRequests++;
+            return Task.CompletedTask;
+        };
+        second.DisconnectMetadataHubConnection = _ =>
+        {
+            secondDisconnectRequests++;
+            return Task.CompletedTask;
+        };
+
+        await first.HubConnected("MetadataHub", "metadata-old");
+        await second.HubConnected("MetadataHub", "metadata-new");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(manager.GetPlayer<LazerPlayer>(1, "Lazer"), Is.SameAs(second));
+            Assert.That(firstDisconnectRequests, Is.EqualTo(1));
+            Assert.That(secondDisconnectRequests, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task GetOrCreatePlayer_WhenMultipleHubsConnect_ReusesPendingPlayerWithoutKicking()
     {
         PlayerManager manager = CreateManager();
@@ -76,8 +107,8 @@ public class PlayerManagerTests
             player => player.Facade.ApplyNonNullDependenciesFrom(spectatorFacade));
 
         await Task.WhenAll(
-            metadataPlayer.HubConnected("MetadataHub"),
-            spectatorPlayer.HubConnected("SpectatorHub"));
+            metadataPlayer.HubConnected("MetadataHub", "metadata-connection"),
+            spectatorPlayer.HubConnected("SpectatorHub", "spectator-connection"));
 
         Assert.Multiple(() =>
         {

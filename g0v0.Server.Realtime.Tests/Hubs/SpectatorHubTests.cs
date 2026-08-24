@@ -43,6 +43,20 @@ public class SpectatorHubTests
     }
 
     [Test]
+    public async Task OnConnectedAsync_WhenSameUserReconnects_RequestsOldConnectionDisconnect()
+    {
+        TestHubHandle first = await _environment.ConnectAsync(3, "connection-first");
+
+        TestHubHandle second = await _environment.ConnectAsync(3, "connection-second");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.Recorder.DisconnectRequestCount, Is.EqualTo(1));
+            Assert.That(second.Recorder.DisconnectRequestCount, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task OnConnectedAsync_ShouldCreatePlayerAndInstallSpectatorCallbacks()
     {
         await _environment.ConnectAsync(3, "connection-3");
@@ -589,7 +603,7 @@ public class SpectatorHubTests
 
         public async Task<TestHubHandle> ConnectAsync(int userId, string connectionId)
         {
-            Router.EnsureUser(userId.ToString());
+            Router.EnsureConnection(userId.ToString(), connectionId);
             SpectatorHub hub = new(
                 PlayerManager,
                 ConfigManager,
@@ -604,13 +618,13 @@ public class SpectatorHubTests
                 ScopeFactory)
             {
                 Context = new TestHubCallerContext(connectionId, userId.ToString()),
-                Clients = new FakeHubCallerClients(Router, userId.ToString()),
+                Clients = new FakeHubCallerClients(Router, connectionId),
                 Groups = new FakeGroupManager(),
             };
 
             await hub.OnConnectedAsync();
             CurrentHub = hub;
-            return new TestHubHandle(hub, Router.GetRecorder(userId.ToString()));
+            return new TestHubHandle(hub, Router.GetRecorder(connectionId));
         }
 
         public void Dispose()
@@ -656,18 +670,18 @@ public class SpectatorHubTests
         public IGroupManager Groups { get; } = new FakeGroupManager();
     }
 
-    private sealed class FakeHubCallerClients(SpectatorClientRouter router, string callerUserId) : IHubCallerClients<ISpectatorClient>
+    private sealed class FakeHubCallerClients(SpectatorClientRouter router, string callerConnectionId) : IHubCallerClients<ISpectatorClient>
     {
-        public ISpectatorClient All => router.CreateProxy(static state => state.UserIds);
+        public ISpectatorClient All => router.CreateProxy(static state => state.ConnectionIds);
 
-        public ISpectatorClient Caller => router.CreateProxy(_ => [callerUserId]);
+        public ISpectatorClient Caller => router.CreateProxy(_ => [callerConnectionId]);
 
-        public ISpectatorClient Others => router.CreateProxy(state => state.UserIds.Where(id => !string.Equals(id, callerUserId, StringComparison.Ordinal)));
+        public ISpectatorClient Others => router.CreateProxy(state => state.ConnectionIds.Where(id => !string.Equals(id, callerConnectionId, StringComparison.Ordinal)));
 
         public ISpectatorClient OthersInGroup(string groupName) => throw new NotSupportedException();
 
         public ISpectatorClient AllExcept(IReadOnlyList<string> excludedConnectionIds) =>
-            router.CreateProxy(state => state.UserIds.Except(excludedConnectionIds, StringComparer.Ordinal));
+            router.CreateProxy(state => state.ConnectionIds.Except(excludedConnectionIds, StringComparer.Ordinal));
 
         public ISpectatorClient Client(string connectionId) => router.CreateProxy(_ => [connectionId]);
 
@@ -679,17 +693,17 @@ public class SpectatorHubTests
 
         public ISpectatorClient Groups(IReadOnlyList<string> groupNames) => throw new NotSupportedException();
 
-        public ISpectatorClient User(string userId) => router.CreateProxy(_ => [userId]);
+        public ISpectatorClient User(string userId) => router.CreateProxy(state => state.ResolveUsers([userId]));
 
-        public ISpectatorClient Users(IReadOnlyList<string> userIds) => router.CreateProxy(_ => userIds);
+        public ISpectatorClient Users(IReadOnlyList<string> userIds) => router.CreateProxy(state => state.ResolveUsers(userIds));
     }
 
     private sealed class FakeHubClients(SpectatorClientRouter router) : IHubClients<ISpectatorClient>
     {
-        public ISpectatorClient All => router.CreateProxy(static state => state.UserIds);
+        public ISpectatorClient All => router.CreateProxy(static state => state.ConnectionIds);
 
         public ISpectatorClient AllExcept(IReadOnlyList<string> excludedConnectionIds) =>
-            router.CreateProxy(state => state.UserIds.Except(excludedConnectionIds, StringComparer.Ordinal));
+            router.CreateProxy(state => state.ConnectionIds.Except(excludedConnectionIds, StringComparer.Ordinal));
 
         public ISpectatorClient Client(string connectionId) => router.CreateProxy(_ => [connectionId]);
 
@@ -701,9 +715,9 @@ public class SpectatorHubTests
 
         public ISpectatorClient Groups(IReadOnlyList<string> groupNames) => throw new NotSupportedException();
 
-        public ISpectatorClient User(string userId) => router.CreateProxy(_ => [userId]);
+        public ISpectatorClient User(string userId) => router.CreateProxy(state => state.ResolveUsers([userId]));
 
-        public ISpectatorClient Users(IReadOnlyList<string> userIds) => router.CreateProxy(_ => userIds);
+        public ISpectatorClient Users(IReadOnlyList<string> userIds) => router.CreateProxy(state => state.ResolveUsers(userIds));
     }
 
     private sealed class FakeGroupManager : IGroupManager
@@ -717,26 +731,36 @@ public class SpectatorHubTests
 
     private sealed class SpectatorClientRouter
     {
-        private readonly Dictionary<string, RecordingSpectatorClient> _users = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, RecordingSpectatorClient> _connections = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _userConnections = new(StringComparer.Ordinal);
 
-        public IReadOnlyCollection<string> UserIds => _users.Keys;
+        public IReadOnlyCollection<string> ConnectionIds => _connections.Keys;
 
         public ISpectatorClient CreateProxy(Func<SpectatorClientRouter, IEnumerable<string>> targetSelector)
             => new RoutedSpectatorClient(this, targetSelector);
 
-        public void EnsureUser(string userId)
+        public void EnsureConnection(string userId, string connectionId)
         {
-            if (!_users.ContainsKey(userId))
-            {
-                _users[userId] = new RecordingSpectatorClient();
-            }
+            GetRecorder(connectionId);
+            _userConnections[userId] = connectionId;
         }
 
-        public RecordingSpectatorClient GetRecorder(string userId)
+        public RecordingSpectatorClient GetRecorder(string connectionId)
         {
-            EnsureUser(userId);
-            return _users[userId];
+            if (_connections.TryGetValue(connectionId, out RecordingSpectatorClient? client))
+            {
+                return client;
+            }
+
+            client = new RecordingSpectatorClient();
+            _connections[connectionId] = client;
+            return client;
         }
+
+        public string[] ResolveUsers(IEnumerable<string> userIds)
+            => userIds
+                .Select(userId => _userConnections.TryGetValue(userId, out string? connectionId) ? connectionId : userId)
+                .ToArray();
 
         private sealed class RoutedSpectatorClient(
             SpectatorClientRouter router,

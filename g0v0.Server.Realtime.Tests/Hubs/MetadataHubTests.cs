@@ -22,6 +22,21 @@ namespace g0v0.Server.Realtime.Tests.Hubs;
 public class MetadataHubTests
 {
     [Test]
+    public async Task OnConnectedAsync_WhenSameUserReconnects_RequestsOldConnectionDisconnect()
+    {
+        MetadataHubTestEnvironment environment = new();
+        TestHubHandle first = await environment.ConnectAsync(10, "connection-first");
+
+        TestHubHandle second = await environment.ConnectAsync(10, "connection-second");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.Recorder.DisconnectRequestCount, Is.EqualTo(1));
+            Assert.That(second.Recorder.DisconnectRequestCount, Is.Zero);
+        });
+    }
+
+    [Test]
     public async Task BeginWatchingUserPresence_ReplaysVisibleUsersAndAddsCallerToWatcherGroup()
     {
         MetadataHubTestEnvironment environment = new();
@@ -496,15 +511,22 @@ public class MetadataHubTests
 
         public List<(int UserId, UserPresence? Presence)> UserPresenceUpdates { get; } = [];
 
+        public int DisconnectRequestCount { get; private set; }
+
         public Task BeatmapSetsUpdated(BeatmapUpdates beatmapUpdates) => Task.CompletedTask;
 
         public void Clear()
         {
             FriendPresenceUpdates.Clear();
             UserPresenceUpdates.Clear();
+            DisconnectRequestCount = 0;
         }
 
-        public Task DisconnectRequested() => Task.CompletedTask;
+        public Task DisconnectRequested()
+        {
+            DisconnectRequestCount++;
+            return Task.CompletedTask;
+        }
 
         public Task ServerShuttingDown() => Task.CompletedTask;
 
