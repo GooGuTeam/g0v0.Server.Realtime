@@ -1,6 +1,6 @@
 # AGENTS.md
 
-ASP.NET Core 8 SignalR realtime server for g0v0 v2 (spectating, online status, multiplay). The solution has two projects: `g0v0.Server.Realtime/` (web host) and `g0v0.Server.Realtime.Tests/` (NUnit 4).
+ASP.NET Core 10 SignalR realtime server for g0v0 v2 (spectating, online status, multiplay). The solution has two projects: `g0v0.Server.Realtime/` (web host) and `g0v0.Server.Realtime.Tests/` (NUnit 4).
 
 ## Sibling-repo dependency (read first)
 
@@ -34,7 +34,7 @@ CI runs the `code-style` job: `dotnet format --verify-no-changes`, a `/warnaserr
 InspectCode. It prints every warning/error and uploads the SARIF report. There is **no test job in CI** — tests must
 be run locally. Format drift or any analyzer/InspectCode warning fails CI.
 
-`global.json` pins SDK `8.0.0` (`rollForward: latestMinor`). `Directory.Build.props` injects StyleCop.Analyzers, Meziantou.Analyzer, Roslynator, `EnforceCodeStyleInBuild`, and `GenerateDocumentationFile` into every project — do not duplicate those in `.csproj`.
+`global.json` pins SDK `10.0.0` (`rollForward: latestMinor`). `Directory.Build.props` injects StyleCop.Analyzers, Meziantou.Analyzer, Roslynator, `EnforceCodeStyleInBuild`, and `GenerateDocumentationFile` into every project — do not duplicate those in `.csproj`.
 
 ## Runtime configuration (not in source control)
 

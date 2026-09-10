@@ -13,7 +13,7 @@ namespace g0v0.Server.Realtime.Objects.Players;
 /// <param name="facade">The player dependency facade.</param>
 public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(playerId, facade)
 {
-    private readonly object _hubConnectionLock = new();
+    private readonly Lock _hubConnectionLock = new();
 
     private string _metadataConnectionId = string.Empty;
     private string _spectatorConnectionId = string.Empty;

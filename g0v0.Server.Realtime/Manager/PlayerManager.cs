@@ -30,7 +30,7 @@ public class PlayerManager(
             new EventId(2, nameof(RemovePlayer)),
             "Player {UserId} ({Server}) disconnected from server. (isKicked: {IsKicked})");
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     private readonly Dictionary<(int, string), IPlayer> _players = new();
 
