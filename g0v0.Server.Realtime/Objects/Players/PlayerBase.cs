@@ -267,7 +267,7 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
 
     private async Task ProcessScore(long scoreToken, Score score)
     {
-        Debug.Assert(score != null, "score != null");
+        Debug.Assert(score != null, "The score to process must not be null.");
 
         // Do nothing with scores on unranked beatmaps.
         BeatmapOnlineStatus status = score.ScoreInfo.BeatmapInfo!.Status;

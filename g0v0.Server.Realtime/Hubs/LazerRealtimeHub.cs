@@ -29,7 +29,7 @@ public class LazerRealtimeHub<T>(PlayerManager playerManager) : Hub<T>
     {
         LazerPlayer? player = playerManager.GetPlayer<LazerPlayer>(Context.GetUserId());
 
-        Debug.Assert(player != null, "player != null");
+        Debug.Assert(player != null, "The current connection must have a registered lazer player.");
         return player ??
                throw new InvalidOperationException(
                    "The current connection is not associated with an active lazer player.");
