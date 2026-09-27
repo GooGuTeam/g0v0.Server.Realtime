@@ -13,7 +13,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Spectator;
 using osu.Game.Scoring;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Hubs;
 
@@ -33,7 +32,7 @@ namespace g0v0.Server.Realtime.Hubs;
 /// <param name="scopeFactory">The service scope factory.</param>
 public class SpectatorHub(
     PlayerManager playerManager,
-    ConfigurationManager configManager,
+    ConfigManager configManager,
     IHubContext<SpectatorHub, ISpectatorClient> hubContext,
     IUserRepository userRepository,
     IBeatmapRepository beatmapRepository,
@@ -469,7 +468,7 @@ public class SpectatorHub(
                     {
                         OnlineID = state.BeatmapID.Value,
                         MD5Hash = beatmap.Checksum!,
-                        Status = configManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard
+                        Status = configManager.Get<GameConfig>().EnableAllBeatmapLeaderboard
                             ? BeatmapOnlineStatus.Approved
                             : beatmap.Status,
                     },

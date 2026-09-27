@@ -1,9 +1,9 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Configuration;
 using NUnit.Framework;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Tests.Multiplayer;
 
@@ -24,7 +24,7 @@ public class TournamentRoomRetentionTests : MultiplayerTestBase
         File.WriteAllText(
             Path.Combine(_basePath, "config", "realtime.json"),
             "{\"TournamentRoomRetentionPeriod\": \"00:00:00.050\"}");
-        RoomFacade.ConfigManager = new ConfigurationManager(_basePath);
+        RoomFacade.ConfigManager = new ConfigManager(_basePath);
     }
 
     [Test]
@@ -56,7 +56,7 @@ public class TournamentRoomRetentionTests : MultiplayerTestBase
         await File.WriteAllTextAsync(
             Path.Combine(_basePath, "config", "realtime.json"),
             "{\"TournamentRoomRetentionPeriod\": \"00:00:00.200\"}");
-        RoomFacade.ConfigManager = new ConfigurationManager(_basePath);
+        RoomFacade.ConfigManager = new ConfigManager(_basePath);
 
         Realtime.Objects.Rooms.IRoom room = await RoomManager.CreateRoom(CreateTournamentRoom(), UserId, tournamentMode: true);
         await room.JoinRoom(UserId);

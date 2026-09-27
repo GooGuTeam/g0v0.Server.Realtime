@@ -38,7 +38,7 @@ public class NotificationServerTests
         File.WriteAllText(
             Path.Combine(_basePath, "config", "chat.json"),
             "{\"PublicMessageLimit\":100,\"PrivateMessageLimit\":100}");
-        ConfigurationManager configurationManager = new(_basePath);
+        ConfigManager configManager = new(_basePath);
 
         ServiceCollection services = new();
         services.AddSingleton<IChatRepository>(_chatRepository);
@@ -48,7 +48,7 @@ public class NotificationServerTests
         _server = new NotificationServer(
             NullLogger<NotificationServer>.Instance,
             new FakeRankedCache(),
-            configurationManager,
+            configManager,
             _playerManager,
             _scopeFactory);
     }
@@ -155,7 +155,7 @@ public class NotificationServerTests
         NotificationServer throttledServer = new(
             NullLogger<NotificationServer>.Instance,
             new FakeRankedCache(),
-            new ConfigurationManager(basePath),
+            new ConfigManager(basePath),
             _playerManager,
             _scopeFactory);
 

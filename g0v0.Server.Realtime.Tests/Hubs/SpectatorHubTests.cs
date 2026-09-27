@@ -541,7 +541,7 @@ public class SpectatorHubTests
                 Path.Combine(BasePath, "config", "realtime.json"),
                 "{\"SaveReplays\":false,\"ReplayUploaderConcurrency\":0}");
 
-            ConfigManager = new ConfigurationManager(BasePath);
+            ConfigManager = new ConfigManager(BasePath);
             UserRepository = new FakeUserRepository();
             BeatmapRepository = new FakeBeatmapRepository();
             ScoreRepository = new FakeScoreRepository();
@@ -573,7 +573,7 @@ public class SpectatorHubTests
             RulesetManager = new RulesetManager(BasePath);
         }
 
-        public ConfigurationManager ConfigManager { get; }
+        public ConfigManager ConfigManager { get; }
 
         public string BasePath { get; }
 

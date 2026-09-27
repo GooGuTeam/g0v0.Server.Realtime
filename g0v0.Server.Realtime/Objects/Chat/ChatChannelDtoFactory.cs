@@ -1,10 +1,10 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Services;
 using osu.Game.Online.Chat;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Objects.Chat;
 
@@ -22,12 +22,12 @@ namespace g0v0.Server.Realtime.Objects.Chat;
 /// <param name="chatRepository">The chat persistence repository.</param>
 /// <param name="userRepository">The user repository used for display names, message senders and PM checks.</param>
 /// <param name="relationshipRepository">The relationship repository backing the block and friend checks.</param>
-/// <param name="configurationManager">The configuration manager used to read the chat limits.</param>
+/// <param name="configManager">The configuration manager used to read the chat limits.</param>
 public sealed class ChatChannelDtoFactory(
     IChatRepository chatRepository,
     IUserRepository userRepository,
     IRelationshipRepository relationshipRepository,
-    ConfigurationManager configurationManager)
+    ConfigManager configManager)
 {
     private const string ModeratedMessage = "This channel is currently moderated.";
 
@@ -333,7 +333,7 @@ public sealed class ChatChannelDtoFactory(
     }
 
     private ChatConfig GetChatConfig() =>
-        configurationManager.TryGet<ChatConfig>() ?? new ChatConfig();
+        configManager.TryGet<ChatConfig>() ?? new ChatConfig();
 
     /// <summary>
     /// Joins the user to the default public channel when they have no membership

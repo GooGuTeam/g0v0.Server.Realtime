@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Runtime.ExceptionServices;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Manager;
@@ -15,7 +16,6 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Rooms;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Hubs;
 
@@ -568,7 +568,7 @@ public class MultiplayerHub(
         // Fall back to the manager's tunable (used by tests) when no
         // configuration manager is registered.
         using IServiceScope scope = scopeFactory.CreateScope();
-        ConfigurationManager? configManager = scope.ServiceProvider.GetService<ConfigurationManager>();
+        ConfigManager? configManager = scope.ServiceProvider.GetService<ConfigManager>();
         return configManager?.Get<RealtimeConfig>().MultiplayerDisconnectGracePeriod
                ?? PlayerManager.MultiplayerDisconnectGracePeriod;
     }

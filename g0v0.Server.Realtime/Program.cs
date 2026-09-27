@@ -16,7 +16,6 @@ using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using osu.Game.Online;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime;
 
@@ -54,8 +53,8 @@ public static class Program
         builder.Services.AddSwaggerGen();
         builder.Services.AddSingleton<IPathProvider, WebPathProvider>();
 
-        ConfigurationManager configManager = new(builder.Environment.ContentRootPath);
-        GeneralConfiguration generalConfig = configManager.Get<GeneralConfiguration>();
+        ConfigManager configManager = new(builder.Environment.ContentRootPath);
+        GeneralConfig generalConfig = configManager.Get<GeneralConfig>();
         builder.Services.AddSingleton(configManager);
 
         builder.Services.AddRepositories(generalConfig.UseLegacyDatabase);

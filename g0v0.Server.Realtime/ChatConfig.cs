@@ -11,7 +11,7 @@ namespace g0v0.Server.Realtime;
 /// The file is optional: when <c>config/chat.json</c> is absent every value
 /// falls back to the upstream default.
 /// </remarks>
-[ConfigurationFile("chat")]
+[ConfigFile("chat")]
 public class ChatConfig
 {
     /// <summary>

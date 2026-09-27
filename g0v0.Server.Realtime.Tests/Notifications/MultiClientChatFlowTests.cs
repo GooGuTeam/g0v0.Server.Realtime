@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.Json;
 using g0v0.Server.Common.Caching;
 using g0v0.Server.Common.Communication;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Extensions;
@@ -27,7 +28,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using NUnit.Framework;
 using osu.Game.Online.Chat;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Tests.Notifications;
 
@@ -63,7 +63,7 @@ public class MultiClientChatFlowTests
         File.WriteAllText(
             Path.Combine(_basePath, "config", "chat.json"),
             "{\"PublicMessageLimit\":100,\"PrivateMessageLimit\":100}");
-        ConfigurationManager configurationManager = new(_basePath);
+        ConfigManager configManager = new(_basePath);
 
         _chatRepository = new FakeChatRepository();
         _rankedCache = new FakeRankedCache();
@@ -84,7 +84,7 @@ public class MultiClientChatFlowTests
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddLogging();
-        builder.Services.AddSingleton(configurationManager);
+        builder.Services.AddSingleton(configManager);
         builder.Services.AddSingleton(_chatRepository);
         builder.Services.AddSingleton<IChatRepository>(_chatRepository);
         builder.Services.AddSingleton<IStringCache, FakeStringCache>();

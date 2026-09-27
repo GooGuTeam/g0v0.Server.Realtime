@@ -17,7 +17,7 @@ public class ChatChannelDtoFactoryTests
     private FakeChatRepository _chatRepository = null!;
     private FakeUserRepository _userRepository = null!;
     private FakeRelationshipRepository _relationshipRepository = null!;
-    private ConfigurationManager _configurationManager = null!;
+    private ConfigManager _configManager = null!;
     private ChatChannelDtoFactory _factory = null!;
 
     [SetUp]
@@ -29,9 +29,9 @@ public class ChatChannelDtoFactoryTests
         _userRepository.AddUser(new User { Id = 2, Username = "user2" });
         _userRepository.AddUser(new User { Id = 3, Username = "user3", IsBot = true });
         _relationshipRepository = new FakeRelationshipRepository();
-        _configurationManager = new ConfigurationManager(Path.Combine(Path.GetTempPath(), "g0v0-chat-dto-factory-tests", Guid.NewGuid().ToString("N")));
+        _configManager = new ConfigManager(Path.Combine(Path.GetTempPath(), "g0v0-chat-dto-factory-tests", Guid.NewGuid().ToString("N")));
 
-        _factory = new ChatChannelDtoFactory(_chatRepository, _userRepository, _relationshipRepository, _configurationManager);
+        _factory = new ChatChannelDtoFactory(_chatRepository, _userRepository, _relationshipRepository, _configManager);
     }
 
     [Test]

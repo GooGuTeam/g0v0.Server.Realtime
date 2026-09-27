@@ -20,7 +20,7 @@ public class BanchoBotTests
 {
     private FakeChatRepository _chatRepository = null!;
     private PlayerManager _playerManager = null!;
-    private ConfigurationManager _configurationManager = null!;
+    private ConfigManager _configManager = null!;
     private RecordingNotificationServer _notificationServer = null!;
     private BanchoBot _bot = null!;
 
@@ -39,12 +39,12 @@ public class BanchoBotTests
 
         string basePath = Path.Combine(Path.GetTempPath(), "g0v0-bancho-bot-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(basePath);
-        _configurationManager = new ConfigurationManager(basePath);
+        _configManager = new ConfigManager(basePath);
 
         _notificationServer = new RecordingNotificationServer(
             new FakeRankedCache(),
             _playerManager,
-            _configurationManager,
+            _configManager,
             serviceProvider.GetRequiredService<IServiceScopeFactory>());
 
         _bot = new BanchoBot(
@@ -202,11 +202,11 @@ public class BanchoBotTests
     private sealed class RecordingNotificationServer(
         IRankedCache rankedCache,
         PlayerManager playerManager,
-        ConfigurationManager configurationManager,
+        ConfigManager configManager,
         IServiceScopeFactory scopeFactory) : NotificationServer(
             NullLogger<NotificationServer>.Instance,
             rankedCache,
-            configurationManager,
+            configManager,
             playerManager,
             scopeFactory)
     {

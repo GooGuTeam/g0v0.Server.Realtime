@@ -1,13 +1,13 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Threading.Channels;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Storage;
 using g0v0.Server.Realtime.Objects;
 using osu.Game.Beatmaps;
 using osu.Game.Scoring;
 using osu.Game.Scoring.Legacy;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Services;
 
@@ -19,7 +19,7 @@ public class ScoreUploader : IDisposable
     private readonly CancellationTokenSource _cancellationSource;
     private readonly CancellationToken _cancellationToken;
 
-    private readonly ConfigurationManager _configManager;
+    private readonly ConfigManager _configManager;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ScoreUploader> _logger;
     private readonly IStorageService _scoreStorage;
@@ -35,7 +35,7 @@ public class ScoreUploader : IDisposable
     /// <param name="logger">The logger.</param>
     /// <param name="scoreStorage">The storage service used for replay files.</param>
     public ScoreUploader(
-        ConfigurationManager configManager,
+        ConfigManager configManager,
         IServiceScopeFactory scopeFactory,
         ILogger<ScoreUploader> logger,
         IStorageService scoreStorage)

@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Common.Authentication;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Extensions;
@@ -10,7 +11,6 @@ using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.Mvc;
 using osu.Game.Online.Chat;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Controllers;
 
@@ -24,7 +24,7 @@ public class MessagesController(
     IUserRepository userRepository,
     INotificationServer notificationServer,
     ChatChannelDtoFactory chatChannelDtoFactory,
-    ConfigurationManager configurationManager,
+    ConfigManager configManager,
     IBanchoBot banchoBot) : ControllerBase
 {
     /// <summary>
@@ -58,7 +58,7 @@ public class MessagesController(
             return ChatErrorResults.NotInChannel();
         }
 
-        ChatConfig chatConfig = configurationManager.TryGet<ChatConfig>() ?? new ChatConfig();
+        ChatConfig chatConfig = configManager.TryGet<ChatConfig>() ?? new ChatConfig();
         IReadOnlyList<ChatMessage> messages = await chatRepository.GetMessagesAsync(
             dbChannel.ChannelId,
             Math.Clamp(limit, 1, 50),

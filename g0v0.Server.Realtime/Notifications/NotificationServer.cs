@@ -3,6 +3,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using g0v0.Server.Common.Caching;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Manager;
@@ -10,7 +11,6 @@ using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
 using osu.Game.Online.Chat;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Notifications;
 
@@ -29,13 +29,13 @@ namespace g0v0.Server.Realtime.Notifications;
 /// </remarks>
 /// <param name="logger">The logger.</param>
 /// <param name="rankedCache">The sorted-set cache holding channel activity markers and message throttles.</param>
-/// <param name="configurationManager">The configuration manager used to read the chat limits.</param>
+/// <param name="configManager">The configuration manager used to read the chat limits.</param>
 /// <param name="playerManager">The player registry.</param>
 /// <param name="scopeFactory">The scope factory used to resolve repositories.</param>
 public class NotificationServer(
     ILogger<NotificationServer> logger,
     IRankedCache rankedCache,
-    ConfigurationManager configurationManager,
+    ConfigManager configManager,
     PlayerManager playerManager,
     IServiceScopeFactory scopeFactory) : INotificationServer
 {
@@ -249,7 +249,7 @@ public class NotificationServer(
     }
 
     private ChatConfig GetChatConfig() =>
-        configurationManager.TryGet<ChatConfig>() ?? new ChatConfig();
+        configManager.TryGet<ChatConfig>() ?? new ChatConfig();
 
     private async Task ThrottleAsync(int userId, bool isPrivate)
     {

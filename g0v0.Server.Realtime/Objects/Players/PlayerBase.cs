@@ -365,7 +365,7 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         bool allRanked = false;
         if (facade.ConfigManager != null)
         {
-            allRanked = facade.ConfigManager.Get<GameConfiguration>().EnableAllBeatmapLeaderboard;
+            allRanked = facade.ConfigManager.Get<GameConfig>().EnableAllBeatmapLeaderboard;
         }
 
         if (!allRanked && status is < BeatmapOnlineStatus.Ranked or > BeatmapOnlineStatus.Loved)

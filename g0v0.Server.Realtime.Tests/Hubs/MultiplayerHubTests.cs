@@ -1038,11 +1038,11 @@ public class MultiplayerHubTests
         };
     }
 
-    private static ConfigurationManager CreateChatConfigurationManager()
+    private static ConfigManager CreateChatConfigurationManager()
     {
         string basePath = Path.Combine(Path.GetTempPath(), "g0v0-multiplayer-hub-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(basePath);
-        return new ConfigurationManager(basePath);
+        return new ConfigManager(basePath);
     }
 
     private sealed class StubRulesetHashValidator(

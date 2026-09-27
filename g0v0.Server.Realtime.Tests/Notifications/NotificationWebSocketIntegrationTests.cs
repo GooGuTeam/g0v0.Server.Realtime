@@ -70,7 +70,7 @@ public class NotificationWebSocketIntegrationTests
         File.WriteAllText(
             Path.Combine(chatConfigBasePath, "config", "chat.json"),
             "{\"PublicMessageLimit\":100,\"PrivateMessageLimit\":100}");
-        builder.Services.AddSingleton(new ConfigurationManager(chatConfigBasePath));
+        builder.Services.AddSingleton(new ConfigManager(chatConfigBasePath));
         builder.Services.AddSingleton<IUserRepository>(new FakeUserRepository());
         builder.Services.AddSingleton<IRelationshipRepository>(new FakeRelationshipRepository());
         builder.Services.AddScoped<ChatPmStartChecker>();

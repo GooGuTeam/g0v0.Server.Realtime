@@ -1,9 +1,9 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Services;
-using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
 namespace g0v0.Server.Realtime.Objects.Players;
 
@@ -25,7 +25,7 @@ public interface IPlayerFacade
     /// <summary>
     /// Gets or sets the configuration manager, when needed by player operations.
     /// </summary>
-    ConfigurationManager? ConfigManager { get; set; }
+    ConfigManager? ConfigManager { get; set; }
 
     /// <summary>
     /// Gets or sets the score buffer, when spectator replay capture is available.

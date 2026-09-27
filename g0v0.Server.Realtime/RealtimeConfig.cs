@@ -7,7 +7,7 @@ namespace g0v0.Server.Realtime;
 /// <summary>
 /// Stores realtime server behavior settings.
 /// </summary>
-[ConfigurationFile("realtime")]
+[ConfigFile("realtime")]
 public class RealtimeConfig
 {
     /// <summary>
