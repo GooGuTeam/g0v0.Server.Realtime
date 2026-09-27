@@ -184,6 +184,14 @@ internal sealed class FakeRoomRepository : IRoomRepository
         return Task.CompletedTask;
     }
 
+    public Task UpdateRoomChannelId(long roomId, int channelId)
+    {
+        Room room = _rooms.Find(r => r.Id == roomId)
+                   ?? throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
+        room.ChannelId = channelId;
+        return Task.CompletedTask;
+    }
+
     public Task SetRoomEndDate(long roomId, DateTimeOffset? endDate)
     {
         Room room = _rooms.Find(r => r.Id == roomId)

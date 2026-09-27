@@ -2,7 +2,9 @@
 
 using System.Collections.Concurrent;
 using g0v0.Server.Common.Communication;
+using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
+using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.States;
 using g0v0.Server.Realtime.Objects.States.Activity;
@@ -212,6 +214,24 @@ public class ScoreProcessedNotificationServiceTests
         public Task WatchPlayer(IPlayer target) => Task.CompletedTask;
 
         public Task StopWatchPlayer(IPlayer target) => Task.CompletedTask;
+
+        public Task OnNewMessage(IPlayer player, ChatMessage message) => Task.CompletedTask;
+
+        public Task OnChannelJoin(IPlayer player, int channelId) => Task.CompletedTask;
+
+        public Task OnChannelLeave(IPlayer player, int channelId) => Task.CompletedTask;
+
+        public Task OnUserSilent(IPlayer player, int channelId, DateTimeOffset? until = null) => Task.CompletedTask;
+
+        public Task SendMessage(int channelId, string message, bool isAction, string? callbackUuid = null) => Task.CompletedTask;
+
+        public Task JoinChannel(IPlayer player, int channelId) => Task.CompletedTask;
+
+        public Task LeaveChannel(IPlayer player, int channelId) => Task.CompletedTask;
+
+        public Task Ack() => Task.CompletedTask;
+
+        public Task OnNewNotification(IPlayer player, NotificationDetail detail) => Task.CompletedTask;
     }
 
     private sealed class FakeScoreRepository : IScoreRepository

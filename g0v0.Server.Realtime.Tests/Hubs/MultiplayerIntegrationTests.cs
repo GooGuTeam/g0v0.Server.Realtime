@@ -12,6 +12,7 @@ using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Rooms;
 using g0v0.Server.Realtime.Services;
+using g0v0.Server.Realtime.Tests.Notifications;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -51,6 +52,7 @@ public class MultiplayerIntegrationTests
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton<FakeRoomRepository>(_roomRepository);
         builder.Services.AddSingleton<IRoomRepository>(_roomRepository);
+        builder.Services.AddSingleton<IChatRepository>(new FakeChatRepository());
         RecordingTransport ipcTransport = new();
         InterProcessCommunicationClient realtimeIpcClient = new(ipcTransport, "realtime-tests");
         InterProcessCommunicationClient lazerIpcClient = new(ipcTransport, "lazer");
@@ -67,7 +69,6 @@ public class MultiplayerIntegrationTests
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
             RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
-            IpcClient = serviceProvider.GetRequiredService<InterProcessCommunicationClient>(),
         });
         builder.Services.AddSingleton<RoomManager>();
 
@@ -255,6 +256,7 @@ public class MultiplayerIntegrationTests
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton<FakeRoomRepository>(_roomRepository);
         builder.Services.AddSingleton<IRoomRepository>(_roomRepository);
+        builder.Services.AddSingleton<IChatRepository>(new FakeChatRepository());
         builder.Services.AddSingleton(new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));
         builder.Services.AddSingleton<MultiplayerEventDispatcher>();
         builder.Services.AddSingleton(new RulesetManager(Path.GetTempPath()));
@@ -266,7 +268,6 @@ public class MultiplayerIntegrationTests
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
             RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
-            IpcClient = serviceProvider.GetRequiredService<InterProcessCommunicationClient>(),
         });
         builder.Services.AddSingleton<RoomManager>();
         builder.Services.AddSingleton<PlayerManager>();

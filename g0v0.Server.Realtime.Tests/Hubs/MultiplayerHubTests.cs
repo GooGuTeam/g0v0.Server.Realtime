@@ -3,14 +3,17 @@
 #pragma warning disable SA1117
 
 using g0v0.Server.Common.Communication;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.Rooms;
 using g0v0.Server.Realtime.Services;
+using g0v0.Server.Realtime.Tests.Notifications;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -49,6 +52,8 @@ public class MultiplayerHubTests
 
         MultiplayerRoom room = await host.Hub.CreateRoom(CreateRoomRequest(OsuMatchType.HeadToHead));
 
+        bool hostInChannel = await environment.NotificationServer.UserInChannel(room.ChannelID, 1);
+
         Assert.Multiple(() =>
         {
             Assert.That(room.RoomID, Is.GreaterThan(0));
@@ -56,9 +61,11 @@ public class MultiplayerHubTests
             Assert.That(room.Users, Has.Count.EqualTo(1));
             Assert.That(room.Users[0].UserID, Is.EqualTo(1));
             Assert.That(room.Host?.UserID, Is.EqualTo(1));
-            Assert.That(room.ChannelID, Is.EqualTo(1));
-            Assert.That(environment.CreateChannelRequestCount, Is.EqualTo(1));
-            Assert.That(environment.JoinChannelRequestCount, Is.EqualTo(1));
+            Assert.That(
+                environment.ChatRepository.Channels.Select(channel => channel.Name),
+                Does.Contain($"mp_{room.RoomID}"));
+            Assert.That(room.ChannelID, Is.GreaterThan(0));
+            Assert.That(hostInChannel, Is.True);
 
             // The host joins before subscribing to the room's event group, so
             // they do not receive their own UserJoined (which would play the
@@ -90,10 +97,14 @@ public class MultiplayerHubTests
 
         MultiplayerRoom joined = await guest.Hub.JoinRoomWithPassword(room.RoomID, "secret");
 
+        bool hostInChannel = await environment.NotificationServer.UserInChannel(room.ChannelID, 1);
+        bool guestInChannel = await environment.NotificationServer.UserInChannel(room.ChannelID, 2);
+
         Assert.Multiple(() =>
         {
             Assert.That(joined.Users, Has.Count.EqualTo(2));
-            Assert.That(environment.JoinChannelRequestCount, Is.EqualTo(2));
+            Assert.That(hostInChannel, Is.True);
+            Assert.That(guestInChannel, Is.True);
 
             // The host (already subscribed) receives the guest's UserJoined.
             Assert.That(host.Recorder.UserJoinedEvents, Has.Count.EqualTo(1));
@@ -482,12 +493,14 @@ public class MultiplayerHubTests
 
         await guest.Hub.LeaveRoom();
 
+        bool guestInChannel = await environment.NotificationServer.UserInChannel(room.ChannelID, 2);
+
         Assert.Multiple(() =>
         {
             Assert.That(room.Users.Any(u => u.UserID == 2), Is.False);
             Assert.That(host.Recorder.UserLeftEvents, Has.Count.EqualTo(1));
             Assert.That(host.Recorder.UserLeftEvents[0].UserID, Is.EqualTo(2));
-            Assert.That(environment.LeaveChannelRequestCount, Is.EqualTo(1));
+            Assert.That(guestInChannel, Is.False);
             Assert.That(environment.PlayerManager.GetPlayer<LazerPlayer>(2)?.State.CurrentRoom, Is.Null);
         });
     }
@@ -1025,6 +1038,13 @@ public class MultiplayerHubTests
         };
     }
 
+    private static ConfigurationManager CreateChatConfigurationManager()
+    {
+        string basePath = Path.Combine(Path.GetTempPath(), "g0v0-multiplayer-hub-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(basePath);
+        return new ConfigurationManager(basePath);
+    }
+
     private sealed class StubRulesetHashValidator(
         Func<int, IReadOnlyDictionary<string, string>, RulesetHashValidationFailure?> validate,
         Func<int, int, RulesetHashValidationFailure?>? validatePlayer = null)
@@ -1063,21 +1083,28 @@ public class MultiplayerHubTests
             IpcTransport = new RecordingTransport();
             IpcClient = new InterProcessCommunicationClient(IpcTransport, "realtime-tests");
             LazerIpcClient = new InterProcessCommunicationClient(IpcTransport, "lazer");
-            RegisterLazerMultiplayerResponders();
             PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, IpcClient);
             RoomRepository = new FakeRoomRepository();
             Router = new MultiplayerClientRouter();
 
-            ScopeFactory = new FakeScopeFactory(RoomRepository, beatmapRepository);
+            ChatRepository = new FakeChatRepository();
+            ScopeFactory = new FakeScopeFactory(RoomRepository, beatmapRepository, chatRepository: ChatRepository);
+            NotificationServer = new NotificationServer(
+                NullLogger<NotificationServer>.Instance,
+                new FakeRankedCache(),
+                CreateChatConfigurationManager(),
+                PlayerManager,
+                ScopeFactory);
             RulesetManager = new RulesetManager(Path.GetTempPath());
             RoomFacade = new RoomFacade(ScopeFactory, new MultiplayerEventDispatcher(
                 new FakeHubContext(Router),
                 NullLogger<MultiplayerEventDispatcher>.Instance), NullLogger<RoomFacade>.Instance)
             {
                 RulesetManager = RulesetManager,
-                IpcClient = IpcClient,
+                NotificationServer = NotificationServer,
+                PlayerManager = PlayerManager,
             };
-            RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, ScopeFactory, IpcClient, RoomFacade);
+            RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, ScopeFactory, RoomFacade);
             RulesetHashValidator = rulesetHashValidator ?? new RulesetHashValidator(
                 RulesetManager,
                 IpcClient,
@@ -1091,6 +1118,10 @@ public class MultiplayerHubTests
         public PlayerManager PlayerManager { get; }
 
         public FakeRoomRepository RoomRepository { get; }
+
+        public FakeChatRepository ChatRepository { get; }
+
+        public NotificationServer NotificationServer { get; }
 
         public RoomManager RoomManager { get; }
 
@@ -1111,12 +1142,6 @@ public class MultiplayerHubTests
         public MultiplayerClientRouter Router { get; }
 
         public FakeHubContext HubContext { get; }
-
-        public int CreateChannelRequestCount { get; private set; }
-
-        public int JoinChannelRequestCount { get; private set; }
-
-        public int LeaveChannelRequestCount { get; private set; }
 
         public async Task<TestHubHandle> ConnectAsync(int userId, string connectionId)
         {
@@ -1142,25 +1167,6 @@ public class MultiplayerHubTests
             handle.Recorder.Clear();
             handle.GroupManager.Reset();
             return handle;
-        }
-
-        private void RegisterLazerMultiplayerResponders()
-        {
-            LazerIpcClient.RegisterResponder<object, object>("create_mp_channel", _ =>
-            {
-                CreateChannelRequestCount++;
-                return new { channel_id = 1 };
-            });
-            LazerIpcClient.RegisterResponder<object, object>("make_user_join_mp_channel", _ =>
-            {
-                JoinChannelRequestCount++;
-                return new { };
-            });
-            LazerIpcClient.RegisterResponder<object, object>("make_user_leave_mp_channel", _ =>
-            {
-                LeaveChannelRequestCount++;
-                return new { };
-            });
         }
     }
 

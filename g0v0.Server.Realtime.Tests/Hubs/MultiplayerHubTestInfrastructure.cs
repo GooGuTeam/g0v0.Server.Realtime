@@ -429,17 +429,19 @@ internal sealed class FakeScopeFactory(
     FakeRoomRepository roomRepository,
     IBeatmapRepository? beatmapRepository = null,
     IRelationshipRepository? relationshipRepository = null,
-    IUserRepository? userRepository = null) : IServiceScopeFactory
+    IUserRepository? userRepository = null,
+    IChatRepository? chatRepository = null) : IServiceScopeFactory
 {
-    public IServiceScope CreateScope() => new FakeScope(roomRepository, beatmapRepository, relationshipRepository, userRepository);
+    public IServiceScope CreateScope() => new FakeScope(roomRepository, beatmapRepository, relationshipRepository, userRepository, chatRepository);
 
     private sealed class FakeScope(
         FakeRoomRepository roomRepository,
         IBeatmapRepository? beatmapRepository,
         IRelationshipRepository? relationshipRepository,
-        IUserRepository? userRepository) : IServiceScope
+        IUserRepository? userRepository,
+        IChatRepository? chatRepository) : IServiceScope
     {
-        public IServiceProvider ServiceProvider => new FakeServiceProvider(roomRepository, beatmapRepository, relationshipRepository, userRepository);
+        public IServiceProvider ServiceProvider => new FakeServiceProvider(roomRepository, beatmapRepository, relationshipRepository, userRepository, chatRepository);
 
         public void Dispose()
         {
@@ -450,7 +452,8 @@ internal sealed class FakeScopeFactory(
         FakeRoomRepository roomRepository,
         IBeatmapRepository? beatmapRepository,
         IRelationshipRepository? relationshipRepository,
-        IUserRepository? userRepository) : IServiceProvider
+        IUserRepository? userRepository,
+        IChatRepository? chatRepository) : IServiceProvider
     {
         public object? GetService(Type serviceType)
         {
@@ -460,7 +463,9 @@ internal sealed class FakeScopeFactory(
                 ? beatmapRepository
                 : serviceType == typeof(IRelationshipRepository)
                 ? relationshipRepository
-                : serviceType == typeof(IUserRepository) ? userRepository : (object?)null;
+                : serviceType == typeof(IUserRepository)
+                ? userRepository
+                : serviceType == typeof(IChatRepository) ? chatRepository : (object?)null;
         }
     }
 }

@@ -861,6 +861,8 @@ public class SpectatorHubTests
 
         public Task<User?> GetByIdAsync(int userId) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyList<int> userIds) => throw new NotSupportedException();
+
         public Task<string?> GetUsernameByIdAsync(int userId) =>
             Task.FromResult(_usernames.TryGetValue(userId, out string? username) ? username : null);
 

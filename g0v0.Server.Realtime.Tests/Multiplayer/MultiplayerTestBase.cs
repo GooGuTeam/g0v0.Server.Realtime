@@ -17,6 +17,7 @@ using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Rooms;
 using g0v0.Server.Realtime.Services;
 using g0v0.Server.Realtime.Tests.Hubs;
+using g0v0.Server.Realtime.Tests.Notifications;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Caching.Memory;
@@ -54,6 +55,8 @@ public abstract class MultiplayerTestBase
     internal FakeRelationshipRepository? RelationshipRepository { get; private set; }
 
     internal FakeUserRepository? UserRepository { get; private set; }
+
+    internal FakeChatRepository ChatRepository { get; private set; } = null!;
 
     /// <summary>
     /// Gets a value indicating whether gets whether beatmap validation should be enabled for this test fixture
@@ -107,7 +110,8 @@ public abstract class MultiplayerTestBase
         BeatmapRepository = EnableBeatmapValidation ? new FakeBeatmapRepository() : null;
         RelationshipRepository = EnableRelationshipValidation ? new FakeRelationshipRepository() : null;
         UserRepository = EnableRelationshipValidation ? new FakeUserRepository() : null;
-        FakeMultiplayerScopeFactory scopeFactory = new(RoomRepository, BeatmapRepository, RelationshipRepository, UserRepository);
+        ChatRepository = new FakeChatRepository();
+        FakeMultiplayerScopeFactory scopeFactory = new(RoomRepository, BeatmapRepository, RelationshipRepository, UserRepository, ChatRepository);
 
         RulesetManager rulesetManager = new(Path.GetTempPath());
         NoOpMultiplayerTransport ipcTransport = new();
@@ -125,10 +129,9 @@ public abstract class MultiplayerTestBase
         {
             RulesetManager = rulesetManager,
             RulesetHashValidator = rulesetHashValidator,
-            IpcClient = ipcClient,
         };
         RoomFacade = roomFacade;
-        RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, scopeFactory, ipcClient, roomFacade);
+        RoomManager = new RoomManager(NullLogger<RoomManager>.Instance, scopeFactory, roomFacade);
 
         Clients = new Mock<IHubClients<IMultiplayerClient>>();
         Groups = new Mock<IGroupManager>();
@@ -394,17 +397,19 @@ internal sealed class FakeMultiplayerScopeFactory(
     FakeRoomRepository roomRepository,
     FakeBeatmapRepository? beatmapRepository = null,
     FakeRelationshipRepository? relationshipRepository = null,
-    FakeUserRepository? userRepository = null) : IServiceScopeFactory
+    FakeUserRepository? userRepository = null,
+    IChatRepository? chatRepository = null) : IServiceScopeFactory
 {
-    public IServiceScope CreateScope() => new FakeScope(roomRepository, beatmapRepository, relationshipRepository, userRepository);
+    public IServiceScope CreateScope() => new FakeScope(roomRepository, beatmapRepository, relationshipRepository, userRepository, chatRepository);
 
     private sealed class FakeScope(
         FakeRoomRepository roomRepository,
         FakeBeatmapRepository? beatmapRepository,
         FakeRelationshipRepository? relationshipRepository,
-        FakeUserRepository? userRepository) : IServiceScope
+        FakeUserRepository? userRepository,
+        IChatRepository? chatRepository) : IServiceScope
     {
-        public IServiceProvider ServiceProvider => new FakeProvider(roomRepository, beatmapRepository, relationshipRepository, userRepository);
+        public IServiceProvider ServiceProvider => new FakeProvider(roomRepository, beatmapRepository, relationshipRepository, userRepository, chatRepository);
 
         public void Dispose()
         {
@@ -415,7 +420,8 @@ internal sealed class FakeMultiplayerScopeFactory(
         FakeRoomRepository roomRepository,
         FakeBeatmapRepository? beatmapRepository,
         FakeRelationshipRepository? relationshipRepository,
-        FakeUserRepository? userRepository) : IServiceProvider
+        FakeUserRepository? userRepository,
+        IChatRepository? chatRepository) : IServiceProvider
     {
         public object? GetService(Type serviceType)
         {
@@ -427,7 +433,9 @@ internal sealed class FakeMultiplayerScopeFactory(
                         ? relationshipRepository
                         : serviceType == typeof(IUserRepository)
                             ? userRepository
-                            : (object?)null;
+                            : serviceType == typeof(IChatRepository)
+                                ? chatRepository
+                                : (object?)null;
         }
     }
 }
@@ -544,6 +552,9 @@ internal sealed class FakeUserRepository : IUserRepository
 
     public Task<User?> GetByIdAsync(int userId)
         => Task.FromResult(_users.GetValueOrDefault(userId));
+
+    public Task<IReadOnlyList<User>> GetByIdsAsync(IReadOnlyList<int> userIds)
+        => Task.FromResult<IReadOnlyList<User>>(userIds.Where(_users.ContainsKey).Select(userId => _users[userId]).ToList());
 
     public Task<string?> GetUsernameByIdAsync(int userId)
         => Task.FromResult(_users.TryGetValue(userId, out User? user) ? user.Username : null);
