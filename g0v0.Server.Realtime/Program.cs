@@ -8,6 +8,9 @@ using g0v0.Server.Common.Extensions;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Notifications;
+using g0v0.Server.Realtime.Notifications.Bot;
+using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Rooms;
 using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.SignalR;
@@ -83,6 +86,9 @@ public static class Program
         builder.Services.AddSingleton<ScoreUploader>();
         builder.Services.AddSingleton<ScoreProcessedNotificationService>();
         builder.Services.AddSingleton<MultiplayerEventDispatcher>();
+        builder.Services.AddSingleton<INotificationServer, NotificationServer>();
+        builder.Services.AddScoped<ChatPmStartChecker>();
+        builder.Services.AddScoped<ChatChannelDtoFactory>();
         builder.Services.AddSingleton<IRoomFacade>(serviceProvider => new RoomFacade(
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             serviceProvider.GetRequiredService<MultiplayerEventDispatcher>(),
@@ -90,9 +96,29 @@ public static class Program
         {
             RulesetManager = serviceProvider.GetRequiredService<RulesetManager>(),
             RulesetHashValidator = serviceProvider.GetRequiredService<IRulesetHashValidator>(),
-            IpcClient = serviceProvider.GetRequiredService<InterProcessCommunicationClient>(),
+            NotificationServer = serviceProvider.GetRequiredService<INotificationServer>(),
+            PlayerManager = serviceProvider.GetRequiredService<PlayerManager>(),
         });
         builder.Services.AddSingleton<RoomManager>();
+        builder.Services.AddSingleton<IBanchoBot>(serviceProvider =>
+        {
+            BanchoBot bot = new(
+                serviceProvider.GetRequiredService<ILogger<BanchoBot>>(),
+                serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+                serviceProvider.GetRequiredService<INotificationServer>(),
+                serviceProvider.GetRequiredService<PlayerManager>());
+            bot.Initialize();
+            return bot;
+        });
+        builder.Services.AddSingleton<LazerWebSocketListener>();
+        builder.Services.AddSingleton(serviceProvider =>
+        {
+            ChatIpcHandler handler = new(
+                serviceProvider.GetRequiredService<InterProcessCommunicationClient>(),
+                serviceProvider.GetRequiredService<IServiceScopeFactory>());
+            handler.Register();
+            return handler;
+        });
 
         // Copy from osu-server-spectator
         builder.Services.AddSignalR()
@@ -134,6 +160,13 @@ public static class Program
         app.MapHub<MetadataHub>("/signalr/metadata");
         app.MapHub<SpectatorHub>("/signalr/spectator");
         app.MapHub<MultiplayerHub>("/signalr/multiplayer");
+
+        app.UseWebSockets();
+        app.Map("/notification-server", async context =>
+        {
+            LazerWebSocketListener listener = context.RequestServices.GetRequiredService<LazerWebSocketListener>();
+            await listener.HandleAsync(context);
+        });
 
         return app;
     }

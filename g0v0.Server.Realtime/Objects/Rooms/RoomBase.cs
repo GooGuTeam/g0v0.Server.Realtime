@@ -38,9 +38,6 @@ public abstract class RoomBase : IRoom
 {
     private const int HighestOfficialRulesetId = 3;
 
-    private const string MakeUserJoinChannelCommand = "make_user_join_mp_channel";
-    private const string MakeUserLeaveChannelCommand = "make_user_leave_mp_channel";
-
     /// <inheritdoc />
     public long RoomId { get; }
 
@@ -99,6 +96,16 @@ public abstract class RoomBase : IRoom
     /// Gets the room dependency facade.
     /// </summary>
     protected IRoomFacade Facade { get; }
+
+    /// <summary>
+    /// Resolves the connected player instance for a user ID, or <see langword="null"/>.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <returns>The player, or <see langword="null"/> when not connected.</returns>
+    protected Objects.Players.IPlayer? GetPlayer(int userId)
+    {
+        return Facade.PlayerManager?.GetPlayer<Objects.Players.IPlayer>(userId);
+    }
 
     /// <summary>
     /// Gets or sets the callback invoked when the room is disbanded (no users remain).
@@ -311,13 +318,13 @@ public abstract class RoomBase : IRoom
             }
 
             await WithRepository(repo => repo.AddUserToRoom(RoomId, userId));
-            if (Facade.IpcClient != null)
+            if (Facade.NotificationServer != null && ChannelId > 0)
             {
-                await Facade.IpcClient.RequestAsync<object>(ServerIdentify.Lazer, MakeUserJoinChannelCommand, new
+                Players.IPlayer? player = GetPlayer(user.UserID);
+                if (player != null)
                 {
-                    user_id = user.UserID,
-                    channel_id = ChannelId,
-                });
+                    await Facade.NotificationServer.JoinChannel(player, ChannelId);
+                }
             }
 
             await HandleUserJoined(user);
@@ -345,13 +352,13 @@ public abstract class RoomBase : IRoom
 
             try
             {
-                if (Facade.IpcClient != null)
+                if (Facade.NotificationServer != null && ChannelId > 0)
                 {
-                    await Facade.IpcClient.RequestAsync<object>(ServerIdentify.Lazer, MakeUserLeaveChannelCommand, new
+                    Players.IPlayer? player = GetPlayer(user.UserID);
+                    if (player != null)
                     {
-                        user_id = user.UserID,
-                        channel_id = ChannelId,
-                    });
+                        await Facade.NotificationServer.LeaveChannel(player, ChannelId);
+                    }
                 }
             }
             catch (InterProcessCommunicationRemoteException)
@@ -1563,13 +1570,13 @@ public abstract class RoomBase : IRoom
     {
         Users.Remove(user);
         await WithRepository(repo => repo.RemoveUserFromRoom(RoomId, user.UserID));
-        if (Facade.IpcClient != null)
+        if (Facade.NotificationServer != null && ChannelId > 0)
         {
-            await Facade.IpcClient.RequestAsync<object>(ServerIdentify.Lazer, MakeUserLeaveChannelCommand, new
+            Players.IPlayer? player = GetPlayer(user.UserID);
+            if (player != null)
             {
-                user_id = user.UserID,
-                channel_id = ChannelId,
-            });
+                await Facade.NotificationServer.LeaveChannel(player, ChannelId);
+            }
         }
 
         await HandleUserLeft(user);

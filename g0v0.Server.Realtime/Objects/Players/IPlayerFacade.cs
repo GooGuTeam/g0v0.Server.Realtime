@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Services;
 using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
@@ -43,6 +44,11 @@ public interface IPlayerFacade
     ScoreProcessedNotificationService? ScoreProcessedNotificationService { get; set; }
 
     /// <summary>
+    /// Gets or sets the real-time chat notification server, when chat is available.
+    /// </summary>
+    INotificationServer? NotificationServer { get; set; }
+
+    /// <summary>
     /// Gets or sets the logger used for player lifecycle events.
     /// </summary>
     ILogger? Logger { get; set; }
@@ -60,6 +66,7 @@ public interface IPlayerFacade
         ScoreBuffer = facade.ScoreBuffer ?? ScoreBuffer;
         ScoreUploader = facade.ScoreUploader ?? ScoreUploader;
         ScoreProcessedNotificationService = facade.ScoreProcessedNotificationService ?? ScoreProcessedNotificationService;
+        NotificationServer = facade.NotificationServer ?? NotificationServer;
         Logger = facade.Logger ?? Logger;
     }
 }

@@ -1,12 +1,10 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Collections.Concurrent;
-using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Objects.Rooms;
-using Newtonsoft.Json;
 using osu.Game.Online.Multiplayer;
 using OsuMatchType = osu.Game.Online.Rooms.MatchType;
 
@@ -18,7 +16,6 @@ namespace g0v0.Server.Realtime.Manager;
 public class RoomManager(
     ILogger<RoomManager> logger,
     IServiceScopeFactory scopeFactory,
-    InterProcessCommunicationClient ipcClient,
     IRoomFacade roomFacade)
 {
     private readonly ConcurrentDictionary<long, IRoom> _rooms = new();
@@ -110,21 +107,7 @@ public class RoomManager(
             throw;
         }
 
-        CreateChannelResult? result = await ipcClient.RequestAsync<CreateChannelResult>(
-            ServerIdentify.Lazer,
-            "create_mp_channel",
-            new
-            {
-                room_id = dbRoom.Id
-            });
-        if (result == null)
-        {
-            logger.LogWarning("Failed to create multiplayer channel for room {RoomId}.", dbRoom.Id);
-        }
-        else
-        {
-            roomInstance.ChannelId = result.ChannelId;
-        }
+        roomInstance.ChannelId = await EnsureRoomChannelAsync(dbRoom);
 
         AddRoom(roomInstance);
         logger.LogInformation(
@@ -178,21 +161,7 @@ public class RoomManager(
 
         if (roomInstance.ChannelId == 0)
         {
-            CreateChannelResult? result = await ipcClient.RequestAsync<CreateChannelResult>(
-                ServerIdentify.Lazer,
-                "create_mp_channel",
-                new
-                {
-                    room_id = dbRoom.Id
-                });
-            if (result == null)
-            {
-                logger.LogWarning("Failed to create multiplayer channel for room {RoomId}.", dbRoom.Id);
-            }
-            else
-            {
-                roomInstance.ChannelId = result.ChannelId;
-            }
+            roomInstance.ChannelId = await EnsureRoomChannelAsync(dbRoom);
         }
 
         AddRoom(roomInstance);
@@ -289,9 +258,30 @@ public class RoomManager(
         };
     }
 
-    private class CreateChannelResult
+    /// <summary>
+    /// Ensures a multiplayer chat channel exists for a room, creating it with
+    /// the name <c>mp_{roomId}</c> when needed and returning its channel ID.
+    /// </summary>
+    /// <param name="dbRoom">The database room.</param>
+    /// <returns>The chat channel ID.</returns>
+    private async Task<int> EnsureRoomChannelAsync(Room dbRoom)
     {
-        [JsonProperty("channel_id")]
-        public int ChannelId { get; set; }
+        if (dbRoom.ChannelId > 0)
+        {
+            return dbRoom.ChannelId;
+        }
+
+        using IServiceScope scope = scopeFactory.CreateScope();
+        IChatRepository chatRepository = scope.ServiceProvider.GetRequiredService<IChatRepository>();
+
+        ChatChannel channel = await chatRepository.GetOrCreateMultiplayerChannelAsync(dbRoom.Id);
+        if (dbRoom.ChannelId == channel.ChannelId)
+        {
+            return channel.ChannelId;
+        }
+
+        IRoomRepository roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
+        await roomRepository.UpdateRoomChannelId(dbRoom.Id, channel.ChannelId);
+        return channel.ChannelId;
     }
 }

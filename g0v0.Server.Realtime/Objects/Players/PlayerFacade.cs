@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Services;
 using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
@@ -29,6 +30,9 @@ public class PlayerFacade(PlayerManager manager) : IPlayerFacade
 
     /// <inheritdoc />
     public ScoreProcessedNotificationService? ScoreProcessedNotificationService { get; set; }
+
+    /// <inheritdoc />
+    public INotificationServer? NotificationServer { get; set; }
 
     /// <inheritdoc />
     public ILogger? Logger { get; set; }

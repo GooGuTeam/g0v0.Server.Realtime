@@ -42,10 +42,6 @@ public class LazerRealtimeHub<T>(PlayerManager playerManager) : Hub<T>
     /// <returns>The current lazer player.</returns>
     protected LazerPlayer GetOrCreatePlayer(IPlayerFacade facade)
     {
-        return playerManager.GetOrCreatePlayer(
-            Context.GetUserId(),
-            "Lazer",
-            () => new LazerPlayer(Context.GetUserId(), facade),
-            player => player.Facade.ApplyNonNullDependenciesFrom(facade));
+        return LazerPlayer.GetOrCreate(playerManager, Context.GetUserId(), facade);
     }
 }

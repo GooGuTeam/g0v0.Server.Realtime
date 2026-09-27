@@ -1,8 +1,8 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
+using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Services;
 using ConfigurationManager = g0v0.Server.Common.Configuration.ConfigurationManager;
 
@@ -44,7 +44,12 @@ public interface IRoomFacade
     IRulesetHashValidator? RulesetHashValidator { get; set; }
 
     /// <summary>
-    /// Gets or sets the inter-process communication client.
+    /// Gets or sets the notification server used to manage chat channel membership.
     /// </summary>
-    InterProcessCommunicationClient? IpcClient { get; set; }
+    INotificationServer? NotificationServer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the player manager used to resolve connected players.
+    /// </summary>
+    Manager.PlayerManager? PlayerManager { get; set; }
 }
