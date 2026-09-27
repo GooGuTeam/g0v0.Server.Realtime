@@ -1,10 +1,12 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Database.Models;
+using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.States;
 using g0v0.Server.Realtime.Objects.States.Activity;
 using osu.Game.Online.Spectator;
-using osu.Game.Scoring;
 using osu.Game.Users;
+using Score = osu.Game.Scoring.Score;
 
 namespace g0v0.Server.Realtime.Objects.Players;
 
@@ -194,6 +196,98 @@ public interface IPlayer
     /// <param name="roomId">The ID of the room to leave.</param>
     /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
     Task LeaveRoom(long roomId);
+
+    #endregion
+
+    #region Chat
+
+    /// <summary>
+    /// Handles a chat message being sent to a channel this player is in.
+    /// </summary>
+    /// <param name="player">The player that sent the message.</param>
+    /// <param name="message">The sent message.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task OnNewMessage(IPlayer player, ChatMessage message);
+
+    /// <summary>
+    /// Handles another player joining a shared channel.
+    /// </summary>
+    /// <param name="player">The player that joined.</param>
+    /// <param name="channelId">The channel ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task OnChannelJoin(IPlayer player, int channelId);
+
+    /// <summary>
+    /// Handles another player leaving a shared channel.
+    /// </summary>
+    /// <param name="player">The player that left.</param>
+    /// <param name="channelId">The channel ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task OnChannelLeave(IPlayer player, int channelId);
+
+    /// <summary>
+    /// Handles a user being silenced in a channel.
+    /// </summary>
+    /// <param name="player">The silenced player.</param>
+    /// <param name="channelId">The channel ID.</param>
+    /// <param name="until">The timestamp until which the user is silenced, if finite.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task OnUserSilent(IPlayer player, int channelId, DateTimeOffset? until = null);
+
+    /// <summary>
+    /// Handles a private notification being delivered to this player.
+    /// </summary>
+    /// <param name="player">The player receiving the notification.</param>
+    /// <param name="detail">The notification detail.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task OnNewNotification(IPlayer player, NotificationDetail detail);
+
+    /// <summary>
+    /// Sends a chat message to a channel.
+    /// </summary>
+    /// <remarks>
+    /// The actual sending is performed by the chat controllers, which persist
+    /// the message and broadcast it through the notification server; this
+    /// member exists so generic player code can trigger a send.
+    /// </remarks>
+    /// <param name="channelId">The channel ID.</param>
+    /// <param name="message">The message content.</param>
+    /// <param name="isAction">Whether the message is an action (<c>/me</c>).</param>
+    /// <param name="callbackUuid">The optional client-generated UUID for deduplication.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task SendMessage(int channelId, string message, bool isAction, string? callbackUuid = null);
+
+    /// <summary>
+    /// Joins a player to a channel.
+    /// </summary>
+    /// <remarks>
+    /// The actual joining is performed by the chat controllers through the
+    /// notification server; this member exists so generic player code can
+    /// trigger a join.
+    /// </remarks>
+    /// <param name="player">The player joining.</param>
+    /// <param name="channelId">The channel ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task JoinChannel(IPlayer player, int channelId);
+
+    /// <summary>
+    /// Removes a player from a channel.
+    /// </summary>
+    /// <remarks>
+    /// The actual leaving is performed by the chat controllers through the
+    /// notification server; this member exists so generic player code can
+    /// trigger a leave.
+    /// </remarks>
+    /// <param name="player">The player leaving.</param>
+    /// <param name="channelId">The channel ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task LeaveChannel(IPlayer player, int channelId);
+
+    /// <summary>
+    /// Keeps the player's chat connection alive (ack).
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task Ack();
 
     #endregion
 }

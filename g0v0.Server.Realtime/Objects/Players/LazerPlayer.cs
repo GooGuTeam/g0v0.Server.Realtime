@@ -1,5 +1,9 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Database.Models;
+using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Notifications;
+using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.States.Activity;
 using osu.Game.Online.Spectator;
 using osu.Game.Users;
@@ -14,6 +18,8 @@ namespace g0v0.Server.Realtime.Objects.Players;
 public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(playerId, facade)
 {
     private readonly Lock _hubConnectionLock = new();
+
+    private int _chatConnectionCount;
 
     private string _metadataConnectionId = string.Empty;
     private string _spectatorConnectionId = string.Empty;
@@ -104,6 +110,76 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
 
     #endregion
 
+    #region Chat
+
+    /// <summary>
+    /// Gets or sets the chat message callbacks, one entry per bound notification WebSocket connection.
+    /// </summary>
+    /// <remarks>
+    /// Assigners must replace the whole list (copy-on-write) instead of mutating it, so the
+    /// <see cref="OnNewMessage"/> invoker can iterate the current list without synchronization.
+    /// </remarks>
+    public IReadOnlyList<Func<ChatMessage, Task>> ChatMessageReceivedHandlers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the channel-joined callbacks, one entry per bound notification WebSocket connection.
+    /// </summary>
+    /// <remarks>
+    /// Assigners must replace the whole list (copy-on-write) instead of mutating it, so the
+    /// <see cref="OnChannelJoin"/> invoker can iterate the current list without synchronization.
+    /// </remarks>
+    public IReadOnlyList<Func<int, Task>> ChatChannelJoinedHandlers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the channel-left callbacks, one entry per bound notification WebSocket connection.
+    /// </summary>
+    /// <remarks>
+    /// Assigners must replace the whole list (copy-on-write) instead of mutating it, so the
+    /// <see cref="OnChannelLeave"/> invoker can iterate the current list without synchronization.
+    /// </remarks>
+    public IReadOnlyList<Func<int, Task>> ChatChannelLeftHandlers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the user-silenced callbacks, one entry per bound notification WebSocket connection.
+    /// </summary>
+    /// <remarks>
+    /// Assigners must replace the whole list (copy-on-write) instead of mutating it, so the
+    /// <see cref="OnUserSilent"/> invoker can iterate the current list without synchronization.
+    /// </remarks>
+    public IReadOnlyList<Func<int, DateTimeOffset?, Task>> ChatUserSilencedHandlers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the private-notification callbacks, one entry per bound notification WebSocket connection.
+    /// </summary>
+    /// <remarks>
+    /// Assigners must replace the whole list (copy-on-write) instead of mutating it, so the
+    /// <see cref="OnNewNotification"/> invoker can iterate the current list without synchronization.
+    /// </remarks>
+    public IReadOnlyList<Func<NotificationDetail, Task>> NotificationReceivedHandlers { get; set; } = [];
+
+    #endregion
+
+    /// <summary>
+    /// Gets the existing lazer player or creates a pending player for the specified user.
+    /// </summary>
+    /// <param name="playerManager">The player manager.</param>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="facade">The dependency facade to merge into the player.</param>
+    /// <returns>The existing or created lazer player.</returns>
+    public static LazerPlayer GetOrCreate(PlayerManager playerManager, int userId, IPlayerFacade? facade = null)
+    {
+        if (facade == null)
+        {
+            facade = new PlayerFacade(playerManager);
+        }
+
+        return playerManager.GetOrCreatePlayer(
+            userId,
+            "Lazer",
+            () => new LazerPlayer(userId, facade),
+            player => player.Facade.ApplyNonNullDependenciesFrom(facade));
+    }
+
     /// <inheritdoc />
     public override Task OnPlayerOnline(IPlayer player)
     {
@@ -172,9 +248,130 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
         return OnScoreProcessedForSpectatorHub != null ? OnScoreProcessedForSpectatorHub(scoreId) : Task.CompletedTask;
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Delivers the message through the bound <see cref="LazerWebSocketListener"/>,
+    /// which serializes it to a <c>chat.message.new</c> WebSocket event.
+    /// </remarks>
+    public override async Task OnNewMessage(IPlayer player, ChatMessage message)
+    {
+        foreach (Func<ChatMessage, Task> handler in ChatMessageReceivedHandlers)
+        {
+            try
+            {
+                await handler(message);
+            }
+            catch (Exception exception)
+            {
+                Facade.Logger?.LogWarning(
+                    exception,
+                    "Failed to invoke {CallbackName} callback for player {UserId} (Lazer).",
+                    nameof(ChatMessageReceivedHandlers),
+                    PlayerId);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Delivers the join through the bound <see cref="LazerWebSocketListener"/>,
+    /// which serializes it to a <c>chat.channel.join</c> WebSocket event.
+    /// </remarks>
+    public override async Task OnChannelJoin(IPlayer player, int channelId)
+    {
+        foreach (Func<int, Task> handler in ChatChannelJoinedHandlers)
+        {
+            try
+            {
+                await handler(channelId);
+            }
+            catch (Exception exception)
+            {
+                Facade.Logger?.LogWarning(
+                    exception,
+                    "Failed to invoke {CallbackName} callback for player {UserId} (Lazer).",
+                    nameof(ChatChannelJoinedHandlers),
+                    PlayerId);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Delivers the leave through the bound <see cref="LazerWebSocketListener"/>,
+    /// which serializes it to a <c>chat.channel.part</c> WebSocket event.
+    /// </remarks>
+    public override async Task OnChannelLeave(IPlayer player, int channelId)
+    {
+        foreach (Func<int, Task> handler in ChatChannelLeftHandlers)
+        {
+            try
+            {
+                await handler(channelId);
+            }
+            catch (Exception exception)
+            {
+                Facade.Logger?.LogWarning(
+                    exception,
+                    "Failed to invoke {CallbackName} callback for player {UserId} (Lazer).",
+                    nameof(ChatChannelLeftHandlers),
+                    PlayerId);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public override async Task OnUserSilent(IPlayer player, int channelId, DateTimeOffset? until = null)
+    {
+        foreach (Func<int, DateTimeOffset?, Task> handler in ChatUserSilencedHandlers)
+        {
+            try
+            {
+                await handler(channelId, until);
+            }
+            catch (Exception exception)
+            {
+                Facade.Logger?.LogWarning(
+                    exception,
+                    "Failed to invoke {CallbackName} callback for player {UserId} (Lazer).",
+                    nameof(ChatUserSilencedHandlers),
+                    PlayerId);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Delivers the notification through the bound <see cref="LazerWebSocketListener"/>,
+    /// which serializes it to the upstream <c>new</c> WebSocket event.
+    /// </remarks>
+    public override async Task OnNewNotification(IPlayer player, NotificationDetail detail)
+    {
+        foreach (Func<NotificationDetail, Task> handler in NotificationReceivedHandlers)
+        {
+            try
+            {
+                await handler(detail);
+            }
+            catch (Exception exception)
+            {
+                Facade.Logger?.LogWarning(
+                    exception,
+                    "Failed to invoke {CallbackName} callback for player {UserId} (Lazer).",
+                    nameof(NotificationReceivedHandlers),
+                    PlayerId);
+            }
+        }
+    }
+
     /// <summary>
     /// Marks a specific hub as connected for this player.
     /// </summary>
+    /// <remarks>
+    /// The player is online while any connection exists: the three realtime
+    /// hubs and the chat WebSockets alike. The player only goes offline once
+    /// the last of those connections is gone.
+    /// </remarks>
     /// <param name="hubName">The connected hub name.</param>
     /// <param name="connectionId">The connection ID.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -193,7 +390,7 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
         bool shouldGoOnline;
         lock (_hubConnectionLock)
         {
-            shouldGoOnline = !HasAnyHubConnection();
+            shouldGoOnline = !HasAnyConnection();
 
             switch (hubName)
             {
@@ -231,8 +428,13 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     }
 
     /// <summary>
-    /// Marks a specific hub as disconnected for this player and removes the player when no realtime hubs remain.
+    /// Marks a specific hub as disconnected for this player and removes the player when no connections remain.
     /// </summary>
+    /// <remarks>
+    /// Chat WebSocket connections keep the player online exactly like hub
+    /// connections do, so the player is only removed once this was the last
+    /// connection of any kind.
+    /// </remarks>
     /// <param name="hubName">The disconnected hub name.</param>
     /// <param name="connectionId">The disconnected connection ID.</param>
     /// <param name="exception">The exception that caused the disconnection, if any.</param>
@@ -266,7 +468,7 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
             if (disconnectedCurrentConnection)
             {
                 ClearHubConnection(hubName);
-                shouldGoOffline = !HasAnyHubConnection();
+                shouldGoOffline = !HasAnyConnection();
             }
         }
 
@@ -282,6 +484,61 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
 
         return true;
     }
+
+    /// <summary>
+    /// Registers a chat WebSocket connection for this player.
+    /// </summary>
+    /// <remarks>
+    /// The player is online while any connection exists, so the first chat
+    /// WebSocket brings an otherwise disconnected player online. Multiple
+    /// chat WebSockets per player are supported (browser tabs, devices).
+    /// </remarks>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task ChatConnected()
+    {
+        bool shouldGoOnline;
+        lock (_hubConnectionLock)
+        {
+            shouldGoOnline = !HasAnyConnection();
+            _chatConnectionCount++;
+        }
+
+        if (shouldGoOnline)
+        {
+            await Online();
+        }
+    }
+
+    /// <summary>
+    /// Removes a chat WebSocket connection for this player.
+    /// </summary>
+    /// <remarks>
+    /// The player only goes offline once the last connection (chat WebSockets
+    /// and realtime hubs alike) is gone.
+    /// </remarks>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public async Task ChatDisconnected()
+    {
+        bool shouldGoOffline;
+        lock (_hubConnectionLock)
+        {
+            if (_chatConnectionCount == 0)
+            {
+                return;
+            }
+
+            _chatConnectionCount--;
+            shouldGoOffline = !HasAnyConnection();
+        }
+
+        if (shouldGoOffline)
+        {
+            await Offline(isKicked: false);
+        }
+    }
+
+    private bool HasAnyConnection() =>
+        HasAnyHubConnection() || _chatConnectionCount > 0;
 
     private bool HasAnyHubConnection() =>
         !string.IsNullOrEmpty(_metadataConnectionId) ||

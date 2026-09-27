@@ -2,14 +2,16 @@
 
 using System.Diagnostics;
 using g0v0.Server.Common.Configuration;
+using g0v0.Server.Common.Database.Models;
+using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.States;
 using g0v0.Server.Realtime.Objects.States.Activity;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
-using osu.Game.Scoring;
 using osu.Game.Users;
+using Score = osu.Game.Scoring.Score;
 
 namespace g0v0.Server.Realtime.Objects.Players;
 
@@ -253,6 +255,95 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
         }
 
         await facade.Manager.UserLeaveRoom(facade.RoomManager, this);
+    }
+
+    /// <inheritdoc />
+    public virtual Task OnNewMessage(IPlayer player, ChatMessage message)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task OnChannelJoin(IPlayer player, int channelId)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task OnChannelLeave(IPlayer player, int channelId)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task OnUserSilent(IPlayer player, int channelId, DateTimeOffset? until = null)
+    {
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Actual message sending is performed by the chat controllers through the
+    /// notification server (which persists and broadcasts); this generic
+    /// implementation only delegates when a notification server is available.
+    /// </remarks>
+    public virtual async Task SendMessage(int channelId, string message, bool isAction, string? callbackUuid = null)
+    {
+        if (facade.NotificationServer == null)
+        {
+            return;
+        }
+
+        await facade.NotificationServer.SendMessage(channelId, PlayerId, message, isAction, callbackUuid);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Actual channel joining is performed by the chat controllers through the
+    /// notification server; this generic implementation only delegates when a
+    /// notification server is available.
+    /// </remarks>
+    public virtual async Task JoinChannel(IPlayer player, int channelId)
+    {
+        if (facade.NotificationServer == null)
+        {
+            return;
+        }
+
+        await facade.NotificationServer.JoinChannel(player, channelId);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Actual channel leaving is performed by the chat controllers through the
+    /// notification server; this generic implementation only delegates when a
+    /// notification server is available.
+    /// </remarks>
+    public virtual async Task LeaveChannel(IPlayer player, int channelId)
+    {
+        if (facade.NotificationServer == null)
+        {
+            return;
+        }
+
+        await facade.NotificationServer.LeaveChannel(player, channelId);
+    }
+
+    /// <inheritdoc />
+    public virtual async Task Ack()
+    {
+        if (facade.NotificationServer == null)
+        {
+            return;
+        }
+
+        await facade.NotificationServer.Ack(this);
+    }
+
+    /// <inheritdoc />
+    public virtual Task OnNewNotification(IPlayer player, NotificationDetail detail)
+    {
+        return Task.CompletedTask;
     }
 
     /// <summary>
