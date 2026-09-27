@@ -96,6 +96,45 @@ SignalR specifics:
   call — the lazer API's `/app/router/lio.py` semantics (participant dedup, empty-room end) are implemented directly in
   the repository layer.
 
+### Chat & notifications
+
+- `INotificationServer`/`NotificationServer` (`Notifications/`) is the chat server (the C# counterpart of the lazer API
+  `ChatServer` plus osu-web's chat model): per-user connections live in memory, membership/read markers and channels'
+  `last_message_id` are persisted through `IChatRepository` (`chat_user_channels`, `chat_channels`), public channel
+  activity lives in the Redis sorted set `chat:channel:{channelId}` behind `IRankedCache`
+  (`Caching/IRankedCache.cs`, 60 second window refreshed by `POST /chat/ack`), and `message_throttle:{userId}:{PM|PUBLIC}`
+  enforces the rate limit. Chat limits come from the optional `config/chat.json` (`ChatConfig` in the Realtime root). It
+  never touches SignalR — it broadcasts by calling `IPlayer.OnNewMessage`, `OnChannelJoin`, `OnChannelLeave`,
+  `OnUserSilent` and `OnNewNotification`.
+- Chat semantics follow osu-web: `addUser` only announces a join when it inserts a row or unhides one, `removeUser`
+  hides PM/announcement rows instead of deleting them, a new message updates `last_message_id`, marks the sender's row
+  read and unhides the channel, and read markers never move backwards. Broadcast scopes mirror `ChatMessageEvent`:
+  channel join/part go to every connection of the acting user, a `!` command goes back to its sender only, public
+  channels reach the users that acknowledged them within the activity window, and every other channel reaches its
+  membership rows (a PM channel falls back to the two IDs in `pm_{user1}_{user2}`).
+- `GET /chat/channels` is osu-web's `ChannelsController::index`: every joinable public channel with the plain
+  channel transform and no include. The user's own channels follow osu-web's `UserChannelList`
+  (`GET /chat/presence`, `GET /chat/updates`): the visible `chat_user_channels` rows ordered by channel ID, with PM
+  conversations of blocked (non-bot) users filtered out by `Channel::isVisibleFor` rules; `/chat/presence` attaches the
+  newest messages of each channel (one query, filtered like `Message::filter`: other users' `!` commands and, for public
+  channels, anything older than the configured backlog). `ChatChannelDtoFactory` (`Objects/Chat/`) builds every channel
+  and message payload (`ChannelsController`, `ChatController`, `MessagesController` and the WebSocket listener share it);
+  `ChatPmStartChecker` implements the `ChatPmStart` block/friends-only rules used by `chat/new` and `POST /chat/channels`.
+- Messages are validated like `Channel::receiveMessage`: newlines collapse into spaces, blank and over-long messages are
+  rejected with `422`, and too-fast senders get `429` through `ChatMessageRejectedException` (`ChatErrorResults` maps it).
+- Every `POST` chat endpoint reads its parameters through `ChatRequestParameters` (`Controllers/`), accepting a JSON body,
+  a form body or the query string like osu-web's `get_params(request()->all())` — so lazer's form-encoded requests work.
+- `LazerWebSocketListener` serves `/notification-server` (mapped in `Program.ConfigureApp`) and maps those callbacks to
+  WebSocket frames: `chat.channel.join`/`part` carry the whole channel object and `chat.message.new` carries the message
+  plus the sender compact, as in osu-web's `ChatChannelEvent`/`ChatMessageEvent`. WebSocket frames use System.Text.Json
+  with a snake_case naming policy; IPC payloads use Newtonsoft.Json. Chat events are gated behind the client's
+  `chat.start`/`chat.end` messages.
+- `RoomManager.EnsureRoomChannelAsync` creates the `mp_{roomId}` channel through `IChatRepository` and writes the ID back
+  with `IRoomRepository.UpdateRoomChannelId`; rooms add/remove their members through the notification server instead of
+  IPC, so any test that creates a room needs `IChatRepository` in its scope factory.
+- `ChatIpcHandler` registers the `new_notification` notice, and `BanchoBot` executes `!` commands declared with
+  `[BotCommand]` in `Notifications/Commands/`.
+
 Player model:
 - `PlayerManager` is a singleton registry keyed by `(playerId, server)`. A player may have multiple `IPlayer` instances per `PlayerId` (one per source server). `GetPlayer<T>(int)` returns the first match across servers; `GetPlayerAllInstances(int)` returns all.
 - Hubs install per-hub callback delegates onto the `LazerPlayer` (e.g. `OnUserBeganPlayingForSpectatorHub`, `OnPlayerOnlineForMetadataHub`). `OnDisconnectedAsync` clears them. The hub never holds direct references to other connections — it pushes to `IHubContext<TSelf, TClient>.Clients.User(...)` so reconnects are transparent.

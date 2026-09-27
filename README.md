@@ -15,7 +15,11 @@ each feature.
         - [x] Standard Play
         - [ ] Ranked Play
     - [ ] RefereeHub
-- [ ] Chatting (NotificationServer)
+- [x] Chatting (NotificationServer)
+    - [x] Channels, messages and silences (REST API)
+    - [x] Real-time chat and notification events (`/notification-server` WebSocket)
+    - [x] BanchoBot commands
+    - [x] Private notifications (IPC + WebSocket)
 - [ ] g0v0 Hub for other servers
 
 ## Try this project
@@ -153,6 +157,8 @@ Then you can run the server and connect to it with lazer. The url path is same a
 
 - Spectator Url: `/signalr/spectator`
 - Metadata Url: `/signalr/metadata`
+- Multiplayer Url: `/signalr/multiplayer`
+- Notification Url: `/notification-server` (WebSocket)
 
 ## Docker
 
