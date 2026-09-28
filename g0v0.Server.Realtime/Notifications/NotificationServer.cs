@@ -2,6 +2,7 @@
 
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Text.Json;
 using g0v0.Server.Common.Caching;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
@@ -39,6 +40,12 @@ public class NotificationServer(
     PlayerManager playerManager,
     IServiceScopeFactory scopeFactory) : INotificationServer
 {
+    /// <summary>
+    /// Serializer options for the persisted <c>details</c> JSON payload; the
+    /// details types carry explicit snake_case names.
+    /// </summary>
+    private static readonly JsonSerializerOptions DetailsSerializerOptions = new(JsonSerializerDefaults.Web);
+
     private readonly ConcurrentDictionary<int, Dictionary<IPlayer, int>> _connections = new();
 
     /// <inheritdoc />
@@ -165,6 +172,7 @@ public class NotificationServer(
             await chatRepository.UnhideChannelAsync(channelId);
 
             await BroadcastMessageAsync(channel, message);
+            await DispatchNotificationAsync(channel, message);
             return message;
         }
     }
@@ -221,9 +229,73 @@ public class NotificationServer(
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Mirrors osu-web's <c>BroadcastNotificationBase::handle()</c>: the source
+    /// user is removed from the receivers (unless the notification overrides
+    /// that), bot users and users blocked by the source are excluded, the
+    /// notification and its per-user delivery records are persisted, and the
+    /// <c>new</c> event is pushed to every connected receiver. When no receiver
+    /// remains, nothing is persisted and nothing is pushed.
+    /// </remarks>
     public async Task SendNotification(NotificationDetail detail)
     {
-        foreach (int receiverId in detail.ReceiverIds.Distinct())
+        IEnumerable<int> receivers = detail.ReceiverIds.Distinct();
+        if (detail.ExcludeSourceFromReceivers)
+        {
+            receivers = receivers.Where(receiverId => receiverId != detail.SourceUserId);
+        }
+
+        List<int> receiverIds = receivers.ToList();
+        if (receiverIds.Count == 0)
+        {
+            return;
+        }
+
+        IServiceScope scope = scopeFactory.CreateScope();
+        using (scope)
+        {
+            IUserRepository userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            IRelationshipRepository relationshipRepository = scope.ServiceProvider.GetRequiredService<IRelationshipRepository>();
+            INotificationRepository notificationRepository = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+
+            // osu-web's excludeBotUserIds: delivery records are not created for bots.
+            Dictionary<int, User> users = (await userRepository.GetByIdsAsync(receiverIds))
+                .ToDictionary(user => user.Id);
+            receiverIds = receiverIds
+                .Where(receiverId => !users.TryGetValue(receiverId, out User? user) || !user.IsBot)
+                .ToList();
+
+            // osu-web's excludeBlockedUserIds: users the source has blocked are excluded.
+            if (receiverIds.Count > 0)
+            {
+                IReadOnlyList<int> blockedUserIds = await relationshipRepository.GetBlockedUserIdsAsync(detail.SourceUserId);
+                receiverIds = receiverIds.Except(blockedUserIds).ToList();
+            }
+
+            if (receiverIds.Count == 0)
+            {
+                return;
+            }
+
+            Notification notification = new()
+            {
+                Name = NotificationCategories.ToDatabaseName(detail.Name),
+                Category = NotificationCategories.CategoryOf(detail.Name),
+                CreatedAt = DateTimeOffset.UtcNow,
+                ObjectType = detail.ObjectType,
+                ObjectId = detail.ObjectId,
+                SourceUserId = detail.SourceUserId,
+                Details = JsonSerializer.Serialize(detail.Details, DetailsSerializerOptions),
+            };
+
+            notification = await notificationRepository.CreateAsync(notification, receiverIds);
+
+            detail.Id = notification.Id;
+            detail.CreatedAt = notification.CreatedAt;
+            detail.IsRead = false;
+        }
+
+        foreach (int receiverId in receiverIds)
         {
             foreach (IPlayer receiver in GetConnectedPlayer(receiverId))
             {
@@ -239,6 +311,153 @@ public class NotificationServer(
                         receiverId);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Creates and dispatches the notifications of a sent message, mirroring
+    /// osu-web's <c>Message::dispatchNotification()</c>: user commands are
+    /// skipped, PM/team/announcement channels notify their users, and public
+    /// channels only notify mentioned users.
+    /// </summary>
+    /// <param name="channel">The channel the message was posted in.</param>
+    /// <param name="message">The persisted message.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task DispatchNotificationAsync(ChatChannel? channel, ChatMessage message)
+    {
+        if (channel == null || ChatConventions.IsUserCommand(message.Content))
+        {
+            return;
+        }
+
+        NotificationDetail? detail = await CreateMessageNotificationAsync(channel, message);
+        if (detail == null)
+        {
+            return;
+        }
+
+        await SendNotification(detail);
+    }
+
+    /// <summary>
+    /// Builds the notification detail of a sent message, or
+    /// <see langword="null"/> when the message must not notify anyone.
+    /// </summary>
+    /// <param name="channel">The channel the message was posted in.</param>
+    /// <param name="message">The persisted message.</param>
+    /// <returns>The notification detail, or <see langword="null"/>.</returns>
+    private async Task<NotificationDetail?> CreateMessageNotificationAsync(ChatChannel channel, ChatMessage message)
+    {
+        switch (channel.Type)
+        {
+            case ChannelType.PM when ChatConventions.TryGetPmUserIds(channel.Name, out int[] pmUserIds):
+                return await FillNotificationAsync(
+                    new ChannelMessageNotification(message.SenderId, pmUserIds),
+                    channel,
+                    message,
+                    ChatConventions.MessageTitleTruncateLimit);
+
+            case ChannelType.Team or ChannelType.Announce:
+                IServiceScope scope = scopeFactory.CreateScope();
+                using (scope)
+                {
+                    IChatRepository chatRepository = scope.ServiceProvider.GetRequiredService<IChatRepository>();
+                    IReadOnlyList<int> memberIds = await chatRepository.GetChannelUserIdsAsync(message.ChannelId);
+
+                    return channel.Type == ChannelType.Team
+                        ? await FillNotificationAsync(
+                            new ChannelTeamNotification(message.SenderId, memberIds),
+                            channel,
+                            message,
+                            ChatConventions.MessageTitleTruncateLimit)
+                        : await FillNotificationAsync(
+                            new ChannelAnnouncementNotification(message.SenderId, memberIds),
+                            channel,
+                            message,
+                            ChatConventions.MessageTitleTruncateLimit);
+                }
+
+            case ChannelType.Public when message.Content.Contains('@'):
+                return await CreateMentionNotificationAsync(channel, message);
+
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// Builds the mention notification of a public channel message, or
+    /// <see langword="null"/> when nothing mentions a known user.
+    /// </summary>
+    /// <param name="channel">The public channel the message was posted in.</param>
+    /// <param name="message">The persisted message.</param>
+    /// <returns>The mention notification, or <see langword="null"/>.</returns>
+    private async Task<ChannelMentionNotification?> CreateMentionNotificationAsync(ChatChannel channel, ChatMessage message)
+    {
+        IReadOnlyList<string> usernames = NotificationCategories.MentionUsernames(message.Content);
+        if (usernames.Count == 0)
+        {
+            return null;
+        }
+
+        IServiceScope scope = scopeFactory.CreateScope();
+        using (scope)
+        {
+            IUserRepository userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+
+            List<int> mentionedUserIds = [];
+            foreach (string username in usernames)
+            {
+                User? mentionedUser = await userRepository.GetByUsernameAsync(username);
+                if (mentionedUser != null && !mentionedUserIds.Contains(mentionedUser.Id))
+                {
+                    mentionedUserIds.Add(mentionedUser.Id);
+                }
+            }
+
+            if (mentionedUserIds.Count == 0)
+            {
+                return null;
+            }
+
+            ChannelMentionNotification detail = await FillNotificationAsync(
+                new ChannelMentionNotification(message.SenderId, mentionedUserIds),
+                channel,
+                message,
+                ChatConventions.MentionTitleTruncateLimit);
+            detail.MessageId = message.MessageId;
+            return detail;
+        }
+    }
+
+    /// <summary>
+    /// Fills the shared fields of a channel message notification, mirroring
+    /// osu-web's <c>ChannelMessageBase::getDetails()</c> and
+    /// <c>makeNotification()</c>: the truncated message content, the lower-cased
+    /// channel type, the sender's avatar and username, and the channel name.
+    /// </summary>
+    /// <param name="detail">The notification to fill.</param>
+    /// <param name="channel">The channel the message was posted in.</param>
+    /// <param name="message">The persisted message.</param>
+    /// <param name="titleLimit">The title truncation limit; <c>null</c> uses the mention limit of 200 or the default of 36.</param>
+    /// <typeparam name="TDetail">The concrete notification type.</typeparam>
+    /// <returns>The filled notification.</returns>
+    private async Task<TDetail> FillNotificationAsync<TDetail>(TDetail detail, ChatChannel channel, ChatMessage message, int titleLimit)
+        where TDetail : ChannelNotificationBase
+    {
+        IServiceScope scope = scopeFactory.CreateScope();
+        using (scope)
+        {
+            IUserRepository userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
+            User? sender = await userRepository.GetByIdAsync(message.SenderId);
+
+            detail.ChannelId = channel.ChannelId;
+            detail.Type = ChatConventions.GetChannelTypeName(channel.Type).ToLowerInvariant();
+            detail.Title = ChatConventions.Truncate(message.Content, titleLimit);
+            detail.CoverUrl = sender?.AvatarUrl ?? string.Empty;
+            detail.Username = sender?.Username ?? string.Empty;
+            detail.ChannelName = channel.Name;
+            return detail;
         }
     }
 

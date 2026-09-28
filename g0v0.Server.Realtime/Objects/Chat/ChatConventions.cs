@@ -11,6 +11,18 @@ namespace g0v0.Server.Realtime.Objects.Chat;
 /// </summary>
 internal static class ChatConventions
 {
+    /// <summary>
+    /// Gets the title truncation limit of channel message notifications,
+    /// mirroring osu-web's <c>ChannelMessageBase::CONTENT_TRUNCATE</c>.
+    /// </summary>
+    internal const int MessageTitleTruncateLimit = 36;
+
+    /// <summary>
+    /// Gets the title truncation limit of mention notifications, mirroring
+    /// osu-web's <c>ChannelMention::CONTENT_TRUNCATE</c>.
+    /// </summary>
+    internal const int MentionTitleTruncateLimit = 200;
+
     private const string PmPrefix = "pm_";
 
     private static readonly char[] PmNameSeparators = ['_', '-'];
@@ -117,5 +129,22 @@ internal static class ChatConventions
 
         userIds = [firstUserId, secondUserId];
         return true;
+    }
+
+    /// <summary>
+    /// Truncates a message for a notification title, mirroring osu-web's
+    /// <c>truncate()</c> helper: texts longer than the limit are cut and the
+    /// ellipsis fills into the limit.
+    /// </summary>
+    /// <param name="content">The message content.</param>
+    /// <param name="limit">The maximum length of the result.</param>
+    /// <returns>The truncated content.</returns>
+    internal static string Truncate(string content, int limit)
+    {
+        const string ellipsis = "...";
+
+        return content.Length > limit
+            ? string.Concat(content.AsSpan(0, limit - ellipsis.Length), ellipsis)
+            : content;
     }
 }
