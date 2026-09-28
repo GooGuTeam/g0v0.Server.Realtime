@@ -73,6 +73,7 @@ public class NotificationWebSocketIntegrationTests
         builder.Services.AddSingleton(new ConfigManager(chatConfigBasePath));
         builder.Services.AddSingleton<IUserRepository>(new FakeUserRepository());
         builder.Services.AddSingleton<IRelationshipRepository>(new FakeRelationshipRepository());
+        builder.Services.AddSingleton<INotificationRepository>(new FakeNotificationRepository());
         builder.Services.AddScoped<ChatPmStartChecker>();
         builder.Services.AddScoped<ChatChannelDtoFactory>();
         builder.Services.AddSingleton(new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));

@@ -34,6 +34,8 @@ public class BanchoBotTests
         ServiceCollection services = new();
         services.AddSingleton<IChatRepository>(_chatRepository);
         services.AddSingleton<IUserRepository>(new FakeUserRepository());
+        services.AddSingleton<IRelationshipRepository>(new Multiplayer.FakeRelationshipRepository());
+        services.AddSingleton<INotificationRepository>(new FakeNotificationRepository());
         services.AddSingleton<IScoreRepository>(new FakeScoreRepository());
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 

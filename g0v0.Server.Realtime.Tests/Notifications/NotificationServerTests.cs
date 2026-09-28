@@ -9,6 +9,7 @@ using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
+using g0v0.Server.Realtime.Tests.Multiplayer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
@@ -21,6 +22,9 @@ public class NotificationServerTests
 {
     private IServiceScopeFactory _scopeFactory = null!;
     private FakeChatRepository _chatRepository = null!;
+    private FakeUserRepository _userRepository = null!;
+    private FakeRelationshipRepository _relationshipRepository = null!;
+    private FakeNotificationRepository _notificationRepository = null!;
     private PlayerManager _playerManager = null!;
     private NotificationServer _server = null!;
     private string _basePath = null!;
@@ -29,6 +33,9 @@ public class NotificationServerTests
     public void SetUp()
     {
         _chatRepository = new FakeChatRepository();
+        _userRepository = new FakeUserRepository();
+        _relationshipRepository = new FakeRelationshipRepository();
+        _notificationRepository = new FakeNotificationRepository();
         _playerManager = new PlayerManager(
             NullLogger<PlayerManager>.Instance,
             new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));
@@ -42,6 +49,9 @@ public class NotificationServerTests
 
         ServiceCollection services = new();
         services.AddSingleton<IChatRepository>(_chatRepository);
+        services.AddSingleton<IUserRepository>(_userRepository);
+        services.AddSingleton<IRelationshipRepository>(_relationshipRepository);
+        services.AddSingleton<INotificationRepository>(_notificationRepository);
         ServiceProvider serviceProvider = services.BuildServiceProvider();
 
         _scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
@@ -347,6 +357,182 @@ public class NotificationServerTests
             Assert.That(receiverFirst.ReceivedMessages, Has.Count.EqualTo(1));
             Assert.That(receiverSecond.ReceivedMessages, Has.Count.EqualTo(1));
         });
+    }
+
+    [Test]
+    public async Task SendNotification_ShouldPersistNotificationAndDeliveryRecords()
+    {
+        TestPlayer receiver = new(7, _playerManager);
+        await _playerManager.AddPlayer(receiver);
+        await _server.Connect(receiver);
+
+        ChannelMessageNotification detail = new(sourceUserId: 1, receiverIds: [7])
+        {
+            Title = "New message",
+            CoverUrl = "https://example.com/a.png",
+            Type = "pm",
+            ChannelId = 100,
+        };
+
+        await _server.SendNotification(detail);
+
+        Assert.That(_notificationRepository.Notifications, Has.Count.EqualTo(1));
+        Notification notification = _notificationRepository.Notifications[0];
+        Assert.That(notification.Name, Is.EqualTo("channel_message"));
+        Assert.That(notification.Category, Is.EqualTo("channel"));
+        Assert.That(notification.ObjectType, Is.EqualTo("channel"));
+        Assert.That(notification.ObjectId, Is.EqualTo(100));
+        Assert.That(notification.SourceUserId, Is.EqualTo(1));
+        Assert.That(_notificationRepository.UserNotifications, Has.Count.EqualTo(1));
+        Assert.That(_notificationRepository.UserNotifications[0].UserId, Is.EqualTo(7));
+        Assert.That(_notificationRepository.UserNotifications[0].IsRead, Is.False);
+
+        // The pushed detail carries the persisted identity.
+        Assert.That(detail.Id, Is.EqualTo(notification.Id));
+        Assert.That(detail.IsRead, Is.False);
+        Assert.That(detail.CreatedAt, Is.EqualTo(notification.CreatedAt));
+    }
+
+    [Test]
+    public async Task SendNotification_WhenNoReceiverRemains_ShouldNotPersist()
+    {
+        // The source user is the only receiver and is always removed.
+        ChannelMessageNotification detail = new(sourceUserId: 1, receiverIds: [1])
+        {
+            Title = "New message",
+            Type = "pm",
+            ChannelId = 100,
+        };
+
+        await _server.SendNotification(detail);
+
+        Assert.That(_notificationRepository.Notifications, Is.Empty);
+        Assert.That(detail.Id, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task SendNotification_ShouldExcludeBotsAndUsersBlockedByTheSource()
+    {
+        _userRepository.AddUser(new User { Id = 7, Username = "plain" });
+        _userRepository.AddUser(new User { Id = 8, Username = "bot", IsBot = true });
+        _relationshipRepository.AddBlock(1, 9);
+
+        ChannelMessageNotification detail = new(sourceUserId: 1, receiverIds: [7, 8, 9])
+        {
+            Title = "New message",
+            Type = "pm",
+            ChannelId = 100,
+        };
+
+        await _server.SendNotification(detail);
+
+        int[] receiverIds = _notificationRepository.UserNotifications.Select(record => record.UserId).ToArray();
+        Assert.That(receiverIds, Is.EquivalentTo([7]));
+    }
+
+    [Test]
+    public async Task SendMessage_PmChannel_ShouldNotifyTheOtherUser()
+    {
+        _chatRepository.AddChannel(new ChatChannel { ChannelId = 300, Name = "pm_1_2", Description = "pm", Type = ChannelType.PM });
+        _userRepository.AddUser(new User { Id = 1, Username = "sender" });
+        _userRepository.AddUser(new User { Id = 2, Username = "receiver" });
+
+        TestPlayer sender = new(1, _playerManager);
+        TestPlayer receiver = new(2, _playerManager);
+        await _playerManager.AddPlayer(sender);
+        await _playerManager.AddPlayer(receiver);
+        await _server.Connect(sender);
+        await _server.Connect(receiver);
+
+        await _server.SendMessage(300, 1, "hello there", isAction: false);
+
+        Assert.That(_notificationRepository.Notifications, Has.Count.EqualTo(1));
+        Notification notification = _notificationRepository.Notifications[0];
+        Assert.That(notification.Name, Is.EqualTo("channel_message"));
+        Assert.That(notification.SourceUserId, Is.EqualTo(1));
+        Assert.That(_notificationRepository.UserNotifications.Select(record => record.UserId), Is.EquivalentTo([2]));
+
+        // The message push is unchanged, and the notification push reaches the receiver only.
+        Assert.That(receiver.ReceivedNotifications, Has.Count.EqualTo(1));
+        Assert.That(sender.ReceivedNotifications, Is.Empty);
+        ChannelMessageNotification pushed = (ChannelMessageNotification)receiver.ReceivedNotifications[0];
+        Assert.That(pushed.ChannelId, Is.EqualTo(300));
+        Assert.That(pushed.Type, Is.EqualTo("pm"));
+        Assert.That(pushed.Title, Is.EqualTo("hello there"));
+        Assert.That(pushed.Username, Is.EqualTo("sender"));
+    }
+
+    [Test]
+    public async Task SendMessage_PmChannel_ShouldSkipUserCommands()
+    {
+        _chatRepository.AddChannel(new ChatChannel { ChannelId = 300, Name = "pm_1_2", Description = "pm", Type = ChannelType.PM });
+
+        await _server.SendMessage(300, 1, "!uptime", isAction: false);
+
+        Assert.That(_notificationRepository.Notifications, Is.Empty);
+    }
+
+    [Test]
+    public async Task SendMessage_PublicChannel_ShouldOnlyNotifyMentionedUsers()
+    {
+        _chatRepository.AddChannel(new ChatChannel { ChannelId = 100, Name = "#osu", Description = "test", Type = ChannelType.Public });
+        _userRepository.AddUser(new User { Id = 1, Username = "sender" });
+        _userRepository.AddUser(new User { Id = 3, Username = "alpha" });
+
+        TestPlayer mentioned = new(3, _playerManager);
+        await _playerManager.AddPlayer(mentioned);
+        await _server.Connect(mentioned);
+
+        await _server.SendMessage(100, 1, "@alpha hello", isAction: false);
+
+        Assert.That(_notificationRepository.Notifications, Has.Count.EqualTo(1));
+        Notification notification = _notificationRepository.Notifications[0];
+        Assert.That(notification.Name, Is.EqualTo("channel_mention"));
+        Assert.That(notification.Category, Is.EqualTo("channel_mention"));
+        Assert.That(_notificationRepository.UserNotifications.Select(record => record.UserId), Is.EquivalentTo([3]));
+
+        ChannelMentionNotification pushed = (ChannelMentionNotification)mentioned.ReceivedNotifications[0];
+        Assert.That(pushed.MessageId, Is.GreaterThan(0));
+        Assert.That(pushed.ChannelName, Is.EqualTo("#osu"));
+    }
+
+    [Test]
+    public async Task SendMessage_PublicChannel_WithoutMention_ShouldNotNotify()
+    {
+        _chatRepository.AddChannel(new ChatChannel { ChannelId = 100, Name = "#osu", Description = "test", Type = ChannelType.Public });
+
+        await _server.SendMessage(100, 1, "plain hello", isAction: false);
+
+        Assert.That(_notificationRepository.Notifications, Is.Empty);
+    }
+
+    [Test]
+    public async Task SendMessage_AnnounceChannel_ShouldNotifyMembersExceptTheSender()
+    {
+        _chatRepository.AddChannel(new ChatChannel { ChannelId = 400, Name = "#ann", Description = "ann", Type = ChannelType.Announce });
+        _userRepository.AddUser(new User { Id = 1, Username = "sender" });
+        await _chatRepository.AddUserChannelAsync(400, 1);
+        await _chatRepository.AddUserChannelAsync(400, 2);
+        await _chatRepository.AddUserChannelAsync(400, 3);
+
+        await _server.SendMessage(400, 1, "announcement", isAction: false);
+
+        Assert.That(_notificationRepository.Notifications, Has.Count.EqualTo(1));
+        Notification notification = _notificationRepository.Notifications[0];
+        Assert.That(notification.Name, Is.EqualTo("channel_announcement"));
+        Assert.That(notification.Category, Is.EqualTo("announcement"));
+        Assert.That(_notificationRepository.UserNotifications.Select(record => record.UserId), Is.EquivalentTo([2, 3]));
+    }
+
+    [Test]
+    public async Task SendMessage_MultiplayerChannel_ShouldNotNotify()
+    {
+        _chatRepository.AddChannel(new ChatChannel { ChannelId = 500, Name = "#mp_1", Description = "mp", Type = ChannelType.Multiplayer });
+        await _chatRepository.AddUserChannelAsync(500, 2);
+
+        await _server.SendMessage(500, 1, "room chat", isAction: false);
+
+        Assert.That(_notificationRepository.Notifications, Is.Empty);
     }
 
     private sealed class TestPlayer(int playerId, PlayerManager manager) : PlayerBase(playerId, new PlayerFacade(manager))

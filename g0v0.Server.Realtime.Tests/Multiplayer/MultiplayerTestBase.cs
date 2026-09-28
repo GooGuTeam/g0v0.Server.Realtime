@@ -532,6 +532,12 @@ internal sealed class FakeRelationshipRepository : IRelationshipRepository
         return Task.CompletedTask;
     }
 
+    public Task<IReadOnlyList<int>> GetBlockedUserIdsAsync(int userId)
+        => Task.FromResult<IReadOnlyList<int>>(_relationships
+            .Where(r => r.UserId == userId && r.Type == RelationshipType.Block)
+            .Select(r => r.TargetId)
+            .ToList());
+
     public Task UpdateAsync(Relationship relationship) => Task.CompletedTask;
 
     public Task DeleteAsync(Relationship relationship)

@@ -50,6 +50,9 @@ public class MultiClientChatFlowTests
     private FakeRankedCache _rankedCache = null!;
     private PlayerManager _playerManager = null!;
     private FakeOAuthTokenRepository _tokenRepository = null!;
+    private FakeUserRepository _userRepository = null!;
+    private FakeRelationshipRepository _relationshipRepository = null!;
+    private FakeNotificationRepository _notificationRepository = null!;
     private string _basePath = null!;
 
     [SetUp]
@@ -71,6 +74,13 @@ public class MultiClientChatFlowTests
             NullLogger<PlayerManager>.Instance,
             new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));
         _tokenRepository = new FakeOAuthTokenRepository();
+        _userRepository = new FakeUserRepository();
+        _relationshipRepository = new FakeRelationshipRepository();
+        _notificationRepository = new FakeNotificationRepository();
+
+        _userRepository.AddUser(new User { Id = 1, Username = "user-1" });
+        _userRepository.AddUser(new User { Id = 2, Username = "user-2" });
+        _userRepository.AddUser(new User { Id = 3, Username = "user-3" });
 
         // Seed the default public channel, as in the osu-web database.
         _chatRepository.AddChannel(new ChatChannel
@@ -89,8 +99,9 @@ public class MultiClientChatFlowTests
         builder.Services.AddSingleton<IChatRepository>(_chatRepository);
         builder.Services.AddSingleton<IStringCache, FakeStringCache>();
         builder.Services.AddSingleton<IRankedCache>(_rankedCache);
-        builder.Services.AddSingleton<IUserRepository>(new FakeUserRepository());
-        builder.Services.AddSingleton<IRelationshipRepository>(new FakeRelationshipRepository());
+        builder.Services.AddSingleton<IUserRepository>(_userRepository);
+        builder.Services.AddSingleton<IRelationshipRepository>(_relationshipRepository);
+        builder.Services.AddSingleton<INotificationRepository>(_notificationRepository);
         builder.Services.AddSingleton<IOAuthTokenRepository>(_tokenRepository);
         builder.Services.AddSingleton(new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));
         builder.Services.AddSingleton(_playerManager);
@@ -263,6 +274,67 @@ public class MultiClientChatFlowTests
     }
 
     [Test]
+    public async Task NotificationApi_ListingAndMarkRead_ShouldRoundTrip()
+    {
+        // A PM conversation between users 1 and 3; user 1 sends a message, which
+        // persists a channel_message notification for user 3 (the sender is
+        // excluded) and pushes the new event to the receiver's connections.
+        _chatRepository.AddChannel(new ChatChannel { ChannelId = 300, Name = "pm_1_3", Description = "pm", Type = ChannelType.PM });
+        await _chatRepository.AddUserChannelAsync(300, 1);
+        await _chatRepository.AddUserChannelAsync(300, 3);
+
+        HttpClient sender = CreateRestClient(1, "chat.write");
+        HttpRequestMessage sendRequest = new(HttpMethod.Post, "/chat/channels/300/messages")
+        {
+            Content = new StringContent("{\"message\":\"hi from user one\"}", Encoding.UTF8, "application/json"),
+        };
+        HttpResponseMessage sendResponse = await sender.SendAsync(sendRequest);
+        Assert.That(sendResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(_notificationRepository.Notifications, Has.Count.EqualTo(1));
+
+        // The sender has no delivery record of their own message.
+        Assert.That(_notificationRepository.UserNotifications.Select(record => record.UserId), Is.EquivalentTo([3]));
+
+        long notificationId = _notificationRepository.Notifications[0].Id;
+
+        HttpClient receiver = CreateRestClient(3, "chat.read");
+        HttpRequestMessage listRequest = new(HttpMethod.Get, "/notifications");
+        HttpResponseMessage listResponse = await receiver.SendAsync(listRequest);
+        Assert.That(listResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        JsonElement bundle = await listResponse.Content.ReadFromJsonAsync<JsonElement>();
+        JsonElement[] notifications = bundle.GetProperty("notifications").EnumerateArray().ToArray();
+        Assert.That(notifications.Length, Is.EqualTo(1));
+        Assert.That(notifications[0].GetProperty("id").GetInt64(), Is.EqualTo(notificationId));
+        Assert.That(notifications[0].GetProperty("name").GetString(), Is.EqualTo("channel_message"));
+        Assert.That(notifications[0].GetProperty("object_type").GetString(), Is.EqualTo("channel"));
+        Assert.That(notifications[0].GetProperty("is_read").GetBoolean(), Is.False);
+        Assert.That(notifications[0].GetProperty("details").GetProperty("title").GetString(), Is.EqualTo("hi from user one"));
+        Assert.That(notifications[0].GetProperty("details").GetProperty("username").GetString(), Is.EqualTo("user-1"));
+        Assert.That(bundle.GetProperty("has_more").GetBoolean(), Is.False);
+        Assert.That(bundle.GetProperty("unread_count").GetInt32(), Is.EqualTo(1));
+        Assert.That(
+            bundle.GetProperty("notification_endpoint").GetString(),
+            Is.EqualTo("ws://localhost:8000/notification-server"));
+
+        // Marking the notification read empties the unread listing.
+        HttpRequestMessage markRequest = new(HttpMethod.Post, "/notifications/mark-read")
+        {
+            Content = new StringContent($"{{\"notifications\":[{{\"id\":{notificationId}}}]}}", Encoding.UTF8, "application/json"),
+        };
+        HttpResponseMessage markResponse = await receiver.SendAsync(markRequest);
+        Assert.That(markResponse.StatusCode, Is.EqualTo(HttpStatusCode.NoContent));
+
+        HttpRequestMessage secondListRequest = new(HttpMethod.Get, "/notifications");
+        HttpResponseMessage secondListResponse = await receiver.SendAsync(secondListRequest);
+        Assert.That(secondListResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+
+        JsonElement secondBundle = await secondListResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.That(secondBundle.GetProperty("notifications").EnumerateArray().Count(), Is.EqualTo(0));
+        Assert.That(secondBundle.GetProperty("unread_count").GetInt32(), Is.EqualTo(0));
+    }
+
+    [Test]
     public async Task Presence_ShouldStayOnlineUntilTheLastConnectionCloses()
     {
         NotificationSocket browserTab1 = await ConnectAsync(3);
@@ -359,28 +431,6 @@ public class MultiClientChatFlowTests
 
         WebSocket webSocket = await client.ConnectAsync(new Uri(url), CancellationToken.None);
         return new NotificationSocket(webSocket);
-    }
-
-    private sealed class FakeUserRepository : IUserRepository
-    {
-        public Task<Common.Database.Models.User?> GetByIdAsync(int userId)
-            => Task.FromResult<Common.Database.Models.User?>(new Common.Database.Models.User { Id = userId, Username = $"user{userId}" });
-
-        public Task<IReadOnlyList<Common.Database.Models.User>> GetByIdsAsync(IReadOnlyList<int> userIds)
-            => Task.FromResult<IReadOnlyList<Common.Database.Models.User>>(
-                userIds.Select(userId => new Common.Database.Models.User { Id = userId, Username = $"user{userId}" }).ToList());
-
-        public Task<string?> GetUsernameByIdAsync(int userId)
-            => Task.FromResult<string?>($"user{userId}");
-
-        public Task<Common.Database.Models.User?> GetByUsernameAsync(string username)
-            => Task.FromResult<Common.Database.Models.User?>(new Common.Database.Models.User { Id = 1, Username = username });
-
-        public Task<bool> UsernameExistsAsync(string username) => Task.FromResult(true);
-
-        public Task CreateAsync(Common.Database.Models.User user) => Task.CompletedTask;
-
-        public Task UpdateAsync(Common.Database.Models.User user) => Task.CompletedTask;
     }
 
     private sealed class NoOpTransport : IInterProcessCommunicationTransport

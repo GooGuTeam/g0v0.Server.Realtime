@@ -299,6 +299,9 @@ public class MetadataHubTests
 
         public Task<IReadOnlyList<Relationship>> GetByUserIdAsync(int userId) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<int>> GetBlockedUserIdsAsync(int userId)
+            => Task.FromResult<IReadOnlyList<int>>([]);
+
         public Task<IReadOnlyList<Relationship>> GetByTargetIdAsync(int targetId) => throw new NotSupportedException();
 
         public Task<Relationship?> GetRelationshipAsync(int userId, int targetId) => throw new NotSupportedException();
