@@ -53,17 +53,23 @@ files and fill in the values according to your environment from g0v0-server v1.
 
 ```json
 {
+  "UseLegacyDatabase": true,
   "MySqlHost": "localhost",
-  "MySqlPort": 3306,
+  "MySqlPort": "3306",
   "MySqlUsername": "osu_api",
   "MySqlPassword": "password",
   "MySqlDatabase": "osu_api",
+  "PostgresqlConnectionString": "Host=localhost;Port=5432;Username=g0v0;Password=password;Database=g0v0",
+  "RedisHost": "localhost:6379",
   "JwtSecretKey": "your_jwt_secret_here",
   "JwtAlgorithm": "HS256",
   "JwtAudience": "5",
   "JwtIssuer": null,
-  "RedisHost": "localhost:6379",
-  "UseLegacyDatabase": true,
+  "OsuClientId": 5,
+  "OsuClientSecret": "FGc9GAtyHzeQDshWP5Ah7dega8hJACAJpQtw6OXk",
+  "OsuWebClientId": 6,
+  "OsuWebClientSecret": "your_osu_web_client_secret_here",
+  "ServerUrl": "http://localhost:8000",
   "FetcherClientId": 0,
   "FetcherClientSecret": "",
   "FetcherBeatmapRawCacheExpireHours": 24
@@ -72,40 +78,48 @@ files and fill in the values according to your environment from g0v0-server v1.
 
 Mapping from v1 `.env`:
 
-| v1 `.env`        | v2 `general.json`   | Description                      |
-|------------------|---------------------|----------------------------------|
-| `MYSQL_HOST`     | `MySqlHost`         | MySQL server address             |
-| `MYSQL_PORT`     | `MySqlPort`         | MySQL server port                |
-| `MYSQL_DATABASE` | `MySqlDatabase`     | MySQL database name              |
-| `MYSQL_USER`     | `MySqlUsername`     | MySQL user                       |
-| `MYSQL_PASSWORD` | `MySqlPassword`     | MySQL password                   |
-| `REDIS_URL`      | `RedisHost`         | Redis connection                 |
-| `JWT_SECRET_KEY` | `JwtSecretKey`      | JWT signing key                  |
-| `JWT_ALGORITHM`  | `JwtAlgorithm`      | JWT algorithm                    |
-| `JWT_AUDIENCE`   | `JwtAudience`       | JWT audience                     |
-| `JWT_ISSUER`     | `JwtIssuer`         | JWT issuer                       |
-| —                | `UseLegacyDatabase` | `true` for MySQL (v1 compatible) |
-| `FETCHER_CLIENT_ID`     | `FetcherClientId`                 | osu! API client ID used by the Fetcher service       |
-| `FETCHER_CLIENT_SECRET` | `FetcherClientSecret`             | osu! API client secret used by the Fetcher service   |
-| —                       | `FetcherBeatmapRawCacheExpireHours` | Raw beatmap cache duration in hours (default `24`) |
+| v1 `.env`                    | v2 `general.json`                   | Description                                                                     |
+|------------------------------|-------------------------------------|---------------------------------------------------------------------------------|
+| `MYSQL_HOST`                 | `MySqlHost`                         | MySQL server address                                                            |
+| `MYSQL_PORT`                 | `MySqlPort`                         | MySQL server port (kept as a string)                                            |
+| `MYSQL_DATABASE`             | `MySqlDatabase`                     | MySQL database name                                                             |
+| `MYSQL_USER`                 | `MySqlUsername`                     | MySQL user                                                                      |
+| `MYSQL_PASSWORD`             | `MySqlPassword`                     | MySQL password                                                                  |
+| —                            | `PostgresqlConnectionString`        | PostgreSQL connection string (v2 backend, used when `UseLegacyDatabase: false`) |
+| `REDIS_URL`                  | `RedisHost`                         | Redis connection                                                                |
+| `JWT_SECRET_KEY`             | `JwtSecretKey`                      | JWT signing key                                                                 |
+| `JWT_ALGORITHM`              | `JwtAlgorithm`                      | JWT algorithm                                                                   |
+| `JWT_AUDIENCE`               | `JwtAudience`                       | JWT audience                                                                    |
+| `JWT_ISSUER`                 | `JwtIssuer`                         | JWT issuer                                                                      |
+| `OSU_CLIENT_ID`              | `OsuClientId`                       | osu! (lazer) OAuth client ID                                                    |
+| `OSU_CLIENT_SECRET`          | `OsuClientSecret`                   | osu! (lazer) OAuth client secret                                                |
+| `OSU_WEB_CLIENT_ID`          | `OsuWebClientId`                    | osu! web OAuth client ID                                                        |
+| `OSU_WEB_CLIENT_SECRET`      | `OsuWebClientSecret`                | osu! web OAuth client secret                                                    |
+| `SERVER_URL`                 | `ServerUrl`                         | Public server URL                                                               |
+| —                            | `UseLegacyDatabase`                 | `true` for MySQL (v1 compatible), `false` for PostgreSQL (v2)                   |
+| `FETCHER_CLIENT_ID`          | `FetcherClientId`                   | osu! API client ID used by the Fetcher service                                  |
+| `FETCHER_CLIENT_SECRET`      | `FetcherClientSecret`               | osu! API client secret used by the Fetcher service                              |
+| `BEATMAP_CACHE_EXPIRE_HOURS` | `FetcherBeatmapRawCacheExpireHours` | Raw beatmap cache duration in hours (default `24`)                              |
+
+All configurations are restart required when changed.
 
 #### `config/game.json` — Game Features
 
 ```json
 {
-  "EnableRelax": true,
-  "EnableAutopilot": true,
-  "EnableAllBeatmapLeaderboard": true
+  "EnableRelax": false,
+  "EnableAutopilot": false,
+  "EnableAllBeatmapLeaderboard": false
 }
 ```
 
-| v1 `.env`                        | v2 `game.json`                | Description                         |
-|----------------------------------|-------------------------------|-------------------------------------|
-| `ENABLE_RX` / `ENABLE_OSU_RX`    | `EnableRelax`                 | Enable Relax mod statistics         |
-| `ENABLE_AP` / `ENABLE_OSU_AP`    | `EnableAutopilot`             | Enable Autopilot mod statistics     |
-| `ENABLE_ALL_BEATMAP_LEADERBOARD` | `EnableAllBeatmapLeaderboard` | Enable leaderboard for all beatmaps |
+| v1 `.env`                        | v2 `game.json`                | Default | Description                         |
+|----------------------------------|-------------------------------|---------|-------------------------------------|
+| `ENABLE_RX` / `ENABLE_OSU_RX`    | `EnableRelax`                 | `false` | Enable Relax mod statistics         |
+| `ENABLE_AP` / `ENABLE_OSU_AP`    | `EnableAutopilot`             | `false` | Enable Autopilot mod statistics     |
+| `ENABLE_ALL_BEATMAP_LEADERBOARD` | `EnableAllBeatmapLeaderboard` | `false` | Enable leaderboard for all beatmaps |
 
-Properties marked with `[Reloadable]` support hot-reload at runtime.
+All configurations are hot-reloadable at runtime.
 
 #### `config/realtime.json` — Realtime-specific Settings
 
@@ -127,19 +141,57 @@ Properties marked with `[Reloadable]` support hot-reload at runtime.
 }
 ```
 
-| Key                                | Type     | Default    | Description                                                                           |
-|------------------------------------|----------|------------|---------------------------------------------------------------------------------------|
-| `SaveReplays`                      | bool     | `true`     | Whether to persist spectator replays (hot-reloadable)                                 |
-| `ReplayUploaderConcurrency`        | int      | `4`        | Number of concurrent replay upload workers (read once at startup; restart required)   |
-| `MaxStartedScores`                 | int      | `2`        | Max concurrent started scores per spectator play session (hot-reloadable)             |
-| `HostPlaylistLimit`                | int      | `50`       | Max playlist items a host or referee may enqueue (restart required)                   |
-| `GuestPlaylistLimit`               | int      | `3`        | Max playlist items a guest may enqueue (restart required)                             |
-| `MultiplayerDisconnectGracePeriod` | TimeSpan | `00:00:30` | How long a disconnected user is kept in their room before removal (hot-reloadable)    |
-| `TournamentRoomRetentionPeriod`    | TimeSpan | `00:30:00` | How long an empty tournament room is retained before being destroyed (hot-reloadable) |
+| Key                                | Type     | Default    | Description                                                                                                |
+|------------------------------------|----------|------------|------------------------------------------------------------------------------------------------------------|
+| `SaveReplays`                      | bool     | `true`     | Whether to persist spectator replays (hot-reloadable)                                                      |
+| `ReplayUploaderConcurrency`        | int      | `4`        | Number of concurrent replay upload workers (read once at startup; restart required)                        |
+| `MaxStartedScores`                 | int      | `2`        | Max concurrent started scores per spectator play session (hot-reloadable)                                  |
+| `HostPlaylistLimit`                | int      | `50`       | Max playlist items a host or referee may enqueue (restart required)                                        |
+| `GuestPlaylistLimit`               | int      | `3`        | Max playlist items a guest may enqueue (restart required)                                                  |
+| `MultiplayerDisconnectGracePeriod` | TimeSpan | `00:00:30` | How long a disconnected user is kept in their room before removal (hot-reloadable)                         |
+| `TournamentRoomRetentionPeriod`    | TimeSpan | `00:30:00` | How long an empty tournament room is retained before being destroyed (hot-reloadable)                      |
 | `Sentry.Dsn`                       | string   | `""`       | Sentry DSN; Sentry is enabled automatically when this is non-empty (secret, git-ignored; restart required) |
-| `Sentry.Environment`               | string   | `""`       | Sentry environment tag; empty falls back to `ASPNETCORE_ENVIRONMENT` (restart required) |
-| `Sentry.TracesSampleRate`          | double   | `0.1`      | Performance-trace sampling rate 0.0–1.0 (restart required)                            |
-| `Sentry.SendDefaultPii`            | bool     | `false`    | Whether default PII (user IDs, emails, IPs) is attached to events (restart required)  |
+| `Sentry.Environment`               | string   | `""`       | Sentry environment tag; empty falls back to `ASPNETCORE_ENVIRONMENT` (restart required)                    |
+| `Sentry.TracesSampleRate`          | double   | `0.1`      | Performance-trace sampling rate 0.0–1.0 (restart required)                                                 |
+| `Sentry.SendDefaultPii`            | bool     | `false`    | Whether default PII (user IDs, emails, IPs) is attached to events (restart required)                       |
+
+These realtime settings are v2-only and have no v1 `.env` equivalent.
+
+#### `config/chat.json` — Chat Limits
+
+This file is **optional**. When `config/chat.json` is absent, every value falls back to the upstream
+([osu-web](https://github.com/ppy/osu-web)) default
+listed below. All configurations are hot-reloadable at runtime.
+
+```json
+{
+  "ChannelLimit": 10000,
+  "MessageLengthLimit": 450,
+  "AnnounceMessageLengthLimit": 1024,
+  "PublicBacklogLimitHours": 24,
+  "ActivityTimeoutSeconds": 60,
+  "RecentMessageLimit": 50,
+  "PublicMessageLimit": 1,
+  "PublicMessageWindowSeconds": 1,
+  "PrivateMessageLimit": 1,
+  "PrivateMessageWindowSeconds": 1
+}
+```
+
+| Key                           | Type | Default | Description                                                                              |
+|-------------------------------|------|---------|------------------------------------------------------------------------------------------|
+| `ChannelLimit`                | int  | `10000` | Maximum number of channels listed for a single user                                      |
+| `MessageLengthLimit`          | int  | `450`   | Maximum length of a chat message                                                         |
+| `AnnounceMessageLengthLimit`  | int  | `1024`  | Maximum length of an announcement message                                                |
+| `PublicBacklogLimitHours`     | int  | `24`    | How many hours of history are exposed for public channels                                |
+| `ActivityTimeoutSeconds`      | int  | `60`    | How long a user stays active in a public channel after acknowledging it (hot-reloadable) |
+| `RecentMessageLimit`          | int  | `50`    | Number of recent messages attached to a channel                                          |
+| `PublicMessageLimit`          | int  | `1`     | Number of messages a user may post in a public channel per window                        |
+| `PublicMessageWindowSeconds`  | int  | `1`     | Public message rate-limit window, in seconds                                             |
+| `PrivateMessageLimit`         | int  | `1`     | Number of messages a user may post in a private channel per window                       |
+| `PrivateMessageWindowSeconds` | int  | `1`     | Private message rate-limit window, in seconds                                            |
+
+These chat limits are v2-only and have no v1 `.env` equivalent.
 
 #### `config/storage.json` — Storage Backend
 
@@ -156,6 +208,37 @@ Properties marked with `[Reloadable]` support hot-reload at runtime.
 |--------------------|-------------------|------------------------------------------|
 | `STORAGE_SERVICE`  | `Type`            | Storage type: `Local`, `S3`, or `R2`     |
 | `STORAGE_SETTINGS` | `Options`         | Provider-specific settings (JSON object) |
+
+The `Options` object matches the v1 `STORAGE_SETTINGS` for each provider:
+
+```jsonc
+// Local (default for development)
+{ "Type": "Local", "Options": { "local_storage_path": "./storage" } }
+
+// Cloudflare R2 (recommended for production)
+{
+  "Type": "R2",
+  "Options": {
+    "r2_account_id": "your_cloudflare_account_id",
+    "r2_access_key_id": "your_r2_access_key_id",
+    "r2_secret_access_key": "your_r2_secret_access_key",
+    "r2_bucket_name": "your_bucket_name",
+    "r2_public_url_base": "https://your-custom-domain.com"
+  }
+}
+
+// AWS S3
+{
+  "Type": "S3",
+  "Options": {
+    "s3_access_key_id": "your_aws_access_key_id",
+    "s3_secret_access_key": "your_aws_secret_access_key",
+    "s3_bucket_name": "your_s3_bucket_name",
+    "s3_region_name": "us-east-1",
+    "s3_public_url_base": "https://your-custom-domain.com"
+  }
+}
+```
 
 ### Run and connect to the server.
 
@@ -193,11 +276,11 @@ docker buildx build \
 
 The image runs as a non-root user (`$APP_UID`) on port `8080`. Runtime data lives in three volumes that must be mounted:
 
-| Volume          | Purpose                                                                                 |
-|-----------------|-----------------------------------------------------------------------------------------|
-| `/app/config`   | JSON configuration files (`general.json`, `game.json`, `realtime.json`, `storage.json`) |
-| `/app/rulesets` | Custom osu! ruleset DLLs (loaded at startup; optional)                                  |
-| `/app/storage`  | Local file storage (spectator replays etc.)                                             |
+| Volume          | Purpose                                                                                                                       |
+|-----------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `/app/config`   | JSON configuration files (`general.json`, `game.json`, `realtime.json`, `chat.json`, `storage.json`; `chat.json` is optional) |
+| `/app/rulesets` | Custom osu! ruleset DLLs (loaded at startup; optional)                                                                        |
+| `/app/storage`  | Local file storage (spectator replays etc.)                                                                                   |
 
 ```bash
 docker run --rm -p 8080:8080 \
