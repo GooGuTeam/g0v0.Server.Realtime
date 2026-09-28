@@ -57,6 +57,20 @@ public static class Program
         GeneralConfig generalConfig = configManager.Get<GeneralConfig>();
         builder.Services.AddSingleton(configManager);
 
+        RealtimeConfig realtimeConfig = configManager.Get<RealtimeConfig>();
+        if (realtimeConfig.Sentry.Enabled)
+        {
+            builder.WebHost.UseSentry(options =>
+            {
+                options.Dsn = realtimeConfig.Sentry.Dsn;
+                options.Environment = string.IsNullOrWhiteSpace(realtimeConfig.Sentry.Environment)
+                    ? builder.Environment.EnvironmentName
+                    : realtimeConfig.Sentry.Environment;
+                options.TracesSampleRate = realtimeConfig.Sentry.TracesSampleRate;
+                options.SendDefaultPii = realtimeConfig.Sentry.SendDefaultPii;
+            });
+        }
+
         builder.Services.AddRepositories(generalConfig.UseLegacyDatabase);
         if (generalConfig.UseLegacyDatabase)
         {

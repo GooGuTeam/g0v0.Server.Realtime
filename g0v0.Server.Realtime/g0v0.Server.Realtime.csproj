@@ -12,6 +12,7 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.20"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.20"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.20"/>
+        <PackageReference Include="Sentry.AspNetCore" Version="6.11.1"/>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3"/>
     </ItemGroup>
 

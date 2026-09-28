@@ -65,4 +65,9 @@ public class RealtimeConfig
     /// </summary>
     [Reloadable]
     public TimeSpan TournamentRoomRetentionPeriod { get; set; } = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// Gets or sets the Sentry error-monitoring settings.
+    /// </summary>
+    public SentryOptions Sentry { get; set; } = new();
 }

@@ -117,7 +117,13 @@ Properties marked with `[Reloadable]` support hot-reload at runtime.
   "HostPlaylistLimit": 50,
   "GuestPlaylistLimit": 3,
   "MultiplayerDisconnectGracePeriod": "00:00:30",
-  "TournamentRoomRetentionPeriod": "00:30:00"
+  "TournamentRoomRetentionPeriod": "00:30:00",
+  "Sentry": {
+    "Dsn": "",
+    "Environment": "",
+    "TracesSampleRate": 0.1,
+    "SendDefaultPii": false
+  }
 }
 ```
 
@@ -130,6 +136,10 @@ Properties marked with `[Reloadable]` support hot-reload at runtime.
 | `GuestPlaylistLimit`               | int      | `3`        | Max playlist items a guest may enqueue (restart required)                             |
 | `MultiplayerDisconnectGracePeriod` | TimeSpan | `00:00:30` | How long a disconnected user is kept in their room before removal (hot-reloadable)    |
 | `TournamentRoomRetentionPeriod`    | TimeSpan | `00:30:00` | How long an empty tournament room is retained before being destroyed (hot-reloadable) |
+| `Sentry.Dsn`                       | string   | `""`       | Sentry DSN; Sentry is enabled automatically when this is non-empty (secret, git-ignored; restart required) |
+| `Sentry.Environment`               | string   | `""`       | Sentry environment tag; empty falls back to `ASPNETCORE_ENVIRONMENT` (restart required) |
+| `Sentry.TracesSampleRate`          | double   | `0.1`      | Performance-trace sampling rate 0.0–1.0 (restart required)                            |
+| `Sentry.SendDefaultPii`            | bool     | `false`    | Whether default PII (user IDs, emails, IPs) is attached to events (restart required)  |
 
 #### `config/storage.json` — Storage Backend
 
