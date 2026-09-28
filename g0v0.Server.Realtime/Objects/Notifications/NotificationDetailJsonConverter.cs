@@ -36,6 +36,15 @@ internal sealed class NotificationDetailJsonConverter : JsonConverter<Notificati
             "channel_message" => new ChannelMessageNotification(
                 detail.Value<int?>("source_user_id") ?? 0,
                 detail["receiver_ids"]?.ToObject<List<int>>(serializer) ?? []),
+            "channel_team" => new ChannelTeamNotification(
+                detail.Value<int?>("source_user_id") ?? 0,
+                detail["receiver_ids"]?.ToObject<List<int>>(serializer) ?? []),
+            "channel_announcement" => new ChannelAnnouncementNotification(
+                detail.Value<int?>("source_user_id") ?? 0,
+                detail["receiver_ids"]?.ToObject<List<int>>(serializer) ?? []),
+            "channel_mention" => new ChannelMentionNotification(
+                detail.Value<int?>("source_user_id") ?? 0,
+                detail["receiver_ids"]?.ToObject<List<int>>(serializer) ?? []),
             "user_achievement_unlock" => new UserAchievementUnlockNotification(),
             _ => throw new JsonSerializationException($"Unsupported notification detail name '{name}'."),
         };

@@ -12,11 +12,36 @@ namespace g0v0.Server.Realtime.Objects.Notifications;
 /// <remarks>
 /// The notification is used on both IPC and the notification WebSocket endpoint.
 /// Newtonsoft.Json attributes define its IPC wire shape, while System.Text.Json
-/// attributes define its ASP.NET response shape.
+/// attributes define its ASP.NET response shape. <see cref="Id"/>,
+/// <see cref="CreatedAt"/> and <see cref="IsRead"/> carry the persisted
+/// notification's identity so the <c>new</c> WebSocket event matches osu-web's
+/// <c>NewPrivateNotificationEvent</c>.
 /// </remarks>
 [Newtonsoft.Json.JsonConverter(typeof(NotificationDetailJsonConverter))]
 public abstract class NotificationDetail
 {
+    /// <summary>
+    /// Gets or sets the persisted notification ID. <c>0</c> when the notification
+    /// has not been persisted.
+    /// </summary>
+    [JsonProperty("id")]
+    [JsonPropertyName("id")]
+    public long Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the creation timestamp of the persisted notification.
+    /// </summary>
+    [JsonProperty("created_at")]
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the persisted notification has been read.
+    /// </summary>
+    [JsonProperty("is_read")]
+    [JsonPropertyName("is_read")]
+    public bool IsRead { get; set; }
+
     /// <summary>
     /// Gets or sets the notification title.
     /// </summary>
@@ -30,6 +55,17 @@ public abstract class NotificationDetail
     [JsonProperty("cover_url")]
     [JsonPropertyName("cover_url")]
     public string CoverUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets a value indicating whether the source user is removed from the
+    /// receivers, mirroring osu-web's
+    /// <c>BroadcastNotificationBase::getReceiverIds()</c>. Notifications that
+    /// notify their source user (for example user achievement unlocks) override
+    /// this.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public virtual bool ExcludeSourceFromReceivers => true;
 
     /// <summary>
     /// Gets the notification name.

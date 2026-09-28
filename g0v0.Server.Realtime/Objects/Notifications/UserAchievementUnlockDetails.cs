@@ -59,4 +59,13 @@ public sealed class UserAchievementUnlockDetails : NotificationDetails
     [JsonProperty("user_id")]
     [JsonPropertyName("user_id")]
     public int UserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the username of the achieving user, mirroring the
+    /// <c>username</c> osu-web's <c>BroadcastNotificationBase::makeNotification()</c>
+    /// adds to every notification's details.
+    /// </summary>
+    [JsonProperty("username")]
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
 }

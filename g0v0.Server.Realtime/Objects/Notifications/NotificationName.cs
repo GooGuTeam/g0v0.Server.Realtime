@@ -86,6 +86,11 @@ public enum NotificationName
     ChannelMessage,
 
     /// <summary>
+    /// A user was mentioned in a public channel message.
+    /// </summary>
+    ChannelMention,
+
+    /// <summary>
     /// A team channel message was sent.
     /// </summary>
     ChannelTeam,

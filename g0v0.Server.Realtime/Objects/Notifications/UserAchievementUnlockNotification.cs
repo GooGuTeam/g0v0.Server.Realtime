@@ -46,6 +46,24 @@ public sealed class UserAchievementUnlockNotification : NotificationDetail
     [JsonPropertyName("user_id")]
     public int UserId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the username of the achieving user, carried into the
+    /// details payload.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public string Username { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// User achievement unlocks notify the achieving user themself, so the
+    /// source user is kept in the receivers like osu-web's
+    /// <c>UserAchievementUnlock::getReceiverIds()</c>.
+    /// </remarks>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public override bool ExcludeSourceFromReceivers => false;
+
     /// <inheritdoc />
     [JsonProperty("name")]
     [JsonPropertyName("name")]
@@ -81,5 +99,6 @@ public sealed class UserAchievementUnlockNotification : NotificationDetail
         Title = Title,
         Description = Description,
         UserId = UserId,
+        Username = Username,
     };
 }

@@ -9,7 +9,7 @@ namespace g0v0.Server.Realtime.Objects.Notifications;
 /// Details of a <c>channel_message</c> notification, mirroring osu-web's
 /// <c>Notifications\ChannelMessageBase::getDetails()</c>.
 /// </summary>
-public sealed class ChannelMessageDetails : NotificationDetails
+public class ChannelMessageDetails : NotificationDetails
 {
     /// <summary>
     /// Gets or sets the (truncated) message content.
@@ -31,4 +31,13 @@ public sealed class ChannelMessageDetails : NotificationDetails
     [JsonProperty("cover_url")]
     [JsonPropertyName("cover_url")]
     public string CoverUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the username of the message sender, mirroring the
+    /// <c>username</c> osu-web's <c>BroadcastNotificationBase::makeNotification()</c>
+    /// adds to every notification's details.
+    /// </summary>
+    [JsonProperty("username")]
+    [JsonPropertyName("username")]
+    public string Username { get; set; } = string.Empty;
 }
