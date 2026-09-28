@@ -6,8 +6,7 @@ using Newtonsoft.Json;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// Details of a <c>user_achievement_unlock</c> notification, mirroring osu-web's
-/// <c>Jobs\Notifications\UserAchievementUnlock::getDetails()</c>.
+/// Details of a <c>user_achievement_unlock</c> notification.
 /// </summary>
 public sealed class UserAchievementUnlockDetails : NotificationDetails
 {
@@ -61,9 +60,7 @@ public sealed class UserAchievementUnlockDetails : NotificationDetails
     public int UserId { get; set; }
 
     /// <summary>
-    /// Gets or sets the username of the achieving user, mirroring the
-    /// <c>username</c> osu-web's <c>BroadcastNotificationBase::makeNotification()</c>
-    /// adds to every notification's details.
+    /// Gets or sets the username of the achieving user.
     /// </summary>
     [JsonProperty("username")]
     [JsonPropertyName("username")]

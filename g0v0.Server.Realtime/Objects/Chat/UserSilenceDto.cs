@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace g0v0.Server.Realtime.Objects.Chat;
 
 /// <summary>
-/// User silence response DTO, mirroring osu-web's <c>UserSilenceTransformer</c> output.
+/// User silence response DTO.
 /// </summary>
 public sealed class UserSilenceDto
 {

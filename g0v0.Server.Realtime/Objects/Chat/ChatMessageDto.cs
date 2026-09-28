@@ -6,7 +6,7 @@ using g0v0.Server.Common.Database.Models;
 namespace g0v0.Server.Realtime.Objects.Chat;
 
 /// <summary>
-/// Chat message response DTO, mirroring osu-web's <c>MessageTransformer</c> output.
+/// Chat message response DTO.
 /// </summary>
 public sealed class ChatMessageDto
 {

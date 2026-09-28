@@ -43,8 +43,7 @@ public class ChatController(
         int? historySince = parameters.GetInt("history_since");
         int? since = parameters.GetInt("since");
 
-        // osu-web's Chat::ack refreshes the activity markers of the public
-        // channels the user is in.
+        // Refreshes the activity markers of the public channels the user is in.
         await notificationServer.Ack(LazerPlayer.GetOrCreate(playerManager, currentUserId));
 
         return Ok(new { silences = await GetSilencesAsync(historySince, since) });

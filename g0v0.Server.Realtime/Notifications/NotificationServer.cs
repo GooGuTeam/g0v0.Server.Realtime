@@ -19,15 +19,6 @@ namespace g0v0.Server.Realtime.Notifications;
 /// Tracks real-time chat connections, persists messages and memberships, and
 /// broadcasts chat/notification events to the connected <see cref="IPlayer"/> instances.
 /// </summary>
-/// <remarks>
-/// This is the C# counterpart of the lazer API <c>ChatServer</c> combined with
-/// osu-web's chat model. Channel membership and read markers live in
-/// <c>chat_user_channels</c>, the activity of a public channel lives in the
-/// Redis sorted set <c>chat:channel:{channelId}</c> with osu-web's 60 second
-/// window, and message fan-out follows <c>ChatMessageEvent</c>: bancho commands
-/// go back to their sender only, public channels reach the users that
-/// acknowledged them recently, and every other channel reaches its members.
-/// </remarks>
 /// <param name="logger">The logger.</param>
 /// <param name="rankedCache">The sorted-set cache holding channel activity markers and message throttles.</param>
 /// <param name="configManager">The configuration manager used to read the chat limits.</param>
@@ -142,7 +133,6 @@ public class NotificationServer(
             ChatChannel? channel = await chatRepository.GetChannelAsync(channelId);
             bool isAnnouncement = channel?.Type == ChannelType.Announce;
 
-            // osu-web's Channel::receiveMessage normalises and validates the content.
             string normalized = isAnnouncement
                 ? content
                 : content.Replace('\r', ' ').Replace('\n', ' ').Trim();
@@ -203,8 +193,6 @@ public class NotificationServer(
         IChatRepository chatRepository = CreateScope(out IServiceScope scope);
         using (scope)
         {
-            // osu-web's Chat::ack refreshes the activity marker of every public
-            // channel the user is a member of.
             IReadOnlyList<ChatUserChannel> memberships = await chatRepository.GetUserChannelsAsync(
                 player.PlayerId,
                 includeHidden: true);
@@ -230,10 +218,9 @@ public class NotificationServer(
 
     /// <inheritdoc />
     /// <remarks>
-    /// Mirrors osu-web's <c>BroadcastNotificationBase::handle()</c>: the source
-    /// user is removed from the receivers (unless the notification overrides
-    /// that), bot users and users blocked by the source are excluded, the
-    /// notification and its per-user delivery records are persisted, and the
+    /// The source user is removed from the receivers (unless the notification
+    /// overrides that), bot users and users blocked by the source are excluded,
+    /// the notification and its per-user delivery records are persisted, and the
     /// <c>new</c> event is pushed to every connected receiver. When no receiver
     /// remains, nothing is persisted and nothing is pushed.
     /// </remarks>
@@ -265,7 +252,6 @@ public class NotificationServer(
                 .Where(receiverId => !users.TryGetValue(receiverId, out User? user) || !user.IsBot)
                 .ToList();
 
-            // osu-web's excludeBlockedUserIds: users the source has blocked are excluded.
             if (receiverIds.Count > 0)
             {
                 IReadOnlyList<int> blockedUserIds = await relationshipRepository.GetBlockedUserIdsAsync(detail.SourceUserId);
@@ -315,9 +301,8 @@ public class NotificationServer(
     }
 
     /// <summary>
-    /// Creates and dispatches the notifications of a sent message, mirroring
-    /// osu-web's <c>Message::dispatchNotification()</c>: user commands are
-    /// skipped, PM/team/announcement channels notify their users, and public
+    /// Creates and dispatches the notifications of a sent message: user commands
+    /// are skipped, PM/team/announcement channels notify their users, and public
     /// channels only notify mentioned users.
     /// </summary>
     /// <param name="channel">The channel the message was posted in.</param>
@@ -431,10 +416,9 @@ public class NotificationServer(
     }
 
     /// <summary>
-    /// Fills the shared fields of a channel message notification, mirroring
-    /// osu-web's <c>ChannelMessageBase::getDetails()</c> and
-    /// <c>makeNotification()</c>: the truncated message content, the lower-cased
-    /// channel type, the sender's avatar and username, and the channel name.
+    /// Fills the shared fields of a channel message notification: the truncated
+    /// message content, the lower-cased channel type, the sender's avatar and
+    /// username, and the channel name.
     /// </summary>
     /// <param name="detail">The notification to fill.</param>
     /// <param name="channel">The channel the message was posted in.</param>
@@ -589,9 +573,7 @@ public class NotificationServer(
     }
 
     /// <summary>
-    /// Resolves the recipients of a message, mirroring osu-web's
-    /// <c>ChatMessageEvent::broadcastOn</c> together with
-    /// <c>Channel::activeUserIds</c>.
+    /// Resolves the recipients of a message.
     /// </summary>
     /// <param name="channel">The channel the message was posted in.</param>
     /// <param name="message">The message.</param>

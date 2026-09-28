@@ -6,9 +6,8 @@ using System.Text.RegularExpressions;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// Maps notification names to their grouping categories, mirroring osu-web's
-/// <c>Notification::NAME_TO_CATEGORY</c> and <c>Notification::namesInCategory()</c>,
-/// and parses message mentions like <c>Message::mention()</c>.
+/// Maps notification names to their grouping categories and parses message
+/// mentions.
 /// </summary>
 internal static partial class NotificationCategories
 {
@@ -42,8 +41,8 @@ internal static partial class NotificationCategories
     };
 
     /// <summary>
-    /// Gets the database name of a notification name, the snake-cased osu-web
-    /// constant value (for example <c>channel_message</c>).
+    /// Gets the database name of a notification name, the snake-cased constant
+    /// value (for example <c>channel_message</c>).
     /// </summary>
     /// <param name="name">The notification name.</param>
     /// <returns>The database value.</returns>
@@ -76,8 +75,7 @@ internal static partial class NotificationCategories
     }
 
     /// <summary>
-    /// Gets every notification name belonging to a category, mirroring
-    /// osu-web's <c>Notification::namesInCategory()</c>.
+    /// Gets every notification name belonging to a category.
     /// </summary>
     /// <param name="category">The category.</param>
     /// <returns>The notification names.</returns>
@@ -92,9 +90,7 @@ internal static partial class NotificationCategories
     }
 
     /// <summary>
-    /// Extracts the username mentioned in a message, mirroring osu-web's
-    /// <c>Message::mention()</c> together with
-    /// <c>UsernamesForDbLookup::make(trimPrefix: true)</c>: the first
+    /// Extracts the username mentioned in a message: the first
     /// <c>@username</c> token and its spacing variants are considered.
     /// </summary>
     /// <param name="content">The message content.</param>

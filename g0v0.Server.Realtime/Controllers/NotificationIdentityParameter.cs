@@ -5,9 +5,8 @@ using System.Text.Json.Serialization;
 namespace g0v0.Server.Realtime.Controllers;
 
 /// <summary>
-/// A notification identity parameter of the mark-read request, mirroring
-/// osu-web's <c>BatchIdentities::scrubIdentity()</c>: every field is optional
-/// and only the set fields constrain the affected notifications.
+/// A notification identity parameter of the mark-read request: every field is
+/// optional and only the set fields constrain the affected notifications.
 /// </summary>
 public sealed class NotificationIdentityParameter
 {

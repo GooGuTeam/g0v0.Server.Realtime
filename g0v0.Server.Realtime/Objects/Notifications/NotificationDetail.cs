@@ -14,8 +14,7 @@ namespace g0v0.Server.Realtime.Objects.Notifications;
 /// Newtonsoft.Json attributes define its IPC wire shape, while System.Text.Json
 /// attributes define its ASP.NET response shape. <see cref="Id"/>,
 /// <see cref="CreatedAt"/> and <see cref="IsRead"/> carry the persisted
-/// notification's identity so the <c>new</c> WebSocket event matches osu-web's
-/// <c>NewPrivateNotificationEvent</c>.
+/// notification's identity so the <c>new</c> WebSocket event carries them.
 /// </remarks>
 [Newtonsoft.Json.JsonConverter(typeof(NotificationDetailJsonConverter))]
 public abstract class NotificationDetail
@@ -58,10 +57,8 @@ public abstract class NotificationDetail
 
     /// <summary>
     /// Gets a value indicating whether the source user is removed from the
-    /// receivers, mirroring osu-web's
-    /// <c>BroadcastNotificationBase::getReceiverIds()</c>. Notifications that
-    /// notify their source user (for example user achievement unlocks) override
-    /// this.
+    /// receivers. Notifications that notify their source user (for example user
+    /// achievement unlocks) override this.
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]
@@ -103,8 +100,7 @@ public abstract class NotificationDetail
     public abstract IReadOnlyList<int> ReceiverIds { get; }
 
     /// <summary>
-    /// Gets the notification details, mirroring the <c>details</c> of osu-web's
-    /// <c>NotificationTransformer</c> output. The details are derived from the
+    /// Gets the notification details. The details are derived from the
     /// notification's own fields so both IPC senders and in-process callers
     /// produce them.
     /// </summary>

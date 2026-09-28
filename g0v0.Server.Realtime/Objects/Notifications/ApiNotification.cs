@@ -5,8 +5,7 @@ using System.Text.Json.Serialization;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// A single notification of the bundle, mirroring osu-web's
-/// <c>NotificationTransformer</c> output and lazer's <c>APINotification</c>.
+/// A single notification of the bundle.
 /// </summary>
 public sealed class ApiNotification
 {

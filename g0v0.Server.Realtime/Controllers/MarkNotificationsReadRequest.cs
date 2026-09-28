@@ -5,8 +5,7 @@ using System.Text.Json.Serialization;
 namespace g0v0.Server.Realtime.Controllers;
 
 /// <summary>
-/// The body of the mark-read request, mirroring osu-web's
-/// <c>NotificationsController::markRead</c> parameters.
+/// The body of the mark-read request.
 /// </summary>
 public sealed class MarkNotificationsReadRequest
 {

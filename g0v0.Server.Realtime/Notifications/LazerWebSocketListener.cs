@@ -111,7 +111,6 @@ public class LazerWebSocketListener(
         ChatUserChannel? membership = await chatRepository.GetUserChannelAsync(channelId, player.PlayerId);
         ChatChannelDtoFactory dtoFactory = scope.ServiceProvider.GetRequiredService<ChatChannelDtoFactory>();
 
-        // osu-web's ChatChannelEvent broadcasts the whole channel object.
         await connection.SendEventAsync(eventName, await dtoFactory.CreateChannelAsync(channel, player.PlayerId, membership));
     }
 
@@ -141,7 +140,6 @@ public class LazerWebSocketListener(
                 return;
             }
 
-            // osu-web's ChatMessageEvent sends the message plus the sender compact.
             UserCompactDto? sender = await GetSenderAsync(message.SenderId);
             await connection.SendEventAsync(
                 "chat.message.new",

@@ -6,8 +6,7 @@ using Newtonsoft.Json;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// An announcement channel message notification, mirroring osu-web's
-/// <c>Notifications\ChannelAnnouncement</c>.
+/// An announcement channel message notification.
 /// </summary>
 public sealed class ChannelAnnouncementNotification : ChannelNotificationBase
 {

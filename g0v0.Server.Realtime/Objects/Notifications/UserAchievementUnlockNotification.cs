@@ -57,8 +57,7 @@ public sealed class UserAchievementUnlockNotification : NotificationDetail
     /// <inheritdoc />
     /// <remarks>
     /// User achievement unlocks notify the achieving user themself, so the
-    /// source user is kept in the receivers like osu-web's
-    /// <c>UserAchievementUnlock::getReceiverIds()</c>.
+    /// source user is kept in the receivers.
     /// </remarks>
     [System.Text.Json.Serialization.JsonIgnore]
     [Newtonsoft.Json.JsonIgnore]

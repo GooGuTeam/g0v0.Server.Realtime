@@ -5,7 +5,7 @@ using g0v0.Server.Common.Configuration.Attributes;
 namespace g0v0.Server.Realtime;
 
 /// <summary>
-/// Stores chat limits, mirroring the <c>chat</c> section of osu-web's <c>config/osu.php</c>.
+/// Stores chat limits.
 /// </summary>
 /// <remarks>
 /// The file is optional: when <c>config/chat.json</c> is absent every value
@@ -98,7 +98,7 @@ public class ChatConfig
 
     /// <summary>
     /// Gets the time-to-live of the activity markers of a public channel,
-    /// mirroring osu-web's <c>CHAT_ACTIVITY_TIMEOUT * 10</c>.
+    /// ten times the configured activity timeout.
     /// </summary>
     public TimeSpan ActivityMarkerExpiry => TimeSpan.FromSeconds(ActivityTimeoutSeconds * 10);
 

@@ -3,9 +3,7 @@
 namespace g0v0.Server.Realtime.Objects.Chat;
 
 /// <summary>
-/// Thrown when a chat message cannot be sent, mirroring osu-web's
-/// <c>ChatMessageEmptyException</c>, <c>ChatMessageTooLongException</c> and
-/// <c>ExcessiveChatMessagesException</c>.
+/// Thrown when a chat message cannot be sent.
 /// </summary>
 public class ChatMessageRejectedException : Exception
 {

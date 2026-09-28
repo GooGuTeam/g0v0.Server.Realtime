@@ -5,9 +5,7 @@ using System.Text.Json.Serialization;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// The response of <c>GET /api/v2/notifications</c>, mirroring the bundle of
-/// osu-web's <c>NotificationsController::index</c> (see its documented
-/// response format and lazer's <c>APINotificationsBundle</c>).
+/// The response of <c>GET /api/v2/notifications</c>.
 /// </summary>
 public sealed class ApiNotificationsBundle
 {

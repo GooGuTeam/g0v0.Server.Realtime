@@ -12,8 +12,7 @@ namespace g0v0.Server.Realtime.Objects.Chat;
 /// Builds chat channel DTOs for the chat REST and WebSocket endpoints.
 /// </summary>
 /// <remarks>
-/// Mirrors osu-web's <c>ChannelTransformer</c> and <c>UserChannelList</c>: the
-/// channel fields, the requesting user's attributes and read marker, the
+/// The channel fields, the requesting user's attributes and read marker, the
 /// participants of PM channels, and - when requested - the newest messages of
 /// the channel filtered like <c>Message::filter</c>. Blocking and
 /// friends-only rules follow <c>Channel::isVisibleFor</c> and
@@ -63,9 +62,8 @@ public sealed class ChatChannelDtoFactory(
     }
 
     /// <summary>
-    /// Lists every joinable public channel, mirroring osu-web's
-    /// <c>ChannelsController::index</c>: the plain channel transform without any
-    /// include, ordered by channel ID.
+    /// Lists every joinable public channel: the plain channel transform without
+    /// any include, ordered by channel ID.
     /// </summary>
     /// <param name="requestingUserId">The user the response is built for.</param>
     /// <returns>The public channels.</returns>
@@ -79,9 +77,9 @@ public sealed class ChatChannelDtoFactory(
     }
 
     /// <summary>
-    /// Lists every channel the user takes part in, mirroring osu-web's
-    /// <c>UserChannelList</c>: the visible membership rows ordered by channel ID,
-    /// with hidden channels and channels of blocked users left out.
+    /// Lists every channel the user takes part in: the visible membership rows
+    /// ordered by channel ID, with hidden channels and channels of blocked users
+    /// left out.
     /// </summary>
     /// <param name="userId">The user the response is built for.</param>
     /// <param name="includeRecentMessages">Whether to attach the recent messages of each channel.</param>
@@ -156,8 +154,7 @@ public sealed class ChatChannelDtoFactory(
     }
 
     /// <summary>
-    /// Gets the reason a user cannot post in a channel, mirroring osu-web's
-    /// <c>ChatChannelCanMessage</c> check.
+    /// Gets the reason a user cannot post in a channel.
     /// </summary>
     /// <param name="channel">The channel.</param>
     /// <param name="userId">The user posting.</param>
@@ -190,8 +187,7 @@ public sealed class ChatChannelDtoFactory(
     }
 
     /// <summary>
-    /// Gets the PM participant that is not the requesting user, mirroring
-    /// osu-web's <c>Channel::pmTargetFor</c>.
+    /// Gets the PM participant that is not the requesting user.
     /// </summary>
     /// <param name="channel">The channel.</param>
     /// <param name="requestingUserId">The user the response is built for.</param>
@@ -237,9 +233,8 @@ public sealed class ChatChannelDtoFactory(
     }
 
     /// <summary>
-    /// Determines whether a channel is listed for the user, mirroring
-    /// osu-web's <c>Channel::isVisibleFor</c>: PM channels with a blocked
-    /// (non-bot) target are hidden.
+    /// Determines whether a channel is listed for the user: PM channels with a
+    /// blocked (non-bot) target are hidden.
     /// </summary>
     private static bool IsVisibleFor(
         ChatChannel channel,
@@ -404,8 +399,8 @@ public sealed class ChatChannelDtoFactory(
     }
 
     /// <summary>
-    /// The relationship sets the listing needs, loaded with osu-web's two
-    /// preloading queries.
+    /// The relationship sets the listing needs, loaded with two preloading
+    /// queries.
     /// </summary>
     /// <param name="FollowedIds">Users the requesting user has on their friends list.</param>
     /// <param name="FollowerIds">Users that have the requesting user on their friends list.</param>

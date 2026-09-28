@@ -6,10 +6,9 @@ using Newtonsoft.Json;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// Base payload of the channel message notifications, mirroring osu-web's
-/// <c>Notifications\ChannelMessageBase</c>: the notifiable object is the
-/// channel the message was posted in and the receivers are derived from the
-/// channel's users.
+/// Base payload of the channel message notifications: the notifiable object is
+/// the channel the message was posted in and the receivers are derived from
+/// the channel's users.
 /// </summary>
 public abstract class ChannelNotificationBase : NotificationDetail
 {

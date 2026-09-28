@@ -7,7 +7,7 @@ using osu.Game.Online.Chat;
 namespace g0v0.Server.Realtime.Services;
 
 /// <summary>
-/// Applies osu-web's <c>Message::filter</c> to a channel's history.
+/// Applies the message filter to a channel's history.
 /// </summary>
 internal static class ChatMessageFilter
 {

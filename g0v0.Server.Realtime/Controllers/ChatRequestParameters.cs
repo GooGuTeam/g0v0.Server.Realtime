@@ -7,8 +7,7 @@ using Microsoft.Extensions.Primitives;
 namespace g0v0.Server.Realtime.Controllers;
 
 /// <summary>
-/// Reads the parameters of a chat request the way osu-web's
-/// <c>get_params(request()->all())</c> does: from a JSON body, a form body or the
+/// Reads the parameters of a chat request from a JSON body, a form body or the
 /// query string, with nested JSON objects flattened into dot-separated names.
 /// </summary>
 internal sealed class ChatRequestParameters

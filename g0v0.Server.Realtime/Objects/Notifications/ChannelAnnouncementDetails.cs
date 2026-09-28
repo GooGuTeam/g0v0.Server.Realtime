@@ -6,8 +6,7 @@ using Newtonsoft.Json;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// Details of a <c>channel_announcement</c> notification, mirroring osu-web's
-/// <c>Notifications\ChannelAnnouncement::getDetails()</c>.
+/// Details of a <c>channel_announcement</c> notification.
 /// </summary>
 public sealed class ChannelAnnouncementDetails : ChannelMessageDetails
 {

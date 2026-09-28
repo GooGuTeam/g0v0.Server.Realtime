@@ -32,9 +32,8 @@ public class ChannelsController(
     /// </summary>
     /// <returns>The public channels.</returns>
     /// <remarks>
-    /// Mirrors osu-web's <c>ChannelsController::index</c>. The channels the user
-    /// is in are exposed through <c>GET /chat/presence</c> and
-    /// <c>GET /chat/updates</c> instead.
+    /// The channels the user is in are exposed through <c>GET /chat/presence</c>
+    /// and <c>GET /chat/updates</c> instead.
     /// </remarks>
     [HttpGet]
     [RequireScope("chat.read")]
@@ -77,7 +76,7 @@ public class ChannelsController(
 
     /// <summary>
     /// Creates a new PM or announcement channel, rejoining an existing PM
-    /// conversation, mirroring osu-web's <c>ChannelsController::store</c>.
+    /// conversation.
     /// </summary>
     /// <returns>The created or rejoined channel.</returns>
     /// <remarks>

@@ -6,8 +6,8 @@ using g0v0.Server.Common.Database.Repository;
 namespace g0v0.Server.Realtime.Services;
 
 /// <summary>
-/// Implements osu-web's <c>ChatPmStart</c> authorization check: whether a user
-/// may start (or keep using) a private conversation with another user.
+/// Implements the PM start authorization check: whether a user may start (or
+/// keep using) a private conversation with another user.
 /// </summary>
 /// <remarks>
 /// The server has no moderator or account-restriction model yet, so only the

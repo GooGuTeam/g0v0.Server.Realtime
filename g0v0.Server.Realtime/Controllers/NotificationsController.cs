@@ -103,9 +103,8 @@ public class NotificationsController(INotificationRepository notificationReposit
     }
 
     /// <summary>
-    /// Transforms a delivery record into its API representation, mirroring
-    /// osu-web's <c>NotificationTransformer</c>: the notification fields
-    /// together with the per-user <c>is_read</c> flag.
+    /// Transforms a delivery record into its API representation: the
+    /// notification fields together with the per-user <c>is_read</c> flag.
     /// </summary>
     /// <param name="record">The delivery record with its notification loaded.</param>
     /// <returns>The API notification.</returns>

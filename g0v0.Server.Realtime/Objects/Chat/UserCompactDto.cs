@@ -6,8 +6,7 @@ using g0v0.Server.Common.Database.Models;
 namespace g0v0.Server.Realtime.Objects.Chat;
 
 /// <summary>
-/// User payload embedded in chat responses, mirroring osu-web's
-/// <c>UserCompactTransformer</c>.
+/// User payload embedded in chat responses.
 /// </summary>
 public sealed class UserCompactDto
 {

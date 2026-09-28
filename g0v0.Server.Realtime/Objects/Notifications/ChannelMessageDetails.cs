@@ -6,8 +6,7 @@ using Newtonsoft.Json;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// Details of a <c>channel_message</c> notification, mirroring osu-web's
-/// <c>Notifications\ChannelMessageBase::getDetails()</c>.
+/// Details of a <c>channel_message</c> notification.
 /// </summary>
 public class ChannelMessageDetails : NotificationDetails
 {
@@ -33,9 +32,7 @@ public class ChannelMessageDetails : NotificationDetails
     public string CoverUrl { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the username of the message sender, mirroring the
-    /// <c>username</c> osu-web's <c>BroadcastNotificationBase::makeNotification()</c>
-    /// adds to every notification's details.
+    /// Gets or sets the username of the message sender.
     /// </summary>
     [JsonProperty("username")]
     [JsonPropertyName("username")]

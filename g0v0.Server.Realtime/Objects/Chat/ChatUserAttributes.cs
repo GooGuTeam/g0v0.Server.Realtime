@@ -5,8 +5,7 @@ using System.Text.Json.Serialization;
 namespace g0v0.Server.Realtime.Objects.Chat;
 
 /// <summary>
-/// User-specific attributes for a chat channel, mirroring osu-web's
-/// <c>includeCurrentUserAttributes</c> transformer output.
+/// User-specific attributes for a chat channel.
 /// </summary>
 public sealed class ChatUserAttributes
 {

@@ -6,8 +6,7 @@ using Newtonsoft.Json;
 namespace g0v0.Server.Realtime.Objects.Notifications;
 
 /// <summary>
-/// A private message notification, mirroring osu-web's
-/// <c>Notifications\ChannelMessage</c> (the lazer API <c>ChannelMessage</c>).
+/// A private message notification.
 /// </summary>
 public sealed class ChannelMessageNotification : ChannelNotificationBase
 {

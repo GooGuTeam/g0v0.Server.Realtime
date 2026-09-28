@@ -82,7 +82,7 @@ public class MultiClientChatFlowTests
         _userRepository.AddUser(new User { Id = 2, Username = "user-2" });
         _userRepository.AddUser(new User { Id = 3, Username = "user-3" });
 
-        // Seed the default public channel, as in the osu-web database.
+        // Seed the default public channel.
         _chatRepository.AddChannel(new ChatChannel
         {
             ChannelId = 1,

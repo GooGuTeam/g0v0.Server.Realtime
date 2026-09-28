@@ -1,7 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Common.Database.Models;
-using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
@@ -13,14 +12,6 @@ namespace g0v0.Server.Realtime.Notifications;
 /// messages/channels, and broadcasts chat and notification events to the
 /// connected <see cref="IPlayer"/> instances.
 /// </summary>
-/// <remarks>
-/// This is the C# counterpart of the lazer API <c>ChatServer</c> combined with
-/// osu-web's chat model: connections are tracked in memory, channel membership
-/// and read markers are persisted through <see cref="IChatRepository"/>, the
-/// activity of public channels lives in a Redis sorted set, and every event is
-/// broadcast to the matching <see cref="IPlayer"/> instances by calling their
-/// <c>On...</c> methods.
-/// </remarks>
 public interface INotificationServer
 {
     /// <summary>
@@ -101,8 +92,7 @@ public interface INotificationServer
 
     /// <summary>
     /// Keeps the player's chat connection alive by refreshing the activity
-    /// markers of every public channel they are in, mirroring osu-web's
-    /// <c>Chat::ack</c>.
+    /// markers of every public channel they are in.
     /// </summary>
     /// <param name="player">The player to keep alive.</param>
     /// <returns>A task representing the asynchronous operation.</returns>

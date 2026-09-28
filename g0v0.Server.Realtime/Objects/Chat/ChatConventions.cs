@@ -12,14 +12,12 @@ namespace g0v0.Server.Realtime.Objects.Chat;
 internal static class ChatConventions
 {
     /// <summary>
-    /// Gets the title truncation limit of channel message notifications,
-    /// mirroring osu-web's <c>ChannelMessageBase::CONTENT_TRUNCATE</c>.
+    /// Gets the title truncation limit of channel message notifications.
     /// </summary>
     internal const int MessageTitleTruncateLimit = 36;
 
     /// <summary>
-    /// Gets the title truncation limit of mention notifications, mirroring
-    /// osu-web's <c>ChannelMention::CONTENT_TRUNCATE</c>.
+    /// Gets the title truncation limit of mention notifications.
     /// </summary>
     internal const int MentionTitleTruncateLimit = 200;
 
@@ -27,37 +25,13 @@ internal static class ChatConventions
 
     private static readonly char[] PmNameSeparators = ['_', '-'];
 
-    /// <summary>
-    /// Gets the key of the activity markers of a public channel, mirroring
-    /// osu-web's <c>Channel::getAckKey</c>.
-    /// </summary>
-    /// <param name="channelId">The channel ID.</param>
-    /// <returns>The cache key.</returns>
     internal static string AckKey(int channelId) => $"chat:channel:{channelId}";
 
-    /// <summary>
-    /// Gets the key of a user's message throttle bucket, mirroring osu-web's
-    /// <c>message_throttle:{userId}:{kind}</c> key.
-    /// </summary>
-    /// <param name="userId">The user ID.</param>
-    /// <param name="isPrivate">Whether the bucket tracks a private (PM) channel.</param>
-    /// <returns>The cache key.</returns>
     internal static string ThrottleKey(int userId, bool isPrivate) => $"message_throttle:{userId}:{(isPrivate ? "PM" : "PUBLIC")}";
 
-    /// <summary>
-    /// Determines whether a message is a BanchoBot command, mirroring osu-web's
-    /// <c>Message::isUserCommand()</c> (<c>/^![^ !]/</c>).
-    /// </summary>
-    /// <param name="content">The raw message content.</param>
-    /// <returns><see langword="true"/> when the content is a user command.</returns>
     internal static bool IsUserCommand(string content) =>
         content.Length > 1 && content[0] == '!' && content[1] != ' ' && content[1] != '!';
 
-    /// <summary>
-    /// Gets the wire name of a channel type, mirroring osu-web's <c>Channel::TYPES</c>.
-    /// </summary>
-    /// <param name="type">The channel type.</param>
-    /// <returns>The upper-case type name used by the API.</returns>
     internal static string GetChannelTypeName(ChannelType type)
     {
         return type switch
@@ -76,14 +50,6 @@ internal static class ChatConventions
         };
     }
 
-    /// <summary>
-    /// Gets the wire name of a message type, mirroring osu-web's
-    /// <c>MessageTransformer</c>: actions are <c>action</c>, announcement
-    /// channel messages are <c>markdown</c> and everything else is <c>plain</c>.
-    /// </summary>
-    /// <param name="type">The message type.</param>
-    /// <param name="isAnnouncement">Whether the message was posted in an announcement channel.</param>
-    /// <returns>The type name used by the API.</returns>
     internal static string GetMessageTypeName(MessageType type, bool isAnnouncement)
     {
         return type switch
@@ -95,8 +61,7 @@ internal static class ChatConventions
     }
 
     /// <summary>
-    /// Determines whether a channel keeps its membership row when a user leaves,
-    /// mirroring osu-web's <c>Channel::isHideable()</c>.
+    /// Determines whether a channel keeps its membership row when a user leaves.
     /// </summary>
     /// <param name="type">The channel type.</param>
     /// <returns><see langword="true"/> when leaving the channel only hides it.</returns>
@@ -132,9 +97,8 @@ internal static class ChatConventions
     }
 
     /// <summary>
-    /// Truncates a message for a notification title, mirroring osu-web's
-    /// <c>truncate()</c> helper: texts longer than the limit are cut and the
-    /// ellipsis fills into the limit.
+    /// Truncates a message for a notification title: texts longer than the limit
+    /// are cut and the ellipsis fills into the limit.
     /// </summary>
     /// <param name="content">The message content.</param>
     /// <param name="limit">The maximum length of the result.</param>
