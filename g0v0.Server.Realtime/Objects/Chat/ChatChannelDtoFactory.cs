@@ -307,7 +307,7 @@ public sealed class ChatChannelDtoFactory(
         string? canMessageError = GetCanMessageError(channel, requestingUserId, users, relationships);
 
         ChatChannelDto dto = ChatChannelDto.FromDb(channel, requestingUserId, displayName, participantIds);
-        dto.Icon = targetUserId.HasValue ? $"https://a.ppy.sh/{targetUserId.Value}" : null;
+        dto.Icon = targetUserId.HasValue ? $"{configManager.Get<GeneralConfig>().GeneralServerUrl}avatar/{targetUserId.Value}" : null;
         dto.LastReadId = membership?.LastReadId;
         dto.MessageLengthLimit = isAnnouncement ? chatConfig.AnnounceMessageLengthLimit : chatConfig.MessageLengthLimit;
         dto.CurrentUserAttributes = new ChatUserAttributes

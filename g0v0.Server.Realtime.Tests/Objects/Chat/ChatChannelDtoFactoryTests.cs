@@ -29,7 +29,10 @@ public class ChatChannelDtoFactoryTests
         _userRepository.AddUser(new User { Id = 2, Username = "user2" });
         _userRepository.AddUser(new User { Id = 3, Username = "user3", IsBot = true });
         _relationshipRepository = new FakeRelationshipRepository();
-        _configManager = new ConfigManager(Path.Combine(Path.GetTempPath(), "g0v0-chat-dto-factory-tests", Guid.NewGuid().ToString("N")));
+        string basePath = Path.Combine(Path.GetTempPath(), "g0v0-chat-dto-factory-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(basePath, "config"));
+        File.WriteAllText(Path.Combine(basePath, "config", "general.json"), "{\"ServerUrl\":\"https://g0v0.example\"}");
+        _configManager = new ConfigManager(basePath);
 
         _factory = new ChatChannelDtoFactory(_chatRepository, _userRepository, _relationshipRepository, _configManager);
     }
@@ -117,7 +120,7 @@ public class ChatChannelDtoFactoryTests
         ChatChannelDto dto = await _factory.CreateChannelAsync(pm, 1);
 
         Assert.That(dto.Name, Is.EqualTo("user2"));
-        Assert.That(dto.Icon, Is.EqualTo("https://a.ppy.sh/2"));
+        Assert.That(dto.Icon, Is.EqualTo("https://g0v0.example/avatar/2"));
         int[] expectedParticipants = [2, 1];
         Assert.That(dto.Users, Is.EqualTo(expectedParticipants));
         Assert.That(dto.MessageLengthLimit, Is.EqualTo(ChatConfig.DefaultMessageLengthLimit));
