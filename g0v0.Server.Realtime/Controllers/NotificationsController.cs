@@ -4,7 +4,6 @@ using System.Text.Json;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
-using g0v0.Server.Common.Extensions;
 using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Objects.Notifications;
 using Microsoft.AspNetCore.Authorization;
@@ -151,7 +150,7 @@ public class NotificationsController(INotificationRepository notificationReposit
     private string BuildNotificationEndpoint()
     {
         GeneralConfig generalConfig = configManager.Get<GeneralConfig>();
-        return (generalConfig.ServerUrl.AddSuffix("/") + "notification-server")
+        return (generalConfig.GeneralServerUrl + "notification-server")
             .Replace("http://", "ws://", StringComparison.Ordinal)
             .Replace("https://", "wss://", StringComparison.Ordinal);
     }
