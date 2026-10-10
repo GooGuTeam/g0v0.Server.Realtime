@@ -277,6 +277,36 @@ public class LazerWebSocketListener(
         public async Task ReadLoopAsync(Action startChat, Action stopChat)
         {
             byte[] buffer = new byte[4096];
+            try
+            {
+                await ReadFramesAsync(buffer, startChat, stopChat);
+            }
+            catch (WebSocketException exception) when (exception.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
+            {
+                // Clients and intermediaries (mobile clients dying, network
+                // switches, CDN/proxy idle timeouts) frequently drop the TCP
+                // connection without completing the WebSocket close handshake.
+                // That is a normal disconnect, not an error; the cleanup in
+                // RunConnectionAsync's finally block still runs.
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _sendLock.Dispose();
+            webSocket.Dispose();
+        }
+
+        /// <summary>
+        /// Reads client frames until the socket closes or a frame error occurs.
+        /// </summary>
+        /// <param name="buffer">The shared receive buffer.</param>
+        /// <param name="startChat">Invoked when the client sends <c>chat.start</c>.</param>
+        /// <param name="stopChat">Invoked when the client sends <c>chat.end</c>.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
+        private async Task ReadFramesAsync(byte[] buffer, Action startChat, Action stopChat)
+        {
             while (webSocket.State == WebSocketState.Open)
             {
                 using MemoryStream stream = new();
@@ -286,6 +316,18 @@ public class LazerWebSocketListener(
                     result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
+                        // Complete the server side of the close handshake so the
+                        // client does not see an aborted connection.
+                        try
+                        {
+                            await webSocket.CloseOutputAsync(
+                                WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
+                        }
+                        catch (WebSocketException)
+                        {
+                            // The peer is already gone; Dispose still cleans up.
+                        }
+
                         return;
                     }
 
@@ -321,13 +363,6 @@ public class LazerWebSocketListener(
                         break;
                 }
             }
-        }
-
-        /// <inheritdoc />
-        public void Dispose()
-        {
-            _sendLock.Dispose();
-            webSocket.Dispose();
         }
     }
 
