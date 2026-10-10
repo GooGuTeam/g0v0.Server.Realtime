@@ -18,7 +18,6 @@ internal sealed class FakeRoomRepository : IRoomRepository
     private readonly List<RoomParticipatedUser> _participants = new();
     private long _nextRoomId = 1;
     private long _nextPlaylistId = 1;
-    private long _nextParticipantId = 1;
 
     public IReadOnlyList<Room> Rooms => _rooms;
 
@@ -123,7 +122,6 @@ internal sealed class FakeRoomRepository : IRoomRepository
         {
             _participants.Add(new RoomParticipatedUser
             {
-                Id = _nextParticipantId++,
                 RoomId = roomId,
                 UserId = userId,
                 JoinedAt = DateTimeOffset.UtcNow,
