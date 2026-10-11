@@ -158,6 +158,11 @@ public static class Program
     /// <returns>The configured application.</returns>
     public static WebApplication ConfigureApp(WebApplication app)
     {
+        // Constructing the handler registers the chat IPC notice handlers
+        // ("new_notification") on the IPC client; nothing else resolves it, so
+        // without this the notices would be silently dropped.
+        _ = app.Services.GetRequiredService<ChatIpcHandler>();
+
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
