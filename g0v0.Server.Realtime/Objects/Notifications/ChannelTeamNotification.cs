@@ -1,6 +1,5 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Objects.Notifications;
@@ -22,7 +21,6 @@ public sealed class ChannelTeamNotification : ChannelNotificationBase
 
     /// <inheritdoc />
     [JsonProperty("name")]
-    [JsonPropertyName("name")]
     public override NotificationName Name => NotificationName.ChannelTeam;
 
     /// <inheritdoc />

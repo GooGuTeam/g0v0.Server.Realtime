@@ -2,15 +2,16 @@
 
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Text.Json;
 using g0v0.Server.Common.Caching;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
+using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
+using Newtonsoft.Json;
 using osu.Game.Online.Chat;
 
 namespace g0v0.Server.Realtime.Notifications;
@@ -32,10 +33,10 @@ public class NotificationServer(
     IServiceScopeFactory scopeFactory) : INotificationServer
 {
     /// <summary>
-    /// Serializer options for the persisted <c>details</c> JSON payload; the
+    /// Serializer settings for the persisted <c>details</c> JSON payload; the
     /// details types carry explicit snake_case names.
     /// </summary>
-    private static readonly JsonSerializerOptions DetailsSerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerSettings DetailsSerializerSettings = RealtimeJson.NotificationDetails;
 
     private readonly ConcurrentDictionary<int, Dictionary<IPlayer, int>> _connections = new();
 
@@ -271,7 +272,7 @@ public class NotificationServer(
                 ObjectType = detail.ObjectType,
                 ObjectId = detail.ObjectId,
                 SourceUserId = detail.SourceUserId,
-                Details = JsonSerializer.Serialize(detail.Details, DetailsSerializerOptions),
+                Details = JsonConvert.SerializeObject(detail.Details, DetailsSerializerSettings),
             };
 
             notification = await notificationRepository.CreateAsync(notification, receiverIds);

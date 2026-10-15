@@ -126,8 +126,9 @@ SignalR specifics:
   a form body or the query string like osu-web's `get_params(request()->all())` — so lazer's form-encoded requests work.
 - `LazerWebSocketListener` serves `/notification-server` (mapped in `Program.ConfigureApp`) and maps those callbacks to
   WebSocket frames: `chat.channel.join`/`part` carry the whole channel object and `chat.message.new` carries the message
-  plus the sender compact, as in osu-web's `ChatChannelEvent`/`ChatMessageEvent`. WebSocket frames use System.Text.Json
-  with a snake_case naming policy; IPC payloads use Newtonsoft.Json. Chat events are gated behind the client's
+  plus the sender compact, as in osu-web's `ChatChannelEvent`/`ChatMessageEvent`. WebSocket frames use Newtonsoft.Json
+  with a snake_case naming policy, as do IPC payloads and the MVC JSON pipeline (`AddNewtonsoftJson`); the shared
+  `Json/RealtimeJson.cs` holds the serializer settings. Chat events are gated behind the client's
   `chat.start`/`chat.end` messages.
 - `RoomManager.EnsureRoomChannelAsync` creates the `mp_{roomId}` channel through `IChatRepository` and writes the ID back
   with `IRoomRepository.UpdateRoomChannelId`; rooms add/remove their members through the notification server instead of

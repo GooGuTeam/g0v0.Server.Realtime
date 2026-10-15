@@ -2,15 +2,15 @@
 
 using System.Net.WebSockets;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
+using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
 using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Notifications;
 
@@ -36,15 +36,11 @@ public class LazerWebSocketListener(
 {
     /// <summary>
     /// Wire format of the WebSocket frames. The frames carry the same DTOs the REST
-    /// endpoints return, so they are serialized with System.Text.Json: snake_case
+    /// endpoints return, so they are serialized with Newtonsoft.Json: snake_case
     /// property names, enums as their snake_case names, and the DTOs' own
-    /// <c>WhenWritingNull</c> contract.
+    /// <c>NullValueHandling</c> contract.
     /// </summary>
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseLower, allowIntegerValues: false) },
-    };
+    private static readonly JsonSerializerSettings JsonSettings = RealtimeJson.SocketFrame;
 
     /// <summary>
     /// Handles a WebSocket connection.
@@ -252,7 +248,7 @@ public class LazerWebSocketListener(
         /// <returns>A task representing the asynchronous operation.</returns>
         public async Task SendEventAsync(string eventName, object? data)
         {
-            string payload = JsonSerializer.Serialize(new SocketMessage { Event = eventName, Data = data }, JsonOptions);
+            string payload = JsonConvert.SerializeObject(new SocketMessage { Event = eventName, Data = data }, JsonSettings);
             byte[] bytes = Encoding.UTF8.GetBytes(payload);
             await _sendLock.WaitAsync();
             try
@@ -346,7 +342,9 @@ public class LazerWebSocketListener(
                 SocketMessage? message;
                 try
                 {
-                    message = JsonSerializer.Deserialize<SocketMessage>(stream.ToArray(), JsonOptions);
+                    message = JsonConvert.DeserializeObject<SocketMessage>(
+                        Encoding.UTF8.GetString(stream.ToArray()),
+                        JsonSettings);
                 }
                 catch (JsonException)
                 {

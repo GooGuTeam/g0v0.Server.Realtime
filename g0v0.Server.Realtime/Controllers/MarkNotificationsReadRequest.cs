@@ -1,6 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Controllers;
 
@@ -13,12 +13,12 @@ public sealed class MarkNotificationsReadRequest
     /// Gets or sets the identity filters. Only used when
     /// <see cref="Notifications"/> is absent.
     /// </summary>
-    [JsonPropertyName("identities")]
+    [JsonProperty("identities")]
     public IReadOnlyList<NotificationIdentityParameter>? Identities { get; set; }
 
     /// <summary>
     /// Gets or sets the explicit notification entries.
     /// </summary>
-    [JsonPropertyName("notifications")]
+    [JsonProperty("notifications")]
     public IReadOnlyList<NotificationIdentityParameter>? Notifications { get; set; }
 }

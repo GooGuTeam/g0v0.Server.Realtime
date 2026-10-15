@@ -14,6 +14,7 @@ using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Extensions;
+using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Notifications.Bot;
@@ -117,7 +118,11 @@ public class MultiClientChatFlowTests
         });
         builder.Services.AddSingleton<LazerWebSocketListener>();
         builder.Services.AddOAuthAuthentication();
+
+        // Mirror the production MVC JSON pipeline (Newtonsoft.Json with the
+        // shared camelCase contract resolver).
         builder.Services.AddControllers()
+            .AddNewtonsoftJson(options => options.SerializerSettings.ContractResolver = RealtimeJson.MvcContractResolver)
             .AddApplicationPart(typeof(g0v0.Server.Realtime.Controllers.ChatController).Assembly);
 
         WebApplication app = builder.Build();

@@ -1,6 +1,5 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Objects.Notifications;
@@ -23,13 +22,11 @@ public sealed class ChannelMentionNotification : ChannelNotificationBase
     /// <summary>
     /// Gets or sets the ID of the message containing the mention.
     /// </summary>
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
+    [JsonIgnore]
     public int MessageId { get; set; }
 
     /// <inheritdoc />
     [JsonProperty("name")]
-    [JsonPropertyName("name")]
     public override NotificationName Name => NotificationName.ChannelMention;
 
     /// <inheritdoc />

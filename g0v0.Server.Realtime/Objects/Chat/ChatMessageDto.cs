@@ -1,7 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using System.Text.Json.Serialization;
 using g0v0.Server.Common.Database.Models;
+using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Objects.Chat;
 
@@ -13,57 +13,55 @@ public sealed class ChatMessageDto
     /// <summary>
     /// Gets or sets the channel ID the message belongs to.
     /// </summary>
-    [JsonPropertyName("channel_id")]
+    [JsonProperty("channel_id")]
     public int ChannelId { get; set; }
 
     /// <summary>
     /// Gets or sets the message content.
     /// </summary>
-    [JsonPropertyName("content")]
+    [JsonProperty("content")]
     public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a value indicating whether the message is an action (<c>/me</c>).
     /// </summary>
-    [JsonPropertyName("is_action")]
+    [JsonProperty("is_action")]
     public bool IsAction { get; set; }
 
     /// <summary>
     /// Gets or sets the message ID.
     /// </summary>
-    [JsonPropertyName("message_id")]
+    [JsonProperty("message_id")]
     public int MessageId { get; set; }
 
     /// <summary>
     /// Gets or sets the sender user ID.
     /// </summary>
-    [JsonPropertyName("sender_id")]
+    [JsonProperty("sender_id")]
     public int SenderId { get; set; }
 
     /// <summary>
     /// Gets or sets the message timestamp.
     /// </summary>
-    [JsonPropertyName("timestamp")]
+    [JsonProperty("timestamp")]
     public DateTimeOffset Timestamp { get; set; }
 
     /// <summary>
     /// Gets or sets the message type name (<c>plain</c>, <c>action</c> or <c>markdown</c>).
     /// </summary>
-    [JsonPropertyName("type")]
+    [JsonProperty("type")]
     public string Type { get; set; } = "plain";
 
     /// <summary>
     /// Gets or sets the client-generated UUID, when present.
     /// </summary>
-    [JsonPropertyName("uuid")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("uuid", NullValueHandling = NullValueHandling.Ignore)]
     public string? Uuid { get; set; }
 
     /// <summary>
     /// Gets or sets the sender payload, when requested.
     /// </summary>
-    [JsonPropertyName("sender")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("sender", NullValueHandling = NullValueHandling.Ignore)]
     public UserCompactDto? Sender { get; set; }
 
     /// <summary>

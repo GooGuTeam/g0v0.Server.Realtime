@@ -7,6 +7,7 @@ using g0v0.Server.Common.Database.PostgreSQL;
 using g0v0.Server.Common.Extensions;
 using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
+using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Notifications.Bot;
@@ -48,7 +49,12 @@ public static class Program
     /// <param name="builder">The web application builder.</param>
     public static void ConfigureServices(WebApplicationBuilder builder)
     {
-        builder.Services.AddControllers();
+        // MVC runs on Newtonsoft.Json (via the official
+        // Microsoft.AspNetCore.Mvc.NewtonsoftJson package): the DTOs carry
+        // explicit snake_case property names and the camelCase resolver keeps
+        // the fallback shape of the anonymous payloads.
+        builder.Services.AddControllers().AddNewtonsoftJson(options =>
+            options.SerializerSettings.ContractResolver = RealtimeJson.MvcContractResolver);
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
         builder.Services.AddSingleton<IPathProvider, WebPathProvider>();

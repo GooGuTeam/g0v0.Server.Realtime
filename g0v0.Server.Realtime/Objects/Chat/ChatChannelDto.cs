@@ -1,7 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using System.Text.Json.Serialization;
 using g0v0.Server.Common.Database.Models;
+using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Objects.Chat;
 
@@ -13,87 +13,80 @@ public sealed class ChatChannelDto
     /// <summary>
     /// Gets or sets the channel ID.
     /// </summary>
-    [JsonPropertyName("channel_id")]
+    [JsonProperty("channel_id")]
     public int? ChannelId { get; set; }
 
     /// <summary>
     /// Gets or sets the channel description/topic.
     /// </summary>
-    [JsonPropertyName("description")]
+    [JsonProperty("description")]
     public string? Description { get; set; }
 
     /// <summary>
     /// Gets or sets the channel icon URL, when available.
     /// </summary>
-    [JsonPropertyName("icon")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("icon", NullValueHandling = NullValueHandling.Ignore)]
     public string? Icon { get; set; }
 
     /// <summary>
     /// Gets or sets the channel name as displayed to the requesting user
     /// (PM channels show the target user's username).
     /// </summary>
-    [JsonPropertyName("name")]
+    [JsonProperty("name")]
     public string? Name { get; set; }
 
     /// <summary>
     /// Gets or sets the channel type name (<c>PUBLIC</c>, <c>PM</c>, ...).
     /// </summary>
-    [JsonPropertyName("type")]
+    [JsonProperty("type")]
     public string? Type { get; set; }
 
     /// <summary>
     /// Gets or sets the channel UUID, when one exists.
     /// </summary>
-    [JsonPropertyName("uuid")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("uuid", NullValueHandling = NullValueHandling.Ignore)]
     public string? Uuid { get; set; }
 
     /// <summary>
     /// Gets or sets the maximum message length allowed in this channel.
     /// </summary>
-    [JsonPropertyName("message_length_limit")]
+    [JsonProperty("message_length_limit")]
     public int MessageLengthLimit { get; set; } = 1000;
 
     /// <summary>
     /// Gets or sets a value indicating whether the channel is moderated.
     /// </summary>
-    [JsonPropertyName("moderated")]
+    [JsonProperty("moderated")]
     public bool Moderated { get; set; }
 
     /// <summary>
     /// Gets or sets the requesting user's attributes for this channel.
     /// </summary>
-    [JsonPropertyName("current_user_attributes")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("current_user_attributes", NullValueHandling = NullValueHandling.Ignore)]
     public ChatUserAttributes? CurrentUserAttributes { get; set; }
 
     /// <summary>
     /// Gets or sets the last message ID the user has read.
     /// </summary>
-    [JsonPropertyName("last_read_id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("last_read_id", NullValueHandling = NullValueHandling.Ignore)]
     public int? LastReadId { get; set; }
 
     /// <summary>
     /// Gets or sets the last message ID in the channel.
     /// </summary>
-    [JsonPropertyName("last_message_id")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("last_message_id", NullValueHandling = NullValueHandling.Ignore)]
     public int? LastMessageId { get; set; }
 
     /// <summary>
     /// Gets or sets the recent messages in the channel.
     /// </summary>
-    [JsonPropertyName("recent_messages")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("recent_messages", NullValueHandling = NullValueHandling.Ignore)]
     public IReadOnlyList<ChatMessageDto>? RecentMessages { get; set; }
 
     /// <summary>
     /// Gets or sets the user IDs currently in the channel (PM channels only).
     /// </summary>
-    [JsonPropertyName("users")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonProperty("users", NullValueHandling = NullValueHandling.Ignore)]
     public IReadOnlyList<int>? Users { get; set; }
 
     /// <summary>

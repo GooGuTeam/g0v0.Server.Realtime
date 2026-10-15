@@ -1,8 +1,9 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Globalization;
-using System.Text.Json;
 using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace g0v0.Server.Realtime.Controllers;
 
@@ -27,8 +28,10 @@ internal sealed class ChatRequestParameters
         {
             try
             {
-                using JsonDocument document = await JsonDocument.ParseAsync(request.Body);
-                Flatten(document.RootElement, prefix: null, parameters._values);
+                using StreamReader streamReader = new(request.Body);
+                using JsonTextReader reader = new(streamReader);
+                JObject document = await JObject.LoadAsync(reader);
+                Flatten(document, prefix: null, parameters._values);
             }
             catch (JsonException)
             {
@@ -79,34 +82,34 @@ internal sealed class ChatRequestParameters
     /// <returns>The value, or <see langword="null"/> when absent or malformed.</returns>
     public bool? GetBool(string name) => bool.TryParse(GetString(name), out bool value) ? value : null;
 
-    private static void Flatten(JsonElement element, string? prefix, Dictionary<string, string> values)
+    private static void Flatten(JToken token, string? prefix, Dictionary<string, string> values)
     {
-        switch (element.ValueKind)
+        switch (token.Type)
         {
-            case JsonValueKind.Object:
-                foreach (JsonProperty property in element.EnumerateObject())
+            case JTokenType.Object:
+                foreach (JProperty property in ((JObject)token).Properties())
                 {
                     Flatten(property.Value, prefix == null ? property.Name : $"{prefix}.{property.Name}", values);
                 }
 
                 break;
 
-            case JsonValueKind.Array:
+            case JTokenType.Array:
                 if (prefix != null)
                 {
-                    values[prefix] = string.Join(',', element.EnumerateArray().Select(static item => item.ToString()));
+                    values[prefix] = string.Join(',', ((JArray)token).Select(static item => item.ToString()));
                 }
 
                 break;
 
-            case JsonValueKind.Null:
-            case JsonValueKind.Undefined:
+            case JTokenType.Null:
+            case JTokenType.Undefined:
                 break;
 
             default:
                 if (prefix != null)
                 {
-                    values[prefix] = element.ToString();
+                    values[prefix] = token.ToString();
                 }
 
                 break;

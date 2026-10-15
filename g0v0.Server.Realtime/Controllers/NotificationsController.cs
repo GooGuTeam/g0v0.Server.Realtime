@@ -1,6 +1,5 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using System.Text.Json;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
@@ -8,6 +7,8 @@ using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Objects.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace g0v0.Server.Realtime.Controllers;
 
@@ -123,7 +124,7 @@ public class NotificationsController(INotificationRepository notificationReposit
         };
     }
 
-    private static JsonElement? DeserializeDetails(string? details)
+    private static JToken? DeserializeDetails(string? details)
     {
         if (string.IsNullOrWhiteSpace(details))
         {
@@ -132,7 +133,7 @@ public class NotificationsController(INotificationRepository notificationReposit
 
         try
         {
-            return JsonSerializer.Deserialize<JsonElement>(details);
+            return JToken.Parse(details);
         }
         catch (JsonException)
         {

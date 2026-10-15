@@ -1,6 +1,5 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Objects.Notifications;
@@ -27,50 +26,42 @@ public abstract class ChannelNotificationBase : NotificationDetail
     /// Gets or sets the channel ID the message was sent in.
     /// </summary>
     [JsonProperty("channel_id")]
-    [JsonPropertyName("channel_id")]
     public int ChannelId { get; set; }
 
     /// <summary>
     /// Gets or sets the lower-cased channel type (for example <c>pm</c>).
     /// </summary>
     [JsonProperty("type")]
-    [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the username of the message sender, carried into the
     /// details payload.
     /// </summary>
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
+    [JsonIgnore]
     public string Username { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the name of the channel, carried into the details payload
     /// of the notification kinds that include it.
     /// </summary>
-    [System.Text.Json.Serialization.JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
+    [JsonIgnore]
     public string ChannelName { get; set; } = string.Empty;
 
     /// <inheritdoc />
     [JsonProperty("object_type")]
-    [JsonPropertyName("object_type")]
     public override string ObjectType => "channel";
 
     /// <inheritdoc />
     [JsonProperty("object_id")]
-    [JsonPropertyName("object_id")]
     public override int ObjectId => ChannelId;
 
     /// <inheritdoc />
     [JsonProperty("source_user_id")]
-    [JsonPropertyName("source_user_id")]
     public override int SourceUserId { get; }
 
     /// <inheritdoc />
     [JsonProperty("receiver_ids")]
-    [JsonPropertyName("receiver_ids")]
     public override IReadOnlyList<int> ReceiverIds { get; }
 
     /// <summary>
