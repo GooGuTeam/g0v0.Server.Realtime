@@ -6,6 +6,17 @@ on:
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag'
+        required: false
+        type: string
+      push:
+        description: 'Whether to push to ghcr.io'
+        required: false
+        type: boolean
+        default: true
 
 env:
   REGISTRY: ghcr.io
@@ -35,7 +46,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Container Registry
-      if: github.event_name != 'pull_request'
+      if: github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.push)
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -54,6 +65,7 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
           type=sha
+          type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -62,7 +74,7 @@ jobs:
         file: ./g0v0.Server.Realtime/g0v0.Server.Realtime/Dockerfile
         build-contexts: |
           common=./g0v0.Server.Common
-        push: ${{ github.event_name != 'pull_request' }}
+        push: ${{ github.event_name != 'pull_request' && (github.event_name != 'workflow_dispatch' || inputs.push) }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: linux/amd64,linux/arm64
