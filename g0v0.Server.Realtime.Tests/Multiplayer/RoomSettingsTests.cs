@@ -31,6 +31,35 @@ public class RoomSettingsTests : MultiplayerTestBase
         Assert.That(room!.Settings.Name, Is.EqualTo(testSettings.Name));
     }
 
+    [TestCase(100)]
+    [TestCase(101)]
+    public async Task RoomNameLengthIsChecked(int length)
+    {
+        await Hub.JoinRoom(RoomId);
+        await Hub.ChangeState(MultiplayerUserState.Ready);
+        Realtime.Objects.Rooms.IRoom room = Hub.GetRoom(RoomId)!;
+        MultiplayerRoomSettings previousSettings = room.Settings;
+        MultiplayerRoomSettings settings = new()
+        {
+            Name = new string('a', length),
+            MatchType = OsuMatchType.HeadToHead,
+        };
+
+        if (length > 100)
+        {
+            Assert.That(() => Hub.ChangeSettings(settings), Throws.TypeOf<InvalidStateException>());
+            Assert.That(room.Settings, Is.SameAs(previousSettings));
+            Assert.That(room.Users.Single().State, Is.EqualTo(MultiplayerUserState.Ready));
+            Receiver.Verify(r => r.SettingsChanged(It.IsAny<MultiplayerRoomSettings>()), Times.Never);
+        }
+        else
+        {
+            await Hub.ChangeSettings(settings);
+            Assert.That(room.Settings.Name, Is.EqualTo(settings.Name));
+            Receiver.Verify(r => r.SettingsChanged(settings), Times.Once);
+        }
+    }
+
     [Test]
     public async Task ChangingSettingsMarksReadyUsersAsIdle()
     {

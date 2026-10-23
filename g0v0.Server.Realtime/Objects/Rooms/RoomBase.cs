@@ -36,6 +36,16 @@ namespace g0v0.Server.Realtime.Objects.Rooms;
 /// </remarks>
 public abstract class RoomBase : IRoom
 {
+    /// <summary>
+    /// The maximum number of characters in a room name.
+    /// </summary>
+    public const int MaxNameLength = 100;
+
+    /// <summary>
+    /// The maximum supported participant limit.
+    /// </summary>
+    public const int MaxParticipantsLimit = 16;
+
     private const int HighestOfficialRulesetId = 3;
 
     /// <inheritdoc />
@@ -455,14 +465,19 @@ public abstract class RoomBase : IRoom
             throw new InvalidStateException("Attempted to change settings while a game is in progress.");
         }
 
+        if (newSettings.Name.Length > MaxNameLength)
+        {
+            throw new InvalidStateException("Room name too long.");
+        }
+
         if (newSettings.MatchType is not (OsuMatchType.HeadToHead or OsuMatchType.TeamVersus))
         {
             throw new InvalidStateException("Invalid match type selected.");
         }
 
-        if (newSettings.MaxParticipants is < 2 or > 16)
+        if (newSettings.MaxParticipants is < 2 or > MaxParticipantsLimit)
         {
-            throw new InvalidStateException("Max participants must be between 2 and 16.");
+            throw new InvalidStateException($"Max participants must be between 2 and {MaxParticipantsLimit}.");
         }
 
         if (newSettings.MaxParticipants < Users.Count)
