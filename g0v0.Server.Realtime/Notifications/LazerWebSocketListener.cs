@@ -2,6 +2,7 @@
 
 using System.Net.WebSockets;
 using System.Text;
+using g0v0.Server.Common.Authentication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Json;
@@ -9,7 +10,6 @@ using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
-using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 
 namespace g0v0.Server.Realtime.Notifications;
@@ -21,7 +21,7 @@ namespace g0v0.Server.Realtime.Notifications;
 /// </summary>
 /// <remarks>
 /// The lazer client connects with a <c>Bearer</c> JWT (header or
-/// <c>token</c>/<c>access_token</c> query parameters), then sends
+/// <c>access_token</c> query parameter), then sends
 /// <c>{ "event": "chat.start" }</c> to begin receiving chat events and
 /// <c>{ "event": "chat.end" }</c> to stop. The listener binds the
 /// <see cref="LazerPlayer"/> chat and notification <c>On...</c> callbacks to
@@ -55,9 +55,10 @@ public class LazerWebSocketListener(
             return;
         }
 
-        int userId = ResolveUserId(context);
-        if (userId == 0)
+        string? verifiedUserId = context.User.FindFirst(OAuthClaimTypes.UserId)?.Value;
+        if (context.User.Identity?.IsAuthenticated != true || !int.TryParse(verifiedUserId, out int userId))
         {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync("{\"error\":\"authentication failed\"}");
             return;
         }
@@ -181,53 +182,6 @@ public class LazerWebSocketListener(
             player.NotificationReceivedHandlers = WithoutHandler(player.NotificationReceivedHandlers, notificationHandler);
             await notificationServer.Disconnect(player);
             await player.ChatDisconnected();
-        }
-    }
-
-    /// <summary>
-    /// Resolves the user from the <c>access_token</c> query parameter or from
-    /// the <c>Authorization: Bearer</c> header.
-    /// </summary>
-    /// <remarks>
-    /// Query parameters are checked first, mirroring the reference
-    /// implementation, so browser WebSocket clients (which cannot send
-    /// headers) can authenticate through the URL.
-    /// </remarks>
-    /// <param name="context">The HTTP context.</param>
-    /// <returns>The user ID, or <c>0</c> when authentication failed.</returns>
-    private int ResolveUserId(HttpContext context)
-    {
-        string? token = context.Request.Query["access_token"];
-
-        if (string.IsNullOrEmpty(token))
-        {
-            StringValues authorization = context.Request.Headers.Authorization;
-            token = authorization.Count > 0 ? authorization[0] : null;
-        }
-
-        if (string.IsNullOrEmpty(token))
-        {
-            return 0;
-        }
-
-        const string bearerPrefix = "Bearer ";
-        if (token.StartsWith(bearerPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            token = token[bearerPrefix.Length..].Trim();
-        }
-
-        try
-        {
-            System.IdentityModel.Tokens.Jwt.JwtSecurityToken jwtToken =
-                new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().ReadJwtToken(token);
-            string? sub = jwtToken.Claims.FirstOrDefault(static claim =>
-                string.Equals(claim.Type, "sub", StringComparison.Ordinal))?.Value;
-            return sub != null && int.TryParse(sub, out int userId) ? userId : 0;
-        }
-        catch (Exception exception)
-        {
-            logger.LogWarning(exception, "Failed to parse notification server JWT.");
-            return 0;
         }
     }
 

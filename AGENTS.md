@@ -64,7 +64,12 @@ Entrypoint: `g0v0.Server.Realtime/Program.cs`. Wiring order matters — `Configu
 SignalR specifics:
 - MessagePack protocol only. JSON is explicitly removed in `Program.cs`'s `ConfigureClientHubOptions` because some union types don't round-trip through JSON.
 - `SignalRUnionWorkaroundResolver.OPTIONS` (from `Common`) is required for derived match-state messages.
-- `IUserIdProvider` is replaced by `JwtUserIdProvider` (`JwtUserIdProvider.cs`). It reads `sub`/`NameIdentifier` from claims, and **manually parses the JWT from the `Authorization: Bearer ...` header** when the auth middleware hasn't populated claims (which happens in some hub-negotiation paths). `Extensions/HubCallerContextExtensions.GetUserId()` duplicates the same fallback for use inside hubs; mirror changes between the two.
+- `IUserIdProvider` is replaced by `JwtUserIdProvider` (`JwtUserIdProvider.cs`). It reads only Common's database-verified
+  `OAuthClaimTypes.UserId` (`osu_user_id`) claim; `HubCallerContextExtensions.GetUserId()` reads the resulting
+  `UserIdentifier`. JWT `sub`/`NameIdentifier` may identify an OAuth client and must not be used as user IDs.
+  `AddRealtimeAuthentication()` validates header tokens and `access_token` query tokens under `/signalr` and
+  `/notification-server` through Common's database-backed handler. HTTP controllers and the notification WebSocket
+  use the same verified user claim.
 - Endpoints: `/signalr/spectator` (`SpectatorHub`), `/signalr/metadata` (`MetadataHub`) and `/signalr/multiplayer`
   (`MultiplayerHub`). All inherit `LazerRealtimeHub<TClient>`.
 - `SpectatorHub` exposes both the legacy V1 API (`BeginPlaySession`, `SendFrameData`, `EndPlaySession` — marked `[Obsolete]`, removal date 20270102) and the V2 API (`BeginPlaySessionV2`, `SendFrameDataV2`, `EndPlaySessionV2`) with explicit per-score tokens. Both routes share one player-side implementation (`IPlayer.BeingPlaying`/`SendFrames`/`FinishPlaying`): `PlayerState.ScoreTokens` tracks up to the configured `RealtimeConfig.MaxStartedScores` concurrent started scores (oldest is evicted and processed on overflow), the ambient `ScoreToken` mirrors the most recently started score, and only ending the latest score (or with a null token) broadcasts `UserFinishedPlaying`. V1 hub methods pass the ambient token; V2 methods pass the explicit one.

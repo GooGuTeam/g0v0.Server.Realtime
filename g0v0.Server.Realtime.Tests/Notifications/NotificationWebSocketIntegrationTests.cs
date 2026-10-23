@@ -15,6 +15,7 @@ using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
+using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Objects.Chat;
@@ -27,6 +28,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using NUnit.Framework;
 using osu.Game.Online.Chat;
 
@@ -40,6 +42,10 @@ namespace g0v0.Server.Realtime.Tests.Notifications;
 [TestFixture]
 public class NotificationWebSocketIntegrationTests
 {
+    private const string JwtSecret = "notification_test_key_12345678901234567890";
+    private const string Issuer = "notification-tests";
+    private const string Audience = "notification-clients";
+    private readonly FakeOAuthTokenRepository _tokenRepository = new();
     private TestServer _server = null!;
     private FakeChatRepository _chatRepository = null!;
     private PlayerManager _playerManager = null!;
@@ -70,7 +76,12 @@ public class NotificationWebSocketIntegrationTests
         File.WriteAllText(
             Path.Combine(chatConfigBasePath, "config", "chat.json"),
             "{\"PublicMessageLimit\":100,\"PrivateMessageLimit\":100}");
+        File.WriteAllText(
+            Path.Combine(chatConfigBasePath, "config", "general.json"),
+            JsonSerializer.Serialize(new { JwtSecretKey = JwtSecret, JwtIssuer = Issuer, JwtAudience = Audience }));
         builder.Services.AddSingleton(new ConfigManager(chatConfigBasePath));
+        builder.Services.AddSingleton<IOAuthTokenRepository>(_tokenRepository);
+        builder.Services.AddRealtimeAuthentication();
         builder.Services.AddSingleton<IUserRepository>(new FakeUserRepository());
         builder.Services.AddSingleton<IRelationshipRepository>(new FakeRelationshipRepository());
         builder.Services.AddSingleton<INotificationRepository>(new FakeNotificationRepository());
@@ -83,6 +94,8 @@ public class NotificationWebSocketIntegrationTests
 
         WebApplication app = builder.Build();
         app.UseWebSockets();
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.Map("/notification-server", async context =>
         {
             LazerWebSocketListener listener = context.RequestServices.GetRequiredService<LazerWebSocketListener>();
@@ -281,10 +294,57 @@ public class NotificationWebSocketIntegrationTests
             Throws.Exception);
     }
 
+    [Test]
+    public void Connect_WithUnregisteredToken_ShouldBeRejected()
+    {
+        string token = CreateToken(99);
+        WebSocketClient client = _server.CreateWebSocketClient();
+        Assert.That(
+            async () => await client.ConnectAsync(
+                new Uri($"ws://localhost/notification-server?access_token={Uri.EscapeDataString(token)}"), CancellationToken.None),
+            Throws.Exception);
+    }
+
+    [Test]
+    public void Connect_WithClientCredentialsSubject_ShouldBeRejected()
+    {
+        string token = CreateToken(98);
+        _tokenRepository.Register(userId: null, token, "*");
+        WebSocketClient client = _server.CreateWebSocketClient();
+        Assert.That(
+            async () => await client.ConnectAsync(
+                new Uri($"ws://localhost/notification-server?access_token={Uri.EscapeDataString(token)}"), CancellationToken.None),
+            Throws.Exception);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Connect_UsesDatabaseUserInsteadOfSubject(bool useHeader)
+    {
+        string token = CreateToken(97);
+        _tokenRepository.Register(96, token, "*");
+        WebSocketClient client = _server.CreateWebSocketClient();
+        string url = "ws://localhost/notification-server";
+        if (useHeader)
+        {
+            client.ConfigureRequest = request => request.Headers.Authorization =
+                $"Bearer {token}";
+        }
+        else
+        {
+            url += $"?access_token={Uri.EscapeDataString("Bearer " + token)}";
+        }
+
+        await using NotificationSocket socket = new(await client.ConnectAsync(new Uri(url), CancellationToken.None));
+        await WaitUntilRegisteredAsync(socket, 96);
+        Assert.That(_playerManager.GetPlayerAllInstances(97), Is.Empty);
+    }
+
     private async Task<NotificationSocket> ConnectAsync(int userId)
     {
         WebSocketClient client = _server.CreateWebSocketClient();
         string token = CreateToken(userId);
+        _tokenRepository.Register(userId, token, "*");
         WebSocket webSocket = await client.ConnectAsync(
             new Uri($"ws://localhost/notification-server?access_token={Uri.EscapeDataString(token)}"),
             CancellationToken.None);
@@ -377,7 +437,13 @@ public class NotificationWebSocketIntegrationTests
 
     private static string CreateToken(int userId)
     {
-        JwtSecurityToken token = new(claims: [new Claim("sub", userId.ToString(CultureInfo.InvariantCulture))]);
+        JwtSecurityToken token = new(
+            issuer: Issuer,
+            audience: Audience,
+            claims: [new Claim("sub", userId.ToString(CultureInfo.InvariantCulture))],
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(JwtSecret)), SecurityAlgorithms.HmacSha256));
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 

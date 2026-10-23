@@ -16,7 +16,19 @@ namespace g0v0.Server.Realtime.Tests.Extensions;
 public class HubCallerContextExtensionsTests
 {
     [Test]
-    public void GetUserId_WhenBearerTokenContainsSubClaim_ReturnsClaimValue()
+    public void GetUserId_WhenBearerSubjectDiffers_UsesResolvedUserIdentifier()
+    {
+        JwtSecurityTokenHandler handler = new();
+        string token = handler.WriteToken(new JwtSecurityToken(claims: [new Claim("sub", "123")]));
+        DefaultHttpContext httpContext = new();
+        httpContext.Request.Headers.Authorization = $"Bearer {token}";
+        TestHubCallerContext context = new(userIdentifier: "456", httpContext: httpContext);
+
+        Assert.That(context.GetUserId(), Is.EqualTo(456));
+    }
+
+    [Test]
+    public void GetUserId_WhenOnlyUnvalidatedBearerTokenExists_Throws()
     {
         JwtSecurityTokenHandler handler = new();
         string token = handler.WriteToken(new JwtSecurityToken(claims: [new Claim("sub", "123")]));
@@ -24,27 +36,23 @@ public class HubCallerContextExtensionsTests
         httpContext.Request.Headers.Authorization = $"Bearer {token}";
         TestHubCallerContext context = new(httpContext: httpContext);
 
-        int userId = context.GetUserId();
-
-        Assert.That(userId, Is.EqualTo(123));
-    }
-
-    [Test]
-    public void GetUserId_WhenUserIdentifierExists_FallsBackToUserIdentifier()
-    {
-        TestHubCallerContext context = new(userIdentifier: "456");
-
-        int userId = context.GetUserId();
-
-        Assert.That(userId, Is.EqualTo(456));
-    }
-
-    [Test]
-    public void GetUserId_WhenNoJwtOrValidIdentifier_ThrowsInvalidOperationException()
-    {
-        TestHubCallerContext context = new(userIdentifier: "not-an-int");
-
         Assert.That(context.GetUserId, Throws.TypeOf<InvalidOperationException>());
+    }
+
+    [TestCase("456")]
+    [TestCase("not-an-int")]
+    [TestCase(null)]
+    public void GetUserId_RequiresValidUserIdentifier(string? identifier)
+    {
+        TestHubCallerContext context = new(userIdentifier: identifier);
+        if (string.Equals(identifier, "456", StringComparison.Ordinal))
+        {
+            Assert.That(context.GetUserId(), Is.EqualTo(456));
+        }
+        else
+        {
+            Assert.That(context.GetUserId, Throws.TypeOf<InvalidOperationException>());
+        }
     }
 
     private sealed class TestHubCallerContext : HubCallerContext

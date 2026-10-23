@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Security.Claims;
+using g0v0.Server.Common.Authentication;
 
 namespace g0v0.Server.Realtime.Extensions;
 
@@ -17,8 +18,7 @@ public static class HttpContextExtensions
     /// <exception cref="InvalidOperationException">Thrown when no user identifier can be resolved.</exception>
     public static int GetUserId(this HttpContext context)
     {
-        Claim? claim = context.User.FindFirst(static claim =>
-            claim.Type is ClaimTypes.NameIdentifier or "sub" && !string.IsNullOrWhiteSpace(claim.Value));
+        Claim? claim = context.User.FindFirst(OAuthClaimTypes.UserId);
 
         return claim != null && int.TryParse(claim.Value, out int userId)
             ? userId

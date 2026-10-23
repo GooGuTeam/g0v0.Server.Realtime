@@ -13,7 +13,7 @@ using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
-using g0v0.Server.Common.Extensions;
+using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
@@ -117,7 +117,7 @@ public class MultiClientChatFlowTests
             return bot;
         });
         builder.Services.AddSingleton<LazerWebSocketListener>();
-        builder.Services.AddOAuthAuthentication();
+        builder.Services.AddRealtimeAuthentication();
 
         // Mirror the production MVC JSON pipeline (Newtonsoft.Json with the
         // shared camelCase contract resolver).
@@ -356,6 +356,21 @@ public class MultiClientChatFlowTests
         Assert.That(IsOnline(3), Is.False, "the player goes offline once the last connection is gone");
     }
 
+    [TestCase("/chat/presence")]
+    [TestCase("/chat/channels")]
+    [TestCase("/notifications")]
+    public async Task UserEndpoints_RejectClientCredentialsEvenWithNumericSubject(string path)
+    {
+        string token = CreateToken(123, "*");
+        _tokenRepository.Register(userId: null, token, "*");
+        using HttpClient client = _server.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        using HttpResponseMessage response = await client.GetAsync(new Uri(path, UriKind.Relative));
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Forbidden));
+    }
+
     private bool IsOnline(int userId) =>
         _playerManager.GetPlayerAllInstances(userId).Any();
 
@@ -432,6 +447,7 @@ public class MultiClientChatFlowTests
     {
         WebSocketClient client = _server.CreateWebSocketClient();
         string token = CreateToken(userId, "*");
+        _tokenRepository.Register(userId, token, "*");
         string url = $"ws://localhost/notification-server?access_token={Uri.EscapeDataString(token)}";
 
         WebSocket webSocket = await client.ConnectAsync(new Uri(url), CancellationToken.None);
@@ -444,37 +460,6 @@ public class MultiClientChatFlowTests
 
         public void Subscribe(string channel, Func<string, Task> handler)
         {
-        }
-    }
-
-    private sealed class FakeOAuthTokenRepository : IOAuthTokenRepository
-    {
-        private readonly Dictionary<string, OAuthToken> _tokens = new(StringComparer.Ordinal);
-
-        public void Register(int userId, string accessToken, string scopes)
-        {
-            OAuthToken token = new()
-            {
-                UserId = userId,
-                ClientId = 1,
-                AccessToken = accessToken,
-                RefreshToken = $"refresh-{Guid.NewGuid():N}",
-                Scope = scopes,
-                ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
-                RefreshTokenExpiresAt = DateTimeOffset.UtcNow.AddDays(1),
-            };
-            _tokens[token.AccessToken] = token;
-        }
-
-        public Task<OAuthToken?> GetByAccessTokenAsync(string token)
-        {
-            _tokens.TryGetValue(token, out OAuthToken? record);
-            return Task.FromResult(record is { } found && found.ExpiresAt > DateTimeOffset.UtcNow ? found : null);
-        }
-
-        public Task<bool> CheckAccessTokenIsValidAsync(string token)
-        {
-            return Task.FromResult(_tokens.ContainsKey(token));
         }
     }
 }

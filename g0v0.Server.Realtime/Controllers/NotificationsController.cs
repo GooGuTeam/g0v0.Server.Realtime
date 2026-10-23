@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Authentication;
 using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
@@ -16,6 +17,7 @@ namespace g0v0.Server.Realtime.Controllers;
 /// Notification listing and read-marking endpoints.
 /// </summary>
 [ApiController]
+[RequireUserId]
 [Route("notifications")]
 [Route("api/v2/notifications")]
 public class NotificationsController(INotificationRepository notificationRepository, ConfigManager configManager) : ControllerBase

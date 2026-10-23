@@ -17,6 +17,7 @@ namespace g0v0.Server.Realtime.Controllers;
 /// Chat keepalive, presence and new-conversation endpoints.
 /// </summary>
 [ApiController]
+[RequireUserId]
 [Route("chat")]
 public class ChatController(
     IChatRepository chatRepository,

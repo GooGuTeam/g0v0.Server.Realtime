@@ -18,6 +18,7 @@ namespace g0v0.Server.Realtime.Controllers;
 /// Chat channel management endpoints.
 /// </summary>
 [ApiController]
+[RequireUserId]
 [Route("chat/channels")]
 public class ChannelsController(
     IChatRepository chatRepository,

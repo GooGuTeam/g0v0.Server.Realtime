@@ -6,6 +6,7 @@ using g0v0.Server.Common.Database.MySQL;
 using g0v0.Server.Common.Database.PostgreSQL;
 using g0v0.Server.Common.Extensions;
 using g0v0.Server.Common.Rulesets;
+using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
@@ -91,7 +92,7 @@ public static class Program
                 options.UseNpgsql(generalConfig.PostgresqlConnectionString));
         }
 
-        builder.Services.AddOAuthAuthentication();
+        builder.Services.AddRealtimeAuthentication();
         builder.Services.AddRedis(ServerIdentify.Realtime);
         builder.Services.AddCache();
         builder.Services.AddFetcher();
