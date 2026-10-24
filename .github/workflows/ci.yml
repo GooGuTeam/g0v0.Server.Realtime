@@ -27,7 +27,6 @@ jobs:
         with:
           repository: GooGuTeam/g0v0.Server.Common
           path: g0v0.Server.Common
-          token: ${{ secrets.GH_TOKEN }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -63,7 +62,6 @@ jobs:
         with:
           repository: GooGuTeam/g0v0.Server.Common
           path: g0v0.Server.Common
-          token: ${{ secrets.GH_TOKEN }}
 
       - name: Setup .NET runtime for InspectCode
         uses: actions/setup-dotnet@v4
@@ -117,7 +115,6 @@ jobs:
         with:
           repository: GooGuTeam/g0v0.Server.Common
           path: g0v0.Server.Common
-          token: ${{ secrets.GH_TOKEN }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
