@@ -92,12 +92,8 @@ public sealed class UserCompactDto
     /// <summary>
     /// Builds the DTO from a database user.
     /// </summary>
-    /// <param name="user">
-    /// The database user.
-    /// </param>
-    /// <returns>
-    /// The user compact DTO.
-    /// </returns>
+    /// <param name="user">The database user.</param>
+    /// <returns>The user compact DTO.</returns>
     /// <remarks>
     /// The server has no user groups or account deletion yet, so
     /// <c>default_group</c> is always the fallback group and <c>is_deleted</c>

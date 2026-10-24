@@ -18,12 +18,8 @@ internal sealed class ChatRequestParameters
     /// <summary>
     /// Reads the request body (JSON or form) and falls back to the query string.
     /// </summary>
-    /// <param name="request">
-    /// The HTTP request.
-    /// </param>
-    /// <returns>
-    /// The parsed parameters.
-    /// </returns>
+    /// <param name="request">The HTTP request.</param>
+    /// <returns>The parsed parameters.</returns>
     public static async Task<ChatRequestParameters> ReadAsync(HttpRequest request)
     {
         ChatRequestParameters parameters = new();
@@ -67,35 +63,23 @@ internal sealed class ChatRequestParameters
     /// <summary>
     /// Gets a string parameter.
     /// </summary>
-    /// <param name="name">
-    /// The parameter name.
-    /// </param>
-    /// <returns>
-    /// The value, or <see langword="null"/> when absent.
-    /// </returns>
+    /// <param name="name">The parameter name.</param>
+    /// <returns>The value, or <see langword="null"/> when absent.</returns>
     public string? GetString(string name) => _values.TryGetValue(name, out string? value) ? value : null;
 
     /// <summary>
     /// Gets an integer parameter.
     /// </summary>
-    /// <param name="name">
-    /// The parameter name.
-    /// </param>
-    /// <returns>
-    /// The value, or <see langword="null"/> when absent or malformed.
-    /// </returns>
+    /// <param name="name">The parameter name.</param>
+    /// <returns>The value, or <see langword="null"/> when absent or malformed.</returns>
     public int? GetInt(string name) =>
         int.TryParse(GetString(name), NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ? value : null;
 
     /// <summary>
     /// Gets a boolean parameter.
     /// </summary>
-    /// <param name="name">
-    /// The parameter name.
-    /// </param>
-    /// <returns>
-    /// The value, or <see langword="null"/> when absent or malformed.
-    /// </returns>
+    /// <param name="name">The parameter name.</param>
+    /// <returns>The value, or <see langword="null"/> when absent or malformed.</returns>
     public bool? GetBool(string name) => bool.TryParse(GetString(name), out bool value) ? value : null;
 
     private static void Flatten(JToken token, string? prefix, Dictionary<string, string> values)

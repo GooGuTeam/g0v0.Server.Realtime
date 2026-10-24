@@ -19,12 +19,8 @@ public class TeamVersusRoom : StandardRoom
     /// <summary>
     /// Initializes a new instance of the <see cref="TeamVersusRoom"/> class.
     /// </summary>
-    /// <param name="room">
-    /// The database room.
-    /// </param>
-    /// <param name="facade">
-    /// The room dependency facade.
-    /// </param>
+    /// <param name="room">The database room.</param>
+    /// <param name="facade">The room dependency facade.</param>
     public TeamVersusRoom(Room room, IRoomFacade facade)
         : base(room, facade)
     {
@@ -120,9 +116,7 @@ public class TeamVersusRoom : StandardRoom
     /// <summary>
     /// Computes the best available team for a newly-joined user, keeping the room balanced.
     /// </summary>
-    /// <returns>
-    /// The ID of the best available team.
-    /// </returns>
+    /// <returns>The ID of the best available team.</returns>
     private int GetBestAvailableTeam()
     {
         if (MatchState is not TeamVersusRoomState teamState)

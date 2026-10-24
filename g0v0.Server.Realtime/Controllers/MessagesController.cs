@@ -31,24 +31,12 @@ public class MessagesController(
     /// <summary>
     /// Gets messages from a channel (returned in chronological order).
     /// </summary>
-    /// <param name="channel">
-    /// The channel ID or name.
-    /// </param>
-    /// <param name="limit">
-    /// The maximum number of messages to return (1-50).
-    /// </param>
-    /// <param name="returnObject">
-    /// Whether to return the <c>{ messages, users }</c> object.
-    /// </param>
-    /// <param name="since">
-    /// Get messages with an ID greater than this value.
-    /// </param>
-    /// <param name="until">
-    /// Get messages with an ID less than this value.
-    /// </param>
-    /// <returns>
-    /// The messages in chronological order.
-    /// </returns>
+    /// <param name="channel">The channel ID or name.</param>
+    /// <param name="limit">The maximum number of messages to return (1-50).</param>
+    /// <param name="returnObject">Whether to return the <c>{ messages, users }</c> object.</param>
+    /// <param name="since">Get messages with an ID greater than this value.</param>
+    /// <param name="until">Get messages with an ID less than this value.</param>
+    /// <returns>The messages in chronological order.</returns>
     [HttpGet]
     [RequireScope("chat.read")]
     public async Task<IActionResult> GetMessages(
@@ -99,12 +87,8 @@ public class MessagesController(
     /// <summary>
     /// Sends a message to a channel.
     /// </summary>
-    /// <param name="channel">
-    /// The channel ID or name.
-    /// </param>
-    /// <returns>
-    /// The sent message.
-    /// </returns>
+    /// <param name="channel">The channel ID or name.</param>
+    /// <returns>The sent message.</returns>
     /// <remarks>
     /// Parameters (<c>message</c>, <c>is_action</c>, <c>uuid</c>) are read from a
     /// JSON body, a form body or the query string.

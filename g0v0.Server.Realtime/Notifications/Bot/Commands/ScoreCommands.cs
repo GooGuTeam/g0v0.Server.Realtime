@@ -14,15 +14,9 @@ public sealed class ScoreCommands(IServiceScopeFactory scopeFactory) : BanchoBot
     /// <summary>
     /// Shows the user's most recent score (including failed attempts).
     /// </summary>
-    /// <param name="senderId">
-    /// The sender user ID.
-    /// </param>
-    /// <param name="args">
-    /// The command arguments.
-    /// </param>
-    /// <returns>
-    /// The reply text.
-    /// </returns>
+    /// <param name="senderId">The sender user ID.</param>
+    /// <param name="args">The command arguments.</param>
+    /// <returns>The reply text.</returns>
     [BotCommand("re")]
     public Task<string?> RecentAsync(int senderId, string[] args)
         => GetRecentScoreAsync(senderId, includeFailed: true);
@@ -30,15 +24,9 @@ public sealed class ScoreCommands(IServiceScopeFactory scopeFactory) : BanchoBot
     /// <summary>
     /// Shows the user's most recent passed score.
     /// </summary>
-    /// <param name="senderId">
-    /// The sender user ID.
-    /// </param>
-    /// <param name="args">
-    /// The command arguments.
-    /// </param>
-    /// <returns>
-    /// The reply text.
-    /// </returns>
+    /// <param name="senderId">The sender user ID.</param>
+    /// <param name="args">The command arguments.</param>
+    /// <returns>The reply text.</returns>
     [BotCommand("pr")]
     public Task<string?> PreviousAsync(int senderId, string[] args)
         => GetRecentScoreAsync(senderId, includeFailed: false);

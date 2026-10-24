@@ -10,12 +10,8 @@ namespace g0v0.Server.Realtime.Services;
 /// <summary>
 /// Stores partial spectator scores while their frame data is being streamed.
 /// </summary>
-/// <param name="memoryCache">
-/// The memory cache used to store buffered scores.
-/// </param>
-/// <param name="logger">
-/// The logger used for spectator score buffer events.
-/// </param>
+/// <param name="memoryCache">The memory cache used to store buffered scores.</param>
+/// <param name="logger">The logger used for spectator score buffer events.</param>
 public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
 {
     private const int LockCount = 1024;
@@ -41,15 +37,9 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
     /// <summary>
     /// Attempts to add a score to the buffer.
     /// </summary>
-    /// <param name="scoreTokenId">
-    /// The score token ID.
-    /// </param>
-    /// <param name="score">
-    /// The score to buffer.
-    /// </param>
-    /// <returns>
-    /// <see langword="true" /> when the score was added; otherwise <see langword="false" />.
-    /// </returns>
+    /// <param name="scoreTokenId">The score token ID.</param>
+    /// <param name="score">The score to buffer.</param>
+    /// <returns><see langword="true" /> when the score was added; otherwise <see langword="false" />.</returns>
     public async Task<bool> TryAddAsync(long scoreTokenId, Score score)
     {
         SemaphoreSlim semaphore = GetLock(scoreTokenId);
@@ -80,15 +70,9 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
     /// <summary>
     /// Updates a buffered score with newly received spectator frame data.
     /// </summary>
-    /// <param name="scoreTokenId">
-    /// The score token ID.
-    /// </param>
-    /// <param name="data">
-    /// The frame data bundle.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
+    /// <param name="scoreTokenId">The score token ID.</param>
+    /// <param name="data">The frame data bundle.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task UpdateAsync(long scoreTokenId, FrameDataBundle data)
     {
         SemaphoreSlim semaphore = GetLock(scoreTokenId);
@@ -147,12 +131,8 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
     /// <summary>
     /// Removes and returns a buffered score.
     /// </summary>
-    /// <param name="scoreTokenId">
-    /// The score token ID.
-    /// </param>
-    /// <returns>
-    /// The buffered score, or <see langword="null" /> if no score was buffered for the token.
-    /// </returns>
+    /// <param name="scoreTokenId">The score token ID.</param>
+    /// <returns>The buffered score, or <see langword="null" /> if no score was buffered for the token.</returns>
     public async Task<Score?> DequeueAsync(long scoreTokenId)
     {
         SemaphoreSlim semaphore = GetLock(scoreTokenId);
@@ -218,9 +198,7 @@ public class ScoreBuffer(IMemoryCache memoryCache, ILogger<ScoreBuffer> logger)
     /// <summary>
     /// A buffered partial score and the timestamp at which it was last updated.
     /// </summary>
-    /// <param name="score">
-    /// The buffered score.
-    /// </param>
+    /// <param name="score">The buffered score.</param>
     public sealed class BufferedScore(Score score)
     {
         /// <summary>

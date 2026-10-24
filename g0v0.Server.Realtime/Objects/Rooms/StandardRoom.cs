@@ -28,12 +28,8 @@ public abstract class StandardRoom : RoomBase
     /// <summary>
     /// Initializes a new instance of the <see cref="StandardRoom"/> class.
     /// </summary>
-    /// <param name="room">
-    /// The database room.
-    /// </param>
-    /// <param name="facade">
-    /// The room dependency facade.
-    /// </param>
+    /// <param name="room">The database room.</param>
+    /// <param name="facade">The room dependency facade.</param>
     protected StandardRoom(Room room, IRoomFacade facade)
         : base(room, facade)
     {
@@ -154,9 +150,7 @@ public abstract class StandardRoom : RoomBase
     /// <summary>
     /// Gets the room's match state as a <see cref="StandardMatchRoomState"/>.
     /// </summary>
-    /// <returns>
-    /// The standard match room state.
-    /// </returns>
+    /// <returns>The standard match room state.</returns>
     protected StandardMatchRoomState GetStandardState()
         => MatchState as StandardMatchRoomState
            ?? throw new InvalidStateException("Room does not have a standard match state.");
@@ -164,9 +158,7 @@ public abstract class StandardRoom : RoomBase
     /// <summary>
     /// Updates the slot array from the current <see cref="MultiplayerRoomSettings.MaxParticipants"/>.
     /// </summary>
-    /// <returns>
-    /// <see langword="true"/> when the slot array changed.
-    /// </returns>
+    /// <returns><see langword="true"/> when the slot array changed.</returns>
     protected bool UpdateSlotsFromSettings()
     {
         StandardMatchRoomState state = GetStandardState();
@@ -258,18 +250,10 @@ public abstract class StandardRoom : RoomBase
     /// <summary>
     /// Changes the slot of the given user.
     /// </summary>
-    /// <param name="user">
-    /// The user whose slot is changing.
-    /// </param>
-    /// <param name="newSlotId">
-    /// The new slot ID.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
-    /// <exception cref="InvalidStateException">
-    /// The room has no slots, the slot is invalid or taken.
-    /// </exception>
+    /// <param name="user">The user whose slot is changing.</param>
+    /// <param name="newSlotId">The new slot ID.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="InvalidStateException">The room has no slots, the slot is invalid or taken.</exception>
     public async Task ChangeUserSlot(MultiplayerRoomUser user, byte newSlotId)
     {
         StandardMatchRoomState state = GetStandardState();
@@ -303,12 +287,8 @@ public abstract class StandardRoom : RoomBase
     /// <summary>
     /// Assigns a slot to the given user if they do not already have one.
     /// </summary>
-    /// <param name="user">
-    /// The user to assign a slot to.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
+    /// <param name="user">The user to assign a slot to.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task AssignUserSlot(MultiplayerRoomUser user)
     {
         StandardMatchRoomState state = GetStandardState();
@@ -326,12 +306,8 @@ public abstract class StandardRoom : RoomBase
     /// <summary>
     /// Clears the slot of the given user.
     /// </summary>
-    /// <param name="user">
-    /// The user whose slot is being cleared.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
+    /// <param name="user">The user whose slot is being cleared.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task ClearUserSlot(MultiplayerRoomUser user)
     {
         StandardMatchRoomState state = GetStandardState();
@@ -353,15 +329,9 @@ public abstract class StandardRoom : RoomBase
     /// <summary>
     /// Computes the next best slot for the given user, keeping the room balanced.
     /// </summary>
-    /// <param name="user">
-    /// The user to assign a slot to.
-    /// </param>
-    /// <param name="slots">
-    /// The current slot array.
-    /// </param>
-    /// <returns>
-    /// The next empty slot index.
-    /// </returns>
+    /// <param name="user">The user to assign a slot to.</param>
+    /// <param name="slots">The current slot array.</param>
+    /// <returns>The next empty slot index.</returns>
     protected virtual int GetNextBestSlot(MultiplayerRoomUser user, int?[] slots)
     {
         int nextEmptySlot = Array.FindIndex(slots, item => item == null);

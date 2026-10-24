@@ -35,12 +35,8 @@ internal sealed class FakeRoomRepository : IRoomRepository
     /// <summary>
     /// Gets the participant records of a room.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <returns>
-    /// The participant records.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <returns>The participant records.</returns>
     public IReadOnlyList<RoomParticipatedUser> GetParticipants(long roomId)
         => _participants.Where(p => p.RoomId == roomId).ToList();
 

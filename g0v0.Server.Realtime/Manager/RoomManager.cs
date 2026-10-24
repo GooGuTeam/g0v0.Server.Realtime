@@ -23,12 +23,8 @@ public class RoomManager(
     /// <summary>
     /// Gets the room with the given ID.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <returns>
-    /// The room, or <see langword="null"/> if not found.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <returns>The room, or <see langword="null"/> if not found.</returns>
     public IRoom? GetRoom(long roomId)
     {
         return _rooms.GetValueOrDefault(roomId);
@@ -37,9 +33,7 @@ public class RoomManager(
     /// <summary>
     /// Registers a room in the manager and wires its disband callback.
     /// </summary>
-    /// <param name="room">
-    /// The room to register.
-    /// </param>
+    /// <param name="room">The room to register.</param>
     public void AddRoom(IRoom room)
     {
         if (room is RoomBase roomBase)
@@ -59,9 +53,7 @@ public class RoomManager(
     /// <summary>
     /// Removes a room from the manager.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
+    /// <param name="roomId">The room ID.</param>
     public void RemoveRoom(long roomId)
     {
         // Disbanding is handled by room itself.
@@ -71,21 +63,11 @@ public class RoomManager(
     /// <summary>
     /// Creates a new multiplayer room of the given match type and registers it.
     /// </summary>
-    /// <param name="room">
-    /// The room details from the client.
-    /// </param>
-    /// <param name="hostUserId">
-    /// The user ID of the room host.
-    /// </param>
-    /// <param name="tournamentMode">
-    /// Whether the room is a tournament room.
-    /// </param>
-    /// <returns>
-    /// The created room.
-    /// </returns>
-    /// <exception cref="InvalidStateException">
-    /// The match type is not supported.
-    /// </exception>
+    /// <param name="room">The room details from the client.</param>
+    /// <param name="hostUserId">The user ID of the room host.</param>
+    /// <param name="tournamentMode">Whether the room is a tournament room.</param>
+    /// <returns>The created room.</returns>
+    /// <exception cref="InvalidStateException">The match type is not supported.</exception>
     public async Task<IRoom> CreateRoom(
         MultiplayerRoom room,
         int hostUserId,
@@ -141,12 +123,8 @@ public class RoomManager(
     /// Retrieves the room with the given ID, or loads it from the database when
     /// it is not currently active.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <returns>
-    /// The room, or <see langword="null"/> if it does not exist.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <returns>The room, or <see langword="null"/> if it does not exist.</returns>
     public async Task<IRoom?> GetOrLoadRoom(long roomId)
     {
         if (_rooms.TryGetValue(roomId, out IRoom? existing))
@@ -198,18 +176,10 @@ public class RoomManager(
     /// is updated in place (only the type field changes); the old instance is
     /// destroyed and replaced by a new one of the target type.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <param name="newType">
-    /// The new match type.
-    /// </param>
-    /// <returns>
-    /// The new room instance.
-    /// </returns>
-    /// <exception cref="InvalidStateException">
-    /// The room does not exist or the match type is unsupported.
-    /// </exception>
+    /// <param name="roomId">The room ID.</param>
+    /// <param name="newType">The new match type.</param>
+    /// <returns>The new room instance.</returns>
+    /// <exception cref="InvalidStateException">The room does not exist or the match type is unsupported.</exception>
     public async Task<IRoom> ChangeMatchType(long roomId, OsuMatchType newType)
     {
         if (!_rooms.TryGetValue(roomId, out IRoom? existing))
@@ -268,26 +238,16 @@ public class RoomManager(
     /// <summary>
     /// Gets all currently active rooms.
     /// </summary>
-    /// <returns>
-    /// All currently active rooms.
-    /// </returns>
+    /// <returns>All currently active rooms.</returns>
     public IEnumerable<IRoom> GetAllRooms() => _rooms.Values.ToArray();
 
     /// <summary>
     /// Creates a room instance of the given match type.
     /// </summary>
-    /// <param name="dbRoom">
-    /// The database room.
-    /// </param>
-    /// <param name="matchType">
-    /// The match type.
-    /// </param>
-    /// <returns>
-    /// The room instance.
-    /// </returns>
-    /// <exception cref="InvalidStateException">
-    /// The match type is not supported.
-    /// </exception>
+    /// <param name="dbRoom">The database room.</param>
+    /// <param name="matchType">The match type.</param>
+    /// <returns>The room instance.</returns>
+    /// <exception cref="InvalidStateException">The match type is not supported.</exception>
     private IRoom CreateRoomInstance(Room dbRoom, OsuMatchType matchType)
     {
         return matchType switch
@@ -302,12 +262,8 @@ public class RoomManager(
     /// Ensures a multiplayer chat channel exists for a room, creating it with
     /// the name <c>mp_{roomId}</c> when needed and returning its channel ID.
     /// </summary>
-    /// <param name="dbRoom">
-    /// The database room.
-    /// </param>
-    /// <returns>
-    /// The chat channel ID.
-    /// </returns>
+    /// <param name="dbRoom">The database room.</param>
+    /// <returns>The chat channel ID.</returns>
     private async Task<int> EnsureRoomChannelAsync(Room dbRoom)
     {
         if (dbRoom.ChannelId > 0)

@@ -30,9 +30,7 @@ public class ChatController(
     /// <summary>
     /// Keeps the chat connection alive and returns recent silences.
     /// </summary>
-    /// <returns>
-    /// The keepalive response.
-    /// </returns>
+    /// <returns>The keepalive response.</returns>
     /// <remarks>
     /// Parameters (<c>history_since</c>, <c>since</c>) are read from a JSON body,
     /// a form body or the query string, as in osu-web.
@@ -55,9 +53,7 @@ public class ChatController(
     /// <summary>
     /// Starts a new private message conversation with another user.
     /// </summary>
-    /// <returns>
-    /// The channel, the sent message and the new channel ID.
-    /// </returns>
+    /// <returns>The channel, the sent message and the new channel ID.</returns>
     /// <remarks>
     /// Parameters (<c>target_id</c>, <c>message</c>, <c>is_action</c>,
     /// <c>uuid</c>) are read from a JSON body, a form body or the query string.
@@ -139,9 +135,7 @@ public class ChatController(
     /// <summary>
     /// Gets the current user's channel presence.
     /// </summary>
-    /// <returns>
-    /// The user's channels.
-    /// </returns>
+    /// <returns>The user's channels.</returns>
     [HttpGet("presence")]
     [RequireScope("chat.read")]
     public async Task<IActionResult> GetPresence()
@@ -153,18 +147,10 @@ public class ChatController(
     /// <summary>
     /// Gets the current user's channel presence and silences.
     /// </summary>
-    /// <param name="historySince">
-    /// Get silence records after this silence ID.
-    /// </param>
-    /// <param name="since">
-    /// Get silence records after this message ID.
-    /// </param>
-    /// <param name="includes">
-    /// The types of updates to include.
-    /// </param>
-    /// <returns>
-    /// The presence and silence updates.
-    /// </returns>
+    /// <param name="historySince">Get silence records after this silence ID.</param>
+    /// <param name="since">Get silence records after this message ID.</param>
+    /// <param name="includes">The types of updates to include.</param>
+    /// <returns>The presence and silence updates.</returns>
     [HttpGet("updates")]
     [RequireScope("chat.read")]
     public async Task<IActionResult> GetUpdates(

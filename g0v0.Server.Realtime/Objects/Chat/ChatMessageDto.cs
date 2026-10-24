@@ -67,18 +67,10 @@ public sealed class ChatMessageDto
     /// <summary>
     /// Builds a message DTO from a database message.
     /// </summary>
-    /// <param name="message">
-    /// The database message.
-    /// </param>
-    /// <param name="isAnnouncement">
-    /// Whether the message was posted in an announcement channel.
-    /// </param>
-    /// <param name="sender">
-    /// The sender payload, when it should be included.
-    /// </param>
-    /// <returns>
-    /// The DTO.
-    /// </returns>
+    /// <param name="message">The database message.</param>
+    /// <param name="isAnnouncement">Whether the message was posted in an announcement channel.</param>
+    /// <param name="sender">The sender payload, when it should be included.</param>
+    /// <returns>The DTO.</returns>
     public static ChatMessageDto FromDb(ChatMessage message, bool isAnnouncement = false, UserCompactDto? sender = null)
     {
         return new ChatMessageDto

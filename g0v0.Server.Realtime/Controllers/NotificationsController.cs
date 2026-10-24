@@ -30,15 +30,9 @@ public class NotificationsController(INotificationRepository notificationReposit
     /// <summary>
     /// Lists the notifications of the current user, sorted by descending ID.
     /// </summary>
-    /// <param name="maxId">
-    /// When set, only notifications with a smaller ID are returned.
-    /// </param>
-    /// <param name="unread">
-    /// Whether only unread notifications are returned; defaults to <c>true</c> like the reference endpoints.
-    /// </param>
-    /// <returns>
-    /// The notification bundle.
-    /// </returns>
+    /// <param name="maxId">When set, only notifications with a smaller ID are returned.</param>
+    /// <param name="unread">Whether only unread notifications are returned; defaults to <c>true</c> like the reference endpoints.</param>
+    /// <returns>The notification bundle.</returns>
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> Index([FromQuery] long? maxId, [FromQuery] bool? unread)
@@ -72,12 +66,8 @@ public class NotificationsController(INotificationRepository notificationReposit
     /// <summary>
     /// Marks notifications of the current user as read.
     /// </summary>
-    /// <param name="request">
-    /// The notifications and identities to mark read.
-    /// </param>
-    /// <returns>
-    /// An empty response.
-    /// </returns>
+    /// <param name="request">The notifications and identities to mark read.</param>
+    /// <returns>An empty response.</returns>
     [HttpPost("mark-read")]
     [Authorize]
     public async Task<IActionResult> MarkRead([FromBody] MarkNotificationsReadRequest? request)
@@ -118,12 +108,8 @@ public class NotificationsController(INotificationRepository notificationReposit
     /// Transforms a delivery record into its API representation: the
     /// notification fields together with the per-user <c>is_read</c> flag.
     /// </summary>
-    /// <param name="record">
-    /// The delivery record with its notification loaded.
-    /// </param>
-    /// <returns>
-    /// The API notification.
-    /// </returns>
+    /// <param name="record">The delivery record with its notification loaded.</param>
+    /// <returns>The API notification.</returns>
     private static ApiNotification CreateNotification(UserNotification record)
     {
         Notification notification = record.Notification!;
@@ -163,9 +149,7 @@ public class NotificationsController(INotificationRepository notificationReposit
     /// the server URL with its trailing slash followed by
     /// <c>notification-server</c>, with the HTTP scheme upgraded to WS.
     /// </summary>
-    /// <returns>
-    /// The endpoint URL.
-    /// </returns>
+    /// <returns>The endpoint URL.</returns>
     private string BuildNotificationEndpoint()
     {
         GeneralConfig generalConfig = configManager.Get<GeneralConfig>();

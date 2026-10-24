@@ -12,12 +12,8 @@ namespace g0v0.Server.Realtime.Services;
 /// <summary>
 /// Provides multiplayer playlist statistics and broadcasts processed scores to room watchers.
 /// </summary>
-/// <param name="scopeFactory">
-/// The factory for scoped repositories.
-/// </param>
-/// <param name="hubContext">
-/// The metadata hub used to notify watchers.
-/// </param>
+/// <param name="scopeFactory">The factory for scoped repositories.</param>
+/// <param name="hubContext">The metadata hub used to notify watchers.</param>
 public sealed class MultiplayerRoomMetadataService(
     IServiceScopeFactory scopeFactory,
     IHubContext<MetadataHub, IMetadataClient> hubContext)

@@ -10,18 +10,10 @@ public interface IRulesetHashValidator
     /// <summary>
     /// Validates that the client has the latest supported version of a ruleset.
     /// </summary>
-    /// <param name="rulesetId">
-    /// The online ruleset ID used by the playlist item.
-    /// </param>
-    /// <param name="clientHashes">
-    /// The client ruleset hashes keyed by ruleset short name.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// The cancellation token.
-    /// </param>
-    /// <returns>
-    /// A validation failure, or <see langword="null"/> when the ruleset is compatible.
-    /// </returns>
+    /// <param name="rulesetId">The online ruleset ID used by the playlist item.</param>
+    /// <param name="clientHashes">The client ruleset hashes keyed by ruleset short name.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A validation failure, or <see langword="null"/> when the ruleset is compatible.</returns>
     Task<RulesetHashValidationFailure?> ValidateAsync(
         int rulesetId,
         IReadOnlyDictionary<string, string> clientHashes,
@@ -30,18 +22,10 @@ public interface IRulesetHashValidator
     /// <summary>
     /// Validates the ruleset hash stored in a connected player's state.
     /// </summary>
-    /// <param name="rulesetId">
-    /// The online ruleset ID used by the playlist item.
-    /// </param>
-    /// <param name="playerId">
-    /// The player whose ruleset hashes should be validated.
-    /// </param>
-    /// <param name="cancellationToken">
-    /// The cancellation token.
-    /// </param>
-    /// <returns>
-    /// A validation failure, or <see langword="null"/> when the ruleset is compatible.
-    /// </returns>
+    /// <param name="rulesetId">The online ruleset ID used by the playlist item.</param>
+    /// <param name="playerId">The player whose ruleset hashes should be validated.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A validation failure, or <see langword="null"/> when the ruleset is compatible.</returns>
     Task<RulesetHashValidationFailure?> ValidatePlayerAsync(
         int rulesetId,
         int playerId,

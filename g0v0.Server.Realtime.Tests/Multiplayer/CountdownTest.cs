@@ -337,15 +337,9 @@ public class CountdownTest : MultiplayerTestBase
     /// implementation's <c>GetCountdownTask</c> which g0v0's <see cref="RoomBase"/>
     /// does not expose publicly.
     /// </summary>
-    /// <param name="room">
-    /// The room hosting the countdown.
-    /// </param>
-    /// <param name="countdown">
-    /// The countdown to retrieve the task of.
-    /// </param>
-    /// <returns>
-    /// The task which completes when the countdown finishes.
-    /// </returns>
+    /// <param name="room">The room hosting the countdown.</param>
+    /// <param name="countdown">The countdown to retrieve the task of.</param>
+    /// <returns>The task which completes when the countdown finishes.</returns>
     private static Task GetCountdownTask(RoomBase room, MultiplayerCountdown countdown)
     {
         object countdownInfo = FindCountdownInfo(room, countdown);
@@ -357,15 +351,9 @@ public class CountdownTest : MultiplayerTestBase
     /// possible unless the countdown has been cancelled, mirroring the reference
     /// implementation's <c>SkipToEndOfCountdown</c>.
     /// </summary>
-    /// <param name="room">
-    /// The room hosting the countdown.
-    /// </param>
-    /// <param name="countdown">
-    /// The countdown to skip.
-    /// </param>
-    /// <returns>
-    /// A task which becomes completed when the active countdown completes.
-    /// </returns>
+    /// <param name="room">The room hosting the countdown.</param>
+    /// <param name="countdown">The countdown to skip.</param>
+    /// <returns>A task which becomes completed when the active countdown completes.</returns>
     private static Task SkipToEndOfCountdown(RoomBase room, MultiplayerCountdown countdown)
     {
         object countdownInfo = FindCountdownInfo(room, countdown);
@@ -378,15 +366,9 @@ public class CountdownTest : MultiplayerTestBase
     /// Locates the (private) countdown info for the given countdown inside the
     /// room's tracked countdowns.
     /// </summary>
-    /// <param name="room">
-    /// The room hosting the countdown.
-    /// </param>
-    /// <param name="countdown">
-    /// The countdown to locate.
-    /// </param>
-    /// <returns>
-    /// The countdown info instance.
-    /// </returns>
+    /// <param name="room">The room hosting the countdown.</param>
+    /// <param name="countdown">The countdown to locate.</param>
+    /// <returns>The countdown info instance.</returns>
     private static object FindCountdownInfo(RoomBase room, MultiplayerCountdown countdown)
     {
         FieldInfo trackedCountdownsField = typeof(RoomBase).GetField("_trackedCountdowns", BindingFlags.NonPublic | BindingFlags.Instance)

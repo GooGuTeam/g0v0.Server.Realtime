@@ -15,16 +15,12 @@ public interface IUserActivity
     /// <summary>
     /// Gets a human-readable activity description.
     /// </summary>
-    /// <returns>
-    /// The display text.
-    /// </returns>
+    /// <returns>The display text.</returns>
     string GetDisplayText();
 
     /// <summary>
     /// Converts the realtime activity into the lazer activity payload format.
     /// </summary>
-    /// <returns>
-    /// The lazer activity payload, or <see langword="null"/> when no lazer activity should be sent.
-    /// </returns>
+    /// <returns>The lazer activity payload, or <see langword="null"/> when no lazer activity should be sent.</returns>
     osu.Game.Users.UserActivity? ToLazer();
 }

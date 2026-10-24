@@ -13,12 +13,8 @@ public static class RealtimeAuthenticationExtensions
     /// <summary>
     /// Registers database-backed authentication and query token support for realtime endpoints.
     /// </summary>
-    /// <param name="services">
-    /// The services to configure.
-    /// </param>
-    /// <returns>
-    /// The service collection.
-    /// </returns>
+    /// <param name="services">The services to configure.</param>
+    /// <returns>The service collection.</returns>
     public static IServiceCollection AddRealtimeAuthentication(this IServiceCollection services)
     {
         services.AddOAuthAuthentication();

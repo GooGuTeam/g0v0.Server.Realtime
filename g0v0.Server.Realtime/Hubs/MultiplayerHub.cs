@@ -505,21 +505,11 @@ public class MultiplayerHub(
     /// relationship table for block/friend state and the target user's PM
     /// preference.
     /// </summary>
-    /// <param name="invitingUserId">
-    /// The user sending the invite.
-    /// </param>
-    /// <param name="targetUserId">
-    /// The user being invited.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
-    /// <exception cref="UserBlockedException">
-    /// Either user has the other blocked.
-    /// </exception>
-    /// <exception cref="UserBlocksPMsException">
-    /// The target disallows PMs from non-friends.
-    /// </exception>
+    /// <param name="invitingUserId">The user sending the invite.</param>
+    /// <param name="targetUserId">The user being invited.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <exception cref="UserBlockedException">Either user has the other blocked.</exception>
+    /// <exception cref="UserBlocksPMsException">The target disallows PMs from non-friends.</exception>
     private async Task CheckUserToUserPermissionsAsync(int invitingUserId, int targetUserId)
     {
         using IServiceScope scope = scopeFactory.CreateScope();

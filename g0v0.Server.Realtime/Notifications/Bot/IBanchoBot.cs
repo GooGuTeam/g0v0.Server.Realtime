@@ -17,20 +17,10 @@ public interface IBanchoBot
     /// <summary>
     /// Attempts to parse and handle a message as a bot command.
     /// </summary>
-    /// <param name="senderId">
-    /// The user ID of the sender.
-    /// </param>
-    /// <param name="channelId">
-    /// The channel the message was sent in.
-    /// </param>
-    /// <param name="content">
-    /// The message content.
-    /// </param>
-    /// <param name="channelType">
-    /// The type of the channel the message was sent in.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
+    /// <param name="senderId">The user ID of the sender.</param>
+    /// <param name="channelId">The channel the message was sent in.</param>
+    /// <param name="content">The message content.</param>
+    /// <param name="channelType">The type of the channel the message was sent in.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     Task TryHandleAsync(int senderId, int channelId, string content, ChannelType channelType);
 }

@@ -92,21 +92,11 @@ public sealed class ChatChannelDto
     /// <summary>
     /// Builds a channel DTO from a database channel and the requesting user.
     /// </summary>
-    /// <param name="channel">
-    /// The database channel.
-    /// </param>
-    /// <param name="requestingUserId">
-    /// The requesting user ID.
-    /// </param>
-    /// <param name="channelName">
-    /// The display name of the channel.
-    /// </param>
-    /// <param name="userIds">
-    /// The user IDs in the channel, when applicable.
-    /// </param>
-    /// <returns>
-    /// The DTO.
-    /// </returns>
+    /// <param name="channel">The database channel.</param>
+    /// <param name="requestingUserId">The requesting user ID.</param>
+    /// <param name="channelName">The display name of the channel.</param>
+    /// <param name="userIds">The user IDs in the channel, when applicable.</param>
+    /// <returns>The DTO.</returns>
     public static ChatChannelDto FromDb(
         ChatChannel channel,
         int requestingUserId,

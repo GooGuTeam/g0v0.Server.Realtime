@@ -14,12 +14,8 @@ public abstract class ChannelNotificationBase : NotificationDetail
     /// <summary>
     /// Initializes a new instance of the <see cref="ChannelNotificationBase"/> class.
     /// </summary>
-    /// <param name="sourceUserId">
-    /// The sender user ID.
-    /// </param>
-    /// <param name="receiverIds">
-    /// The receiving user IDs.
-    /// </param>
+    /// <param name="sourceUserId">The sender user ID.</param>
+    /// <param name="receiverIds">The receiving user IDs.</param>
     protected ChannelNotificationBase(int sourceUserId, IReadOnlyList<int> receiverIds)
     {
         SourceUserId = sourceUserId;
@@ -71,12 +67,8 @@ public abstract class ChannelNotificationBase : NotificationDetail
     /// <summary>
     /// Creates the base channel message details shared by every kind.
     /// </summary>
-    /// <typeparam name="TDetails">
-    /// The concrete details type.
-    /// </typeparam>
-    /// <returns>
-    /// The populated details.
-    /// </returns>
+    /// <typeparam name="TDetails">The concrete details type.</typeparam>
+    /// <returns>The populated details.</returns>
     protected TDetails CreateDetails<TDetails>()
         where TDetails : ChannelMessageDetails, new()
     {

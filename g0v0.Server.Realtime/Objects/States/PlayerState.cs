@@ -9,9 +9,7 @@ namespace g0v0.Server.Realtime.Objects.States;
 /// <summary>
 /// Stores the current presence state for a connected player.
 /// </summary>
-/// <param name="userActivity">
-/// The initial user activity.
-/// </param>
+/// <param name="userActivity">The initial user activity.</param>
 public class PlayerState(IUserActivity userActivity)
 {
     /// <summary>
@@ -60,9 +58,7 @@ public class PlayerState(IUserActivity userActivity)
     /// <summary>
     /// Converts the current state into lazer presence payload format.
     /// </summary>
-    /// <returns>
-    /// The lazer presence payload, or <see langword="null"/> when the player should appear offline.
-    /// </returns>
+    /// <returns>The lazer presence payload, or <see langword="null"/> when the player should appear offline.</returns>
     public UserPresence? ToLazerUserPresence()
     {
         return UserStatus switch

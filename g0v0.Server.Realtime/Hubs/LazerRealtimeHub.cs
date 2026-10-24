@@ -11,9 +11,7 @@ namespace g0v0.Server.Realtime.Hubs;
 /// <summary>
 /// Provides common realtime hub functionality for lazer clients.
 /// </summary>
-/// <typeparam name="T">
-/// The hub client contract.
-/// </typeparam>
+/// <typeparam name="T">The hub client contract.</typeparam>
 public class LazerRealtimeHub<T>(PlayerManager playerManager) : Hub<T>
     where T : class
 {
@@ -25,12 +23,8 @@ public class LazerRealtimeHub<T>(PlayerManager playerManager) : Hub<T>
     /// <summary>
     /// Gets the currently connected lazer player.
     /// </summary>
-    /// <returns>
-    /// The current lazer player.
-    /// </returns>
-    /// <exception cref="InvalidOperationException">
-    /// Thrown when the current connection has no registered player.
-    /// </exception>
+    /// <returns>The current lazer player.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the current connection has no registered player.</exception>
     protected LazerPlayer GetPlayer()
     {
         LazerPlayer? player = playerManager.GetPlayer<LazerPlayer>(Context.GetUserId());
@@ -44,12 +38,8 @@ public class LazerRealtimeHub<T>(PlayerManager playerManager) : Hub<T>
     /// <summary>
     /// Gets the current lazer player or creates it with the supplied facade.
     /// </summary>
-    /// <param name="facade">
-    /// The facade to use when creating or updating the player.
-    /// </param>
-    /// <returns>
-    /// The current lazer player.
-    /// </returns>
+    /// <param name="facade">The facade to use when creating or updating the player.</param>
+    /// <returns>The current lazer player.</returns>
     protected LazerPlayer GetOrCreatePlayer(IPlayerFacade facade)
     {
         return LazerPlayer.GetOrCreate(playerManager, Context.GetUserId(), facade);

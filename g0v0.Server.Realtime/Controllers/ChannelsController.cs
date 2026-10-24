@@ -31,9 +31,7 @@ public class ChannelsController(
     /// <summary>
     /// Lists every joinable public channel.
     /// </summary>
-    /// <returns>
-    /// The public channels.
-    /// </returns>
+    /// <returns>The public channels.</returns>
     /// <remarks>
     /// The channels the user is in are exposed through <c>GET /chat/presence</c>
     /// and <c>GET /chat/updates</c> instead.
@@ -49,12 +47,8 @@ public class ChannelsController(
     /// <summary>
     /// Gets a channel by its ID, together with the users of a PM channel.
     /// </summary>
-    /// <param name="channelId">
-    /// The channel ID.
-    /// </param>
-    /// <returns>
-    /// The channel and its visible users.
-    /// </returns>
+    /// <param name="channelId">The channel ID.</param>
+    /// <returns>The channel and its visible users.</returns>
     [HttpGet("{channelId:int}")]
     [RequireScope("chat.read")]
     public async Task<IActionResult> GetChannel(int channelId)
@@ -85,9 +79,7 @@ public class ChannelsController(
     /// Creates a new PM or announcement channel, rejoining an existing PM
     /// conversation.
     /// </summary>
-    /// <returns>
-    /// The created or rejoined channel.
-    /// </returns>
+    /// <returns>The created or rejoined channel.</returns>
     /// <remarks>
     /// Parameters are read from a JSON body, a form body or the query string.
     /// </remarks>
@@ -151,15 +143,9 @@ public class ChannelsController(
     /// <summary>
     /// Joins a public channel.
     /// </summary>
-    /// <param name="channel">
-    /// The channel ID or name.
-    /// </param>
-    /// <param name="userId">
-    /// The user ID.
-    /// </param>
-    /// <returns>
-    /// The joined channel.
-    /// </returns>
+    /// <param name="channel">The channel ID or name.</param>
+    /// <param name="userId">The user ID.</param>
+    /// <returns>The joined channel.</returns>
     [HttpPut("{channel}/users/{userId:int}")]
     [RequireScope("chat.write_manage")]
     public async Task<IActionResult> JoinChannel(string channel, int userId)
@@ -192,15 +178,9 @@ public class ChannelsController(
     /// <summary>
     /// Leaves a channel.
     /// </summary>
-    /// <param name="channel">
-    /// The channel ID or name.
-    /// </param>
-    /// <param name="userId">
-    /// The user ID.
-    /// </param>
-    /// <returns>
-    /// No content.
-    /// </returns>
+    /// <param name="channel">The channel ID or name.</param>
+    /// <param name="userId">The user ID.</param>
+    /// <returns>No content.</returns>
     [HttpDelete("{channel}/users/{userId:int}")]
     [RequireScope("chat.write_manage")]
     public async Task<IActionResult> LeaveChannel(string channel, int userId)
@@ -230,15 +210,9 @@ public class ChannelsController(
     /// <summary>
     /// Marks a message as read in a channel. The read marker never moves backwards.
     /// </summary>
-    /// <param name="channel">
-    /// The channel ID or name.
-    /// </param>
-    /// <param name="messageId">
-    /// The message ID to mark as read.
-    /// </param>
-    /// <returns>
-    /// No content.
-    /// </returns>
+    /// <param name="channel">The channel ID or name.</param>
+    /// <param name="messageId">The message ID to mark as read.</param>
+    /// <returns>No content.</returns>
     [HttpPut("{channel}/mark-as-read/{messageId:int}")]
     [RequireScope("chat.read")]
     public async Task<IActionResult> MarkChannelAsRead(string channel, int messageId)

@@ -16,15 +16,9 @@ public class RoomFacade : IRoomFacade
     /// <summary>
     /// Initializes a new instance of the <see cref="RoomFacade"/> class.
     /// </summary>
-    /// <param name="scopeFactory">
-    /// The service scope factory.
-    /// </param>
-    /// <param name="eventDispatcher">
-    /// The multiplayer event dispatcher.
-    /// </param>
-    /// <param name="logger">
-    /// The logger.
-    /// </param>
+    /// <param name="scopeFactory">The service scope factory.</param>
+    /// <param name="eventDispatcher">The multiplayer event dispatcher.</param>
+    /// <param name="logger">The logger.</param>
     public RoomFacade(
         IServiceScopeFactory scopeFactory,
         MultiplayerEventDispatcher eventDispatcher,

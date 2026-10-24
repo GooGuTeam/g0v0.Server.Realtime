@@ -14,15 +14,9 @@ internal static class EnumerableExtensions
     /// For the collections A = [A1, A2, A3], B = [B1, B2], this returns the groups
     /// [A1, B1], [A2, B2], [A3].
     /// </remarks>
-    /// <typeparam name="T">
-    /// The element type.
-    /// </typeparam>
-    /// <param name="collections">
-    /// The collections to interleave.
-    /// </param>
-    /// <returns>
-    /// The interleaved element groups.
-    /// </returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="collections">The collections to interleave.</param>
+    /// <returns>The interleaved element groups.</returns>
     public static IEnumerable<IEnumerable<T>> Interleave<T>(this IEnumerable<IEnumerable<T>> collections)
     {
         List<IEnumerator<T>> enumerators = new();

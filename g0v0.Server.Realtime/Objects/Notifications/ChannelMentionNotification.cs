@@ -12,12 +12,8 @@ public sealed class ChannelMentionNotification : ChannelNotificationBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ChannelMentionNotification"/> class.
     /// </summary>
-    /// <param name="sourceUserId">
-    /// The sender user ID.
-    /// </param>
-    /// <param name="receiverIds">
-    /// The receiving user IDs.
-    /// </param>
+    /// <param name="sourceUserId">The sender user ID.</param>
+    /// <param name="receiverIds">The receiving user IDs.</param>
     public ChannelMentionNotification(int sourceUserId, IReadOnlyList<int> receiverIds)
         : base(sourceUserId, receiverIds)
     {

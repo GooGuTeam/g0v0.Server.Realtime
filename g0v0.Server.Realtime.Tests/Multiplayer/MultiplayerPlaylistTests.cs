@@ -634,15 +634,9 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
     /// fake room repository so a subsequent explicit join loads it from the
     /// database layer, mirroring the reference tests' pre-configured rooms.
     /// </summary>
-    /// <param name="queueMode">
-    /// The queue mode to store on the room.
-    /// </param>
-    /// <param name="addExtraItem">
-    /// Whether to seed a second playlist item.
-    /// </param>
-    /// <returns>
-    /// A task representing the asynchronous operation.
-    /// </returns>
+    /// <param name="queueMode">The queue mode to store on the room.</param>
+    /// <param name="addExtraItem">Whether to seed a second playlist item.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     private async Task SeedRoomInRepository(QueueMode queueMode, bool addExtraItem = false)
     {
         List<MultiplayerPlaylistItem> playlist =
