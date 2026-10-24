@@ -10,7 +10,9 @@ namespace g0v0.Server.Realtime.Objects.Players;
 /// <summary>
 /// Default implementation of <see cref="IPlayerFacade"/>.
 /// </summary>
-/// <param name="manager">The player manager.</param>
+/// <param name="manager">
+/// The player manager.
+/// </param>
 public class PlayerFacade(PlayerManager manager) : IPlayerFacade
 {
     /// <inheritdoc />

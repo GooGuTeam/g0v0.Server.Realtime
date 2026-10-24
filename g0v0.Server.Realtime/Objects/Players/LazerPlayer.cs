@@ -13,8 +13,12 @@ namespace g0v0.Server.Realtime.Objects.Players;
 /// <summary>
 /// Represents a lazer client connected to the realtime server.
 /// </summary>
-/// <param name="playerId">The player ID.</param>
-/// <param name="facade">The player dependency facade.</param>
+/// <param name="playerId">
+/// The player ID.
+/// </param>
+/// <param name="facade">
+/// The player dependency facade.
+/// </param>
 public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(playerId, facade)
 {
     private readonly Lock _hubConnectionLock = new();
@@ -162,10 +166,18 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// <summary>
     /// Gets the existing lazer player or creates a pending player for the specified user.
     /// </summary>
-    /// <param name="playerManager">The player manager.</param>
-    /// <param name="userId">The user ID.</param>
-    /// <param name="facade">The dependency facade to merge into the player.</param>
-    /// <returns>The existing or created lazer player.</returns>
+    /// <param name="playerManager">
+    /// The player manager.
+    /// </param>
+    /// <param name="userId">
+    /// The user ID.
+    /// </param>
+    /// <param name="facade">
+    /// The dependency facade to merge into the player.
+    /// </param>
+    /// <returns>
+    /// The existing or created lazer player.
+    /// </returns>
     public static LazerPlayer GetOrCreate(PlayerManager playerManager, int userId, IPlayerFacade? facade = null)
     {
         if (facade == null)
@@ -372,9 +384,15 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// hubs and the chat WebSockets alike. The player only goes offline once
     /// the last of those connections is gone.
     /// </remarks>
-    /// <param name="hubName">The connected hub name.</param>
-    /// <param name="connectionId">The connection ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="hubName">
+    /// The connected hub name.
+    /// </param>
+    /// <param name="connectionId">
+    /// The connection ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task HubConnected(string hubName, string connectionId)
     {
         if (Facade.Logger != null)
@@ -435,10 +453,18 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// connections do, so the player is only removed once this was the last
     /// connection of any kind.
     /// </remarks>
-    /// <param name="hubName">The disconnected hub name.</param>
-    /// <param name="connectionId">The disconnected connection ID.</param>
-    /// <param name="exception">The exception that caused the disconnection, if any.</param>
-    /// <returns>Whether the disconnected connection was the current connection for the hub.</returns>
+    /// <param name="hubName">
+    /// The disconnected hub name.
+    /// </param>
+    /// <param name="connectionId">
+    /// The disconnected connection ID.
+    /// </param>
+    /// <param name="exception">
+    /// The exception that caused the disconnection, if any.
+    /// </param>
+    /// <returns>
+    /// Whether the disconnected connection was the current connection for the hub.
+    /// </returns>
     public async Task<bool> HubDisconnected(string hubName, string connectionId, Exception? exception)
     {
         if (Facade.Logger != null)
@@ -493,7 +519,9 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// WebSocket brings an otherwise disconnected player online. Multiple
     /// chat WebSockets per player are supported (browser tabs, devices).
     /// </remarks>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task ChatConnected()
     {
         bool shouldGoOnline;
@@ -516,7 +544,9 @@ public class LazerPlayer(int playerId, IPlayerFacade facade) : PlayerBase(player
     /// The player only goes offline once the last connection (chat WebSockets
     /// and realtime hubs alike) is gone.
     /// </remarks>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task ChatDisconnected()
     {
         bool shouldGoOffline;

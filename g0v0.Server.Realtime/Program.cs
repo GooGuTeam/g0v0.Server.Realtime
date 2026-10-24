@@ -36,7 +36,9 @@ public static class Program
     /// <summary>
     /// Configures and runs the web host.
     /// </summary>
-    /// <param name="args">Command-line arguments.</param>
+    /// <param name="args">
+    /// Command-line arguments.
+    /// </param>
     public static void Main(string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -47,7 +49,9 @@ public static class Program
     /// <summary>
     /// Registers all services required by the realtime server.
     /// </summary>
-    /// <param name="builder">The web application builder.</param>
+    /// <param name="builder">
+    /// The web application builder.
+    /// </param>
     public static void ConfigureServices(WebApplicationBuilder builder)
     {
         // MVC runs on Newtonsoft.Json (via the official
@@ -162,8 +166,12 @@ public static class Program
     /// <summary>
     /// Configures the web application pipeline.
     /// </summary>
-    /// <param name="app">The application.</param>
-    /// <returns>The configured application.</returns>
+    /// <param name="app">
+    /// The application.
+    /// </param>
+    /// <returns>
+    /// The configured application.
+    /// </returns>
     public static WebApplication ConfigureApp(WebApplication app)
     {
         // Constructing the handler registers the chat IPC notice handlers

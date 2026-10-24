@@ -12,9 +12,15 @@ public static class HubCallerContextExtensions
     /// <summary>
     /// Returns the osu! user id for the supplied <paramref name="context"/>.
     /// </summary>
-    /// <param name="context">The hub caller context.</param>
-    /// <returns>The osu! user id.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when no user identifier can be resolved.</exception>
+    /// <param name="context">
+    /// The hub caller context.
+    /// </param>
+    /// <returns>
+    /// The osu! user id.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no user identifier can be resolved.
+    /// </exception>
     public static int GetUserId(this HubCallerContext context)
     {
         return context.UserIdentifier != null && int.TryParse(context.UserIdentifier, out int userId)

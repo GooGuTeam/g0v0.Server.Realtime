@@ -136,7 +136,9 @@ public class AutomaticForceStartTest : MultiplayerTestBase
     /// <c>SkipToEndOfCountdown</c> helper, so the countdown's internal skip token is
     /// cancelled via reflection (equivalent to cancelling <c>CountdownInfo.SkipSource</c>).
     /// </remarks>
-    /// <returns>A task which completes when the active countdown completes.</returns>
+    /// <returns>
+    /// A task which completes when the active countdown completes.
+    /// </returns>
     private async Task SkipToEndOfCountdown()
     {
         IRoom room = Hub.GetRoom(RoomId)!;

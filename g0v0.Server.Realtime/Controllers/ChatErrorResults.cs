@@ -15,7 +15,9 @@ internal static class ChatErrorResults
     /// <summary>
     /// Builds the <c>404</c> response for a missing channel.
     /// </summary>
-    /// <returns>The response.</returns>
+    /// <returns>
+    /// The response.
+    /// </returns>
     internal static IActionResult ChannelNotFound()
     {
         return NotFound("channel_not_found", "Channel not found.");
@@ -24,7 +26,9 @@ internal static class ChatErrorResults
     /// <summary>
     /// Builds the <c>404</c> response for a channel the user takes no part in.
     /// </summary>
-    /// <returns>The response.</returns>
+    /// <returns>
+    /// The response.
+    /// </returns>
     internal static IActionResult NotInChannel()
     {
         return NotFound("you_are_not_in_channel", "You are not in this channel.");
@@ -33,7 +37,9 @@ internal static class ChatErrorResults
     /// <summary>
     /// Builds the <c>404</c> response for a missing message target user.
     /// </summary>
-    /// <returns>The response.</returns>
+    /// <returns>
+    /// The response.
+    /// </returns>
     internal static IActionResult TargetUserNotFound()
     {
         return NotFound("target_user_not_found", "Target user not found.");
@@ -42,9 +48,15 @@ internal static class ChatErrorResults
     /// <summary>
     /// Builds the <c>403</c> response of an authorization failure.
     /// </summary>
-    /// <param name="message">The error message.</param>
-    /// <param name="msgKey">The localization key of the error message.</param>
-    /// <returns>The response.</returns>
+    /// <param name="message">
+    /// The error message.
+    /// </param>
+    /// <param name="msgKey">
+    /// The localization key of the error message.
+    /// </param>
+    /// <returns>
+    /// The response.
+    /// </returns>
     internal static IActionResult Forbidden(string message, string msgKey = "forbidden")
     {
         return new ObjectResult(new { error = message, msg_key = msgKey })
@@ -56,9 +68,15 @@ internal static class ChatErrorResults
     /// <summary>
     /// Builds the <c>422</c> response used by the chat endpoints.
     /// </summary>
-    /// <param name="message">The error message.</param>
-    /// <param name="msgKey">The localization key of the error message.</param>
-    /// <returns>The response.</returns>
+    /// <param name="message">
+    /// The error message.
+    /// </param>
+    /// <param name="msgKey">
+    /// The localization key of the error message.
+    /// </param>
+    /// <returns>
+    /// The response.
+    /// </returns>
     internal static IActionResult Unprocessable(string message, string msgKey = "invalid_request")
     {
         return new UnprocessableEntityObjectResult(new { error = message, msg_key = msgKey });
@@ -68,8 +86,12 @@ internal static class ChatErrorResults
     /// Builds the response of a rejected message: <c>429</c> when the sender is
     /// throttled, <c>422</c> when the content itself was rejected.
     /// </summary>
-    /// <param name="exception">The rejection.</param>
-    /// <returns>The response.</returns>
+    /// <param name="exception">
+    /// The rejection.
+    /// </param>
+    /// <returns>
+    /// The response.
+    /// </returns>
     internal static IActionResult FromRejection(ChatMessageRejectedException exception)
     {
         return exception.Reason switch

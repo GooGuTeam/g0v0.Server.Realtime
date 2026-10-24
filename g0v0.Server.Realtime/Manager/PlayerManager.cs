@@ -55,10 +55,18 @@ public class PlayerManager(
     /// the specified period unless cancelled by a reconnect. Used to keep users
     /// in a room across brief connection drops.
     /// </summary>
-    /// <param name="userId">The user ID.</param>
-    /// <param name="roomId">The room ID the user is currently in.</param>
-    /// <param name="gracePeriod">The grace period.</param>
-    /// <param name="roomManager">The room manager used to resolve the room.</param>
+    /// <param name="userId">
+    /// The user ID.
+    /// </param>
+    /// <param name="roomId">
+    /// The room ID the user is currently in.
+    /// </param>
+    /// <param name="gracePeriod">
+    /// The grace period.
+    /// </param>
+    /// <param name="roomManager">
+    /// The room manager used to resolve the room.
+    /// </param>
     public void StartMultiplayerDisconnectGrace(int userId, long roomId, TimeSpan gracePeriod, RoomManager roomManager)
     {
         CancelMultiplayerDisconnectGrace(userId);
@@ -111,7 +119,9 @@ public class PlayerManager(
     /// <summary>
     /// Cancels any pending multiplayer disconnect grace timer for the user.
     /// </summary>
-    /// <param name="userId">The user ID.</param>
+    /// <param name="userId">
+    /// The user ID.
+    /// </param>
     public void CancelMultiplayerDisconnectGrace(int userId)
     {
         lock (_lock)
@@ -132,8 +142,12 @@ public class PlayerManager(
     /// <summary>
     /// Adds a player to the active connection registry.
     /// </summary>
-    /// <param name="player">The player to add.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player to add.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task AddPlayer(IPlayer player)
     {
         IPlayer? existingPlayer;
@@ -185,9 +199,15 @@ public class PlayerManager(
     /// <summary>
     /// Removes a player from the active connection registry.
     /// </summary>
-    /// <param name="player">The player to remove.</param>
-    /// <param name="isKicked">Whether the player was removed because another connection replaced them.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player to remove.
+    /// </param>
+    /// <param name="isKicked">
+    /// Whether the player was removed because another connection replaced them.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task RemovePlayer(IPlayer player, bool isKicked = false)
     {
         List<IPlayer> watchingStopped;
@@ -225,12 +245,24 @@ public class PlayerManager(
     /// <summary>
     /// Gets an existing player or creates one atomically for concurrent hub connections.
     /// </summary>
-    /// <typeparam name="T">The expected player type.</typeparam>
-    /// <param name="playerId">The player ID.</param>
-    /// <param name="server">The server identifier.</param>
-    /// <param name="playerFactory">The factory used when a player does not already exist.</param>
-    /// <param name="updatePlayer">The callback used to update an existing player instance.</param>
-    /// <returns>The existing or newly created player.</returns>
+    /// <typeparam name="T">
+    /// The expected player type.
+    /// </typeparam>
+    /// <param name="playerId">
+    /// The player ID.
+    /// </param>
+    /// <param name="server">
+    /// The server identifier.
+    /// </param>
+    /// <param name="playerFactory">
+    /// The factory used when a player does not already exist.
+    /// </param>
+    /// <param name="updatePlayer">
+    /// The callback used to update an existing player instance.
+    /// </param>
+    /// <returns>
+    /// The existing or newly created player.
+    /// </returns>
     public T GetOrCreatePlayer<T>(int playerId, string server, Func<T> playerFactory, Action<T> updatePlayer)
         where T : class, IPlayer
     {
@@ -260,10 +292,18 @@ public class PlayerManager(
     /// <summary>
     /// Gets the player instance for a specific server connection.
     /// </summary>
-    /// <typeparam name="T">The expected player type.</typeparam>
-    /// <param name="playerId">The player ID.</param>
-    /// <param name="server">The server identifier.</param>
-    /// <returns>The matching player if present; otherwise, <see langword="null"/>.</returns>
+    /// <typeparam name="T">
+    /// The expected player type.
+    /// </typeparam>
+    /// <param name="playerId">
+    /// The player ID.
+    /// </param>
+    /// <param name="server">
+    /// The server identifier.
+    /// </param>
+    /// <returns>
+    /// The matching player if present; otherwise, <see langword="null"/>.
+    /// </returns>
     public T? GetPlayer<T>(int playerId, string server)
         where T : class, IPlayer
     {
@@ -277,9 +317,15 @@ public class PlayerManager(
     /// <summary>
     /// Gets the first connected instance of a player matching the supplied type.
     /// </summary>
-    /// <typeparam name="T">The expected player type.</typeparam>
-    /// <param name="playerId">The player ID.</param>
-    /// <returns>The first matching player if present; otherwise, <see langword="null"/>.</returns>
+    /// <typeparam name="T">
+    /// The expected player type.
+    /// </typeparam>
+    /// <param name="playerId">
+    /// The player ID.
+    /// </param>
+    /// <returns>
+    /// The first matching player if present; otherwise, <see langword="null"/>.
+    /// </returns>
     public T? GetPlayer<T>(int playerId)
         where T : class, IPlayer
     {
@@ -303,8 +349,12 @@ public class PlayerManager(
     /// <summary>
     /// Gets every connected instance for the specified player ID.
     /// </summary>
-    /// <param name="playerId">The player ID.</param>
-    /// <returns>All connected instances for the player.</returns>
+    /// <param name="playerId">
+    /// The player ID.
+    /// </param>
+    /// <returns>
+    /// All connected instances for the player.
+    /// </returns>
     public IEnumerable<IPlayer> GetPlayerAllInstances(int playerId)
     {
         IPlayer[] players;
@@ -322,7 +372,9 @@ public class PlayerManager(
     /// <summary>
     /// Gets all connected players.
     /// </summary>
-    /// <returns>All connected players.</returns>
+    /// <returns>
+    /// All connected players.
+    /// </returns>
     public IEnumerable<IPlayer> GetAllPlayers()
     {
         lock (_lock)
@@ -334,8 +386,12 @@ public class PlayerManager(
     /// <summary>
     /// Gets all connected players of a specific type.
     /// </summary>
-    /// <typeparam name="T">The expected player type.</typeparam>
-    /// <returns>All connected players of the requested type.</returns>
+    /// <typeparam name="T">
+    /// The expected player type.
+    /// </typeparam>
+    /// <returns>
+    /// All connected players of the requested type.
+    /// </returns>
     public IEnumerable<T> GetAllPlayers<T>()
         where T : class, IPlayer
     {
@@ -352,8 +408,12 @@ public class PlayerManager(
     /// <summary>
     /// Broadcasts that a player came online.
     /// </summary>
-    /// <param name="player">The player that came online.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that came online.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BroadcastPlayerOnline(IPlayer player)
     {
         await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
@@ -372,9 +432,15 @@ public class PlayerManager(
     /// <summary>
     /// Broadcasts that a player went offline.
     /// </summary>
-    /// <param name="player">The player that went offline.</param>
-    /// <param name="isKicked">Whether the player was kicked because of a replacement connection.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that went offline.
+    /// </param>
+    /// <param name="isKicked">
+    /// Whether the player was kicked because of a replacement connection.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BroadcastPlayerOffline(IPlayer player, bool isKicked = false)
     {
         await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
@@ -393,9 +459,15 @@ public class PlayerManager(
     /// <summary>
     /// Broadcasts that a player changed activity.
     /// </summary>
-    /// <param name="player">The player that changed activity.</param>
-    /// <param name="activity">The updated activity.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that changed activity.
+    /// </param>
+    /// <param name="activity">
+    /// The updated activity.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BroadcastPlayerChangeActivity(IPlayer player, IUserActivity activity)
     {
         // Follow osu!'s hiding online status policy.
@@ -412,9 +484,15 @@ public class PlayerManager(
     /// <summary>
     /// Broadcasts that a player changed status.
     /// </summary>
-    /// <param name="player">The player that changed status.</param>
-    /// <param name="status">The updated status.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that changed status.
+    /// </param>
+    /// <param name="status">
+    /// The updated status.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BroadcastPlayerChangeStatus(IPlayer player, UserStatus? status)
     {
         await Task.WhenAll(
@@ -429,8 +507,12 @@ public class PlayerManager(
     /// <summary>
     /// Broadcasts that a watched player began a spectator play session.
     /// </summary>
-    /// <param name="player">The player that began playing.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that began playing.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BroadcastUserBeganPlaying(IPlayer player)
     {
         IPlayer[] watchers = GetWatchingPlayers(player).ToArray();
@@ -449,8 +531,12 @@ public class PlayerManager(
     /// <summary>
     /// Broadcasts that a watched player finished a spectator play session.
     /// </summary>
-    /// <param name="player">The player that finished playing.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that finished playing.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BroadcastUserFinishedPlaying(IPlayer player)
     {
         IPlayer[] watchers = GetWatchingPlayers(player).ToArray();
@@ -469,9 +555,15 @@ public class PlayerManager(
     /// <summary>
     /// Broadcasts spectator frame data to players watching the source player.
     /// </summary>
-    /// <param name="player">The player that sent frames.</param>
-    /// <param name="frame">The frame bundle to broadcast.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that sent frames.
+    /// </param>
+    /// <param name="frame">
+    /// The frame bundle to broadcast.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BroadcastUserSentFrames(IPlayer player, FrameDataBundle frame)
     {
         IPlayer[] watchers = GetWatchingPlayers(player).ToArray();
@@ -494,9 +586,15 @@ public class PlayerManager(
     /// <summary>
     /// Registers that one player is watching another player.
     /// </summary>
-    /// <param name="source">The watching player.</param>
-    /// <param name="target">The watched player.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="source">
+    /// The watching player.
+    /// </param>
+    /// <param name="target">
+    /// The watched player.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task UserWatchingPlayer(IPlayer source, IPlayer target)
     {
         bool added;
@@ -544,9 +642,15 @@ public class PlayerManager(
     /// <summary>
     /// Registers that one player stopped watching another player.
     /// </summary>
-    /// <param name="source">The watching player.</param>
-    /// <param name="target">The watched player.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="source">
+    /// The watching player.
+    /// </param>
+    /// <param name="target">
+    /// The watched player.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task UserStoppedWatchingPlayer(IPlayer source, IPlayer target)
     {
         bool removed;
@@ -572,8 +676,12 @@ public class PlayerManager(
     /// <summary>
     /// Gets all players currently watching the specified target.
     /// </summary>
-    /// <param name="target">The watched player.</param>
-    /// <returns>The players watching the target.</returns>
+    /// <param name="target">
+    /// The watched player.
+    /// </param>
+    /// <returns>
+    /// The players watching the target.
+    /// </returns>
     public IEnumerable<IPlayer> GetWatchingPlayers(IPlayer target)
     {
         IPlayer[] watchers;
@@ -595,11 +703,21 @@ public class PlayerManager(
     /// <summary>
     /// Joins a player into a room, updating the player's current-room state.
     /// </summary>
-    /// <param name="roomManager">The room manager.</param>
-    /// <param name="player">The joining player.</param>
-    /// <param name="roomId">The room ID.</param>
-    /// <param name="role">The role to join with.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="roomManager">
+    /// The room manager.
+    /// </param>
+    /// <param name="player">
+    /// The joining player.
+    /// </param>
+    /// <param name="roomId">
+    /// The room ID.
+    /// </param>
+    /// <param name="role">
+    /// The role to join with.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task UserJoinRoom(
         RoomManager roomManager,
         IPlayer player,
@@ -632,9 +750,15 @@ public class PlayerManager(
     /// <summary>
     /// Leaves the room the player is currently in, clearing the player's current-room state.
     /// </summary>
-    /// <param name="roomManager">The room manager.</param>
-    /// <param name="player">The leaving player.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="roomManager">
+    /// The room manager.
+    /// </param>
+    /// <param name="player">
+    /// The leaving player.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task UserLeaveRoom(RoomManager roomManager, IPlayer player)
     {
         long? roomId = player.State.CurrentRoom;

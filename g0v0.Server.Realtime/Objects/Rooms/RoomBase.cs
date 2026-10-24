@@ -110,8 +110,12 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Resolves the connected player instance for a user ID, or <see langword="null"/>.
     /// </summary>
-    /// <param name="userId">The user ID.</param>
-    /// <returns>The player, or <see langword="null"/> when not connected.</returns>
+    /// <param name="userId">
+    /// The user ID.
+    /// </param>
+    /// <returns>
+    /// The player, or <see langword="null"/> when not connected.
+    /// </returns>
     protected Objects.Players.IPlayer? GetPlayer(int userId)
     {
         return Facade.PlayerManager?.GetPlayer<Objects.Players.IPlayer>(userId);
@@ -130,9 +134,15 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Executes the supplied operation with a scoped room repository.
     /// </summary>
-    /// <typeparam name="T">The result type.</typeparam>
-    /// <param name="operation">The operation to run with the repository.</param>
-    /// <returns>The operation result.</returns>
+    /// <typeparam name="T">
+    /// The result type.
+    /// </typeparam>
+    /// <param name="operation">
+    /// The operation to run with the repository.
+    /// </param>
+    /// <returns>
+    /// The operation result.
+    /// </returns>
     private async Task<T> WithRepository<T>(Func<IRoomRepository, Task<T>> operation)
     {
         using IServiceScope scope = Facade.ScopeFactory.CreateScope();
@@ -143,8 +153,12 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Executes the supplied operation with a scoped room repository.
     /// </summary>
-    /// <param name="operation">The operation to run with the repository.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="operation">
+    /// The operation to run with the repository.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task WithRepository(Func<IRoomRepository, Task> operation)
     {
         using IServiceScope scope = Facade.ScopeFactory.CreateScope();
@@ -155,9 +169,15 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Executes the supplied operation with a scoped beatmap repository.
     /// </summary>
-    /// <typeparam name="T">The result type.</typeparam>
-    /// <param name="operation">The operation to run with the repository.</param>
-    /// <returns>The operation result, or <see langword="null"/> when no beatmap repository is registered.</returns>
+    /// <typeparam name="T">
+    /// The result type.
+    /// </typeparam>
+    /// <param name="operation">
+    /// The operation to run with the repository.
+    /// </param>
+    /// <returns>
+    /// The operation result, or <see langword="null"/> when no beatmap repository is registered.
+    /// </returns>
     private async Task<T?> WithBeatmapRepository<T>(Func<IBeatmapRepository, Task<T>> operation)
     {
         using IServiceScope scope = Facade.ScopeFactory.CreateScope();
@@ -169,9 +189,15 @@ public abstract class RoomBase : IRoom
     /// Executes the supplied operation with a scoped beatmap repository and the osu! fetcher.
     /// Falls back to the plain repository lookup when no fetcher is registered.
     /// </summary>
-    /// <param name="operation">The operation to run with the repository and fetcher.</param>
-    /// <param name="lookup">The fallback operation used when no fetcher is registered.</param>
-    /// <returns>The operation result, or <see langword="null"/> when no beatmap repository is registered.</returns>
+    /// <param name="operation">
+    /// The operation to run with the repository and fetcher.
+    /// </param>
+    /// <param name="lookup">
+    /// The fallback operation used when no fetcher is registered.
+    /// </param>
+    /// <returns>
+    /// The operation result, or <see langword="null"/> when no beatmap repository is registered.
+    /// </returns>
     private async Task<Beatmap?> WithBeatmapRepositoryAndFetcher(Func<IBeatmapRepository, IFetcher, Task<Beatmap?>> operation, Func<IBeatmapRepository, Task<Beatmap?>> lookup)
     {
         using IServiceScope scope = Facade.ScopeFactory.CreateScope();
@@ -188,8 +214,12 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Resolves the star rating for a beatmap from the beatmap repository.
     /// </summary>
-    /// <param name="beatmapId">The beatmap ID.</param>
-    /// <returns>The star rating, or <c>0</c> when the beatmap is unknown.</returns>
+    /// <param name="beatmapId">
+    /// The beatmap ID.
+    /// </param>
+    /// <returns>
+    /// The star rating, or <c>0</c> when the beatmap is unknown.
+    /// </returns>
     private async Task<double> GetStarRating(int beatmapId)
     {
         Beatmap? beatmap = await WithBeatmapRepositoryAndFetcher(
@@ -206,8 +236,12 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Initializes a new instance of the <see cref="RoomBase"/> class from a database room.
     /// </summary>
-    /// <param name="room">The database room.</param>
-    /// <param name="facade">The room dependency facade.</param>
+    /// <param name="room">
+    /// The database room.
+    /// </param>
+    /// <param name="facade">
+    /// The room dependency facade.
+    /// </param>
     protected RoomBase(Room room, IRoomFacade facade)
     {
         ArgumentNullException.ThrowIfNull(room);
@@ -526,8 +560,12 @@ public abstract class RoomBase : IRoom
     /// Handles match-state specific settings changes (e.g. slot reallocation when
     /// the participant limit changes). Derived rooms override this.
     /// </summary>
-    /// <param name="previousSettings">The settings before the change.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="previousSettings">
+    /// The settings before the change.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected virtual Task HandleMatchStateSettingsChanged(MultiplayerRoomSettings previousSettings) => Task.CompletedTask;
 
     /// <inheritdoc />
@@ -635,10 +673,18 @@ public abstract class RoomBase : IRoom
     /// selected beatmap must exist and belong to the current item's beatmap set,
     /// and the ruleset must be supported by the selected beatmap.
     /// </summary>
-    /// <param name="beatmapId">The selected beatmap ID.</param>
-    /// <param name="rulesetId">The selected ruleset ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="InvalidStateException">The selection is not valid for the current item.</exception>
+    /// <param name="beatmapId">
+    /// The selected beatmap ID.
+    /// </param>
+    /// <param name="rulesetId">
+    /// The selected ruleset ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <exception cref="InvalidStateException">
+    /// The selection is not valid for the current item.
+    /// </exception>
     private async Task ValidateUserStyleBeatmap(int? beatmapId, int? rulesetId)
     {
         if (beatmapId == null && rulesetId == null)
@@ -697,10 +743,18 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Changes the style of a user and broadcasts the change.
     /// </summary>
-    /// <param name="user">The user whose style is changing.</param>
-    /// <param name="beatmapId">The new beatmap ID.</param>
-    /// <param name="rulesetId">The new ruleset ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="user">
+    /// The user whose style is changing.
+    /// </param>
+    /// <param name="beatmapId">
+    /// The new beatmap ID.
+    /// </param>
+    /// <param name="rulesetId">
+    /// The new ruleset ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task ChangeUserStyleInternal(MultiplayerRoomUser user, int? beatmapId, int? rulesetId)
     {
         if (user.BeatmapId == beatmapId && user.RulesetId == rulesetId)
@@ -729,8 +783,12 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Determines whether the given user is the room host or a referee.
     /// </summary>
-    /// <param name="user">The user to check.</param>
-    /// <returns><see langword="true"/> when the user is the host or a referee.</returns>
+    /// <param name="user">
+    /// The user to check.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the user is the host or a referee.
+    /// </returns>
     private bool IsHostOrReferee(MultiplayerRoomUser user)
         => Host?.UserID == user.UserID || user.Role == MultiplayerRoomUserRole.Referee;
 
@@ -738,7 +796,9 @@ public abstract class RoomBase : IRoom
     /// Ensures every user's style (beatmap/ruleset selection) is valid for the
     /// current playlist item, resetting selections which no longer apply.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task EnsureAllUsersValidStyle()
     {
         MultiplayerPlaylistItem currentItem = CurrentItem;
@@ -1022,9 +1082,15 @@ public abstract class RoomBase : IRoom
     /// checksum must match, and the ruleset must be compatible with the
     /// beatmap's play mode.
     /// </summary>
-    /// <param name="item">The playlist item to validate.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="InvalidStateException">The beatmap is unknown, modified or incompatible with the ruleset.</exception>
+    /// <param name="item">
+    /// The playlist item to validate.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <exception cref="InvalidStateException">
+    /// The beatmap is unknown, modified or incompatible with the ruleset.
+    /// </exception>
     private async Task ValidatePlaylistItemBeatmap(MultiplayerPlaylistItem item)
     {
         bool repositoryRegistered = false;
@@ -1140,9 +1206,15 @@ public abstract class RoomBase : IRoom
     /// Handles a change to a playlist item, re-validating user styles and
     /// unreadying users when the currently-selected item changed.
     /// </summary>
-    /// <param name="item">The changed item.</param>
-    /// <param name="beatmapChanged">Whether the beatmap changed.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="item">
+    /// The changed item.
+    /// </param>
+    /// <param name="beatmapChanged">
+    /// Whether the beatmap changed.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task HandlePlaylistItemChanged(MultiplayerPlaylistItem item, bool beatmapChanged)
     {
         if (item.ID == Settings.PlaylistItemId)
@@ -1159,7 +1231,9 @@ public abstract class RoomBase : IRoom
     /// Trims every user's mod selection to the set which is valid for the
     /// current playlist item, broadcasting the trimmed selection.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task TrimAllUsersMods()
     {
         if (Facade.RulesetManager == null)
@@ -1263,9 +1337,15 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Handles a match-type specific user request. Derived rooms override this.
     /// </summary>
-    /// <param name="user">The requesting user.</param>
-    /// <param name="request">The request.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="user">
+    /// The requesting user.
+    /// </param>
+    /// <param name="request">
+    /// The request.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected virtual Task HandleMatchUserRequest(MultiplayerRoomUser user, MatchUserRequest request)
     {
         // Unknown requests are silently ignored (aligned with the reference
@@ -1276,29 +1356,43 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Handles a user joining, hooking the room-specific match state.
     /// </summary>
-    /// <param name="user">The joining user.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="user">
+    /// The joining user.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected virtual Task HandleUserJoined(MultiplayerRoomUser user) => Task.CompletedTask;
 
     /// <summary>
     /// Handles a user leaving, cleaning up the room-specific match state.
     /// </summary>
-    /// <param name="user">The leaving user.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="user">
+    /// The leaving user.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected virtual Task HandleUserLeft(MultiplayerRoomUser user) => Task.CompletedTask;
 
     /// <summary>
     /// Handles a user state change, updating the room-specific match state.
     /// </summary>
-    /// <param name="user">The user whose state changed.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="user">
+    /// The user whose state changed.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected virtual Task HandleUserStateChanged(MultiplayerRoomUser user) => Task.CompletedTask;
 
     /// <summary>
     /// Handles gameplay completion, resetting the room-specific match state and
     /// advancing the playlist queue (expiring the played item).
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected virtual async Task HandleGameplayCompleted()
     {
         MultiplayerPlaylistItem currentItem = CurrentItem;
@@ -1331,7 +1425,9 @@ public abstract class RoomBase : IRoom
     /// everything is expired), broadcasting the settings change when the
     /// selection moves.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected async Task UpdateCurrentItem()
     {
         if (Playlist.Count == 0)
@@ -1360,7 +1456,9 @@ public abstract class RoomBase : IRoom
     /// Recomputes and persists the <see cref="MultiplayerPlaylistItem.PlaylistOrder"/>
     /// of all non-expired items according to the room's queueing mode.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected async Task UpdatePlaylistOrder()
     {
         List<MultiplayerPlaylistItem> orderedActiveItems;
@@ -1422,7 +1520,9 @@ public abstract class RoomBase : IRoom
     /// Initialises the match-type specific state for this room instance.
     /// Called by the room manager after construction or after a match-type change.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     internal virtual Task InitializeMatchState() => Task.CompletedTask;
 
     /// <summary>
@@ -1430,8 +1530,12 @@ public abstract class RoomBase : IRoom
     /// without recreating the record. Used by settings changes and by the room
     /// manager on match-type changes.
     /// </summary>
-    /// <param name="settings">The settings to persist.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="settings">
+    /// The settings to persist.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     internal async Task UpdateRoomSettings(MultiplayerRoomSettings settings)
     {
         await WithRepository(repo => repo.UpdateRoomSettings(RoomId, settings));
@@ -1441,8 +1545,12 @@ public abstract class RoomBase : IRoom
     /// Copies the live in-memory state from another room instance of the same room.
     /// Used by the room manager when swapping the room's implementation type.
     /// </summary>
-    /// <param name="other">The room instance to copy state from.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="other">
+    /// The room instance to copy state from.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     internal async Task CopyStateFrom(RoomBase other)
     {
         Users.Clear();
@@ -1473,7 +1581,9 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Updates the room state based on the current user states.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task UpdateRoomStateIfRequired()
     {
         switch (State)
@@ -1564,9 +1674,15 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Changes and broadcasts a user state, then notifies the match controller.
     /// </summary>
-    /// <param name="user">The user whose state changed.</param>
-    /// <param name="state">The new state.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="user">
+    /// The user whose state changed.
+    /// </param>
+    /// <param name="state">
+    /// The new state.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected async Task ChangeAndBroadcastUserState(MultiplayerRoomUser user, MultiplayerUserState state)
     {
         user.State = state;
@@ -1638,7 +1754,9 @@ public abstract class RoomBase : IRoom
     /// Disbands the room: marks it as ended in the database and notifies the
     /// room manager so the in-memory instance is destroyed.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task Disband()
     {
         CancelEndDateDestruction();
@@ -1656,8 +1774,12 @@ public abstract class RoomBase : IRoom
     /// is reached, persisting the end date and starting a timer which disbands
     /// the room (removing it from the room manager) at that point.
     /// </summary>
-    /// <param name="endDate">The date at which the room should be destroyed.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="endDate">
+    /// The date at which the room should be destroyed.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task ScheduleEndDateDestruction(DateTimeOffset endDate)
     {
         EndDate = endDate;
@@ -1730,7 +1852,9 @@ public abstract class RoomBase : IRoom
     /// tests which exercise the expired-room state (the timer would otherwise
     /// destroy the room immediately).
     /// </summary>
-    /// <param name="endDate">The end date to set.</param>
+    /// <param name="endDate">
+    /// The end date to set.
+    /// </param>
     internal void SetEndDateForTesting(DateTimeOffset? endDate)
     {
         EndDate = endDate;
@@ -1746,8 +1870,12 @@ public abstract class RoomBase : IRoom
     /// Unreadies all users and resets their beatmap availability when the
     /// currently-selected playlist item changed.
     /// </summary>
-    /// <param name="resetBeatmapAvailability">Whether to reset users' beatmap availability.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="resetBeatmapAvailability">
+    /// Whether to reset users' beatmap availability.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task UnreadyAllUsers(bool resetBeatmapAvailability)
     {
         foreach (MultiplayerRoomUser? u in Users.Where(u => u.State == MultiplayerUserState.Ready).ToArray())
@@ -1771,9 +1899,15 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Adds a playlist item to the in-memory queue and persists it.
     /// </summary>
-    /// <param name="item">The item to add.</param>
-    /// <param name="ownerId">The owning user ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="item">
+    /// The item to add.
+    /// </param>
+    /// <param name="ownerId">
+    /// The owning user ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     protected async Task AddPlaylistItemInternal(MultiplayerPlaylistItem item, int ownerId)
     {
         // New items are appended to the queue; the queue reorder assigns the
@@ -1912,10 +2046,18 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Starts a countdown which invokes <paramref name="onComplete"/> when it finishes.
     /// </summary>
-    /// <typeparam name="T">The countdown type.</typeparam>
-    /// <param name="countdown">The countdown to start.</param>
-    /// <param name="onComplete">The callback invoked when the countdown completes.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <typeparam name="T">
+    /// The countdown type.
+    /// </typeparam>
+    /// <param name="countdown">
+    /// The countdown to start.
+    /// </param>
+    /// <param name="onComplete">
+    /// The callback invoked when the countdown completes.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task StartCountdown<T>(T countdown, Func<Task>? onComplete = null)
         where T : MultiplayerCountdown
     {
@@ -1984,8 +2126,12 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Stops the given countdown, preventing its callback from running.
     /// </summary>
-    /// <param name="countdown">The countdown to stop.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="countdown">
+    /// The countdown to stop.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task StopCountdown(MultiplayerCountdown? countdown)
     {
         if (countdown == null || !_trackedCountdowns.TryRemove(countdown, out CountdownInfo? countdownInfo))
@@ -2002,8 +2148,12 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Finds an active countdown by ID.
     /// </summary>
-    /// <param name="countdownId">The countdown ID.</param>
-    /// <returns>The countdown, or <see langword="null"/> if not found.</returns>
+    /// <param name="countdownId">
+    /// The countdown ID.
+    /// </param>
+    /// <returns>
+    /// The countdown, or <see langword="null"/> if not found.
+    /// </returns>
     public MultiplayerCountdown? FindCountdownById(int countdownId)
         => ActiveCountdowns.SingleOrDefault(c => c.ID == countdownId);
 

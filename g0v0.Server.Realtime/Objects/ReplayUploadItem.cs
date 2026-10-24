@@ -8,10 +8,18 @@ namespace g0v0.Server.Realtime.Objects;
 /// <summary>
 /// Represents a queued spectator replay upload.
 /// </summary>
-/// <param name="Token">The score token ID.</param>
-/// <param name="Score">The score containing replay data.</param>
-/// <param name="Beatmap">The beatmap metadata associated with the score.</param>
-/// <param name="CancellationToken">The cancellation source controlling upload timeout.</param>
+/// <param name="Token">
+/// The score token ID.
+/// </param>
+/// <param name="Score">
+/// The score containing replay data.
+/// </param>
+/// <param name="Beatmap">
+/// The beatmap metadata associated with the score.
+/// </param>
+/// <param name="CancellationToken">
+/// The cancellation source controlling upload timeout.
+/// </param>
 public record ReplayUploadItem(long Token, OsuScore Score, Beatmap Beatmap, CancellationTokenSource CancellationToken) : IDisposable
 {
     /// <inheritdoc />

@@ -35,59 +35,95 @@ public interface IPlayer
     /// <summary>
     /// Handles another player coming online.
     /// </summary>
-    /// <param name="player">The player that came online.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that came online.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnPlayerOnline(IPlayer player);
 
     /// <summary>
     /// Handles another player going offline.
     /// </summary>
-    /// <param name="player">The player that went offline.</param>
-    /// <param name="isKicked">Whether the player was kicked because a replacement connection was opened.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that went offline.
+    /// </param>
+    /// <param name="isKicked">
+    /// Whether the player was kicked because a replacement connection was opened.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnPlayerOffline(IPlayer player, bool isKicked = false);
 
     /// <summary>
     /// Handles another player changing activity.
     /// </summary>
-    /// <param name="player">The player that changed activity.</param>
-    /// <param name="activity">The updated activity.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that changed activity.
+    /// </param>
+    /// <param name="activity">
+    /// The updated activity.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnPlayerChangeActivity(IPlayer player, IUserActivity activity);
 
     /// <summary>
     /// Handles another player changing status.
     /// </summary>
-    /// <param name="player">The player that changed status.</param>
-    /// <param name="status">The updated status.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that changed status.
+    /// </param>
+    /// <param name="status">
+    /// The updated status.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnPlayerChangeStatus(IPlayer player, UserStatus? status);
 
     /// <summary>
     /// Marks the player as online.
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task Online();
 
     /// <summary>
     /// Marks the player as offline.
     /// </summary>
-    /// <param name="isKicked">Whether the player was kicked because a replacement connection was opened.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="isKicked">
+    /// Whether the player was kicked because a replacement connection was opened.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task Offline(bool isKicked = false);
 
     /// <summary>
     /// Changes the player's current activity.
     /// </summary>
-    /// <param name="newActivity">The new activity.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="newActivity">
+    /// The new activity.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task ChangePlayerActivityAsync(IUserActivity newActivity);
 
     /// <summary>
     /// Changes the player's current status.
     /// </summary>
-    /// <param name="newStatus">The new status.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="newStatus">
+    /// The new status.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task ChangePlayerStatusAsync(UserStatus? newStatus);
 
     #endregion
@@ -97,86 +133,144 @@ public interface IPlayer
     /// <summary>
     /// Handles a watched player beginning a play session.
     /// </summary>
-    /// <param name="player">The player that began playing.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that began playing.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnUserBeganPlaying(IPlayer player);
 
     /// <summary>
     /// Handles a watched player finishing a play session.
     /// </summary>
-    /// <param name="player">The player that finished playing.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that finished playing.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnUserFinishedPlaying(IPlayer player);
 
     /// <summary>
     /// Handles spectator frame data from a watched player.
     /// </summary>
-    /// <param name="player">The player that sent frame data.</param>
-    /// <param name="frame">The frame data bundle.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that sent frame data.
+    /// </param>
+    /// <param name="frame">
+    /// The frame data bundle.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnUserSentFrames(IPlayer player, FrameDataBundle frame);
 
     /// <summary>
     /// Handles another player starting to watch this player.
     /// </summary>
-    /// <param name="source">The watcher.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="source">
+    /// The watcher.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnWatched(IPlayer source);
 
     /// <summary>
     /// Handles another player stopping watching this player.
     /// </summary>
-    /// <param name="source">The watcher.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="source">
+    /// The watcher.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnWatchedStopped(IPlayer source);
 
     /// <summary>
     /// Called when a score has been fully processed by the lazer server.
     /// </summary>
-    /// <param name="scoreId">The id of the processed score.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="scoreId">
+    /// The id of the processed score.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnScoreProcessed(long scoreId);
 
     /// <summary>
     /// Begins a started score and the player's spectator play session. Supports multiple concurrent
     /// started scores identified by explicit score tokens.
     /// </summary>
-    /// <param name="scoreToken">The score token associated with the started score, if any.</param>
-    /// <param name="score">The initial score object to buffer.</param>
-    /// <param name="spectatorState">The spectator state describing the session.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="scoreToken">
+    /// The score token associated with the started score, if any.
+    /// </param>
+    /// <param name="score">
+    /// The initial score object to buffer.
+    /// </param>
+    /// <param name="spectatorState">
+    /// The spectator state describing the session.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task BeingPlaying(long? scoreToken, Score score, SpectatorState spectatorState);
 
     /// <summary>
     /// Finishes a started score and potentially the player's spectator play session.
     /// </summary>
-    /// <param name="scoreToken">The score token of the finished score, if any.</param>
-    /// <param name="finalState">The final state of gameplay.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the supplied score token was not started.</exception>
+    /// <param name="scoreToken">
+    /// The score token of the finished score, if any.
+    /// </param>
+    /// <param name="finalState">
+    /// The final state of gameplay.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the supplied score token was not started.
+    /// </exception>
     Task FinishPlaying(long? scoreToken, SpectatedUserState finalState);
 
     /// <summary>
     /// Sends spectator frame data for a specific started score.
     /// </summary>
-    /// <param name="scoreToken">The score token of the started score the data belongs to, if any.</param>
-    /// <param name="data">The frame data bundle.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the supplied score token was not started.</exception>
+    /// <param name="scoreToken">
+    /// The score token of the started score the data belongs to, if any.
+    /// </param>
+    /// <param name="data">
+    /// The frame data bundle.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the supplied score token was not started.
+    /// </exception>
     Task SendFrames(long? scoreToken, FrameDataBundle data);
 
     /// <summary>
     /// Starts watching another player.
     /// </summary>
-    /// <param name="target">The player to watch.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="target">
+    /// The player to watch.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task WatchPlayer(IPlayer target);
 
     /// <summary>
     /// Stops watching another player.
     /// </summary>
-    /// <param name="target">The player to stop watching.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="target">
+    /// The player to stop watching.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task StopWatchPlayer(IPlayer target);
 
     #endregion
@@ -186,15 +280,23 @@ public interface IPlayer
     /// <summary>
     /// Joins the multiplayer room with the specified ID.
     /// </summary>
-    /// <param name="roomId">The ID of the room to join.</param>
-    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+    /// <param name="roomId">
+    /// The ID of the room to join.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the result of the asynchronous operation.
+    /// </returns>
     Task JoinRoom(long roomId);
 
     /// <summary>
     /// Leaves the multiplayer room with the specified ID.
     /// </summary>
-    /// <param name="roomId">The ID of the room to leave.</param>
-    /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
+    /// <param name="roomId">
+    /// The ID of the room to leave.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> representing the result of the asynchronous operation.
+    /// </returns>
     Task LeaveRoom(long roomId);
 
     #endregion
@@ -204,42 +306,74 @@ public interface IPlayer
     /// <summary>
     /// Handles a chat message being sent to a channel this player is in.
     /// </summary>
-    /// <param name="player">The player that sent the message.</param>
-    /// <param name="message">The sent message.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that sent the message.
+    /// </param>
+    /// <param name="message">
+    /// The sent message.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnNewMessage(IPlayer player, ChatMessage message);
 
     /// <summary>
     /// Handles another player joining a shared channel.
     /// </summary>
-    /// <param name="player">The player that joined.</param>
-    /// <param name="channelId">The channel ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that joined.
+    /// </param>
+    /// <param name="channelId">
+    /// The channel ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnChannelJoin(IPlayer player, int channelId);
 
     /// <summary>
     /// Handles another player leaving a shared channel.
     /// </summary>
-    /// <param name="player">The player that left.</param>
-    /// <param name="channelId">The channel ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player that left.
+    /// </param>
+    /// <param name="channelId">
+    /// The channel ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnChannelLeave(IPlayer player, int channelId);
 
     /// <summary>
     /// Handles a user being silenced in a channel.
     /// </summary>
-    /// <param name="player">The silenced player.</param>
-    /// <param name="channelId">The channel ID.</param>
-    /// <param name="until">The timestamp until which the user is silenced, if finite.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The silenced player.
+    /// </param>
+    /// <param name="channelId">
+    /// The channel ID.
+    /// </param>
+    /// <param name="until">
+    /// The timestamp until which the user is silenced, if finite.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnUserSilent(IPlayer player, int channelId, DateTimeOffset? until = null);
 
     /// <summary>
     /// Handles a private notification being delivered to this player.
     /// </summary>
-    /// <param name="player">The player receiving the notification.</param>
-    /// <param name="detail">The notification detail.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player receiving the notification.
+    /// </param>
+    /// <param name="detail">
+    /// The notification detail.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task OnNewNotification(IPlayer player, NotificationDetail detail);
 
     /// <summary>
@@ -250,11 +384,21 @@ public interface IPlayer
     /// the message and broadcast it through the notification server; this
     /// member exists so generic player code can trigger a send.
     /// </remarks>
-    /// <param name="channelId">The channel ID.</param>
-    /// <param name="message">The message content.</param>
-    /// <param name="isAction">Whether the message is an action (<c>/me</c>).</param>
-    /// <param name="callbackUuid">The optional client-generated UUID for deduplication.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="channelId">
+    /// The channel ID.
+    /// </param>
+    /// <param name="message">
+    /// The message content.
+    /// </param>
+    /// <param name="isAction">
+    /// Whether the message is an action (<c>/me</c>).
+    /// </param>
+    /// <param name="callbackUuid">
+    /// The optional client-generated UUID for deduplication.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task SendMessage(int channelId, string message, bool isAction, string? callbackUuid = null);
 
     /// <summary>
@@ -265,9 +409,15 @@ public interface IPlayer
     /// notification server; this member exists so generic player code can
     /// trigger a join.
     /// </remarks>
-    /// <param name="player">The player joining.</param>
-    /// <param name="channelId">The channel ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player joining.
+    /// </param>
+    /// <param name="channelId">
+    /// The channel ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task JoinChannel(IPlayer player, int channelId);
 
     /// <summary>
@@ -278,15 +428,23 @@ public interface IPlayer
     /// notification server; this member exists so generic player code can
     /// trigger a leave.
     /// </remarks>
-    /// <param name="player">The player leaving.</param>
-    /// <param name="channelId">The channel ID.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="player">
+    /// The player leaving.
+    /// </param>
+    /// <param name="channelId">
+    /// The channel ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task LeaveChannel(IPlayer player, int channelId);
 
     /// <summary>
     /// Keeps the player's chat connection alive (ack).
     /// </summary>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     Task Ack();
 
     #endregion

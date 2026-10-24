@@ -44,8 +44,12 @@ internal static partial class NotificationCategories
     /// Gets the database name of a notification name, the snake-cased constant
     /// value (for example <c>channel_message</c>).
     /// </summary>
-    /// <param name="name">The notification name.</param>
-    /// <returns>The database value.</returns>
+    /// <param name="name">
+    /// The notification name.
+    /// </param>
+    /// <returns>
+    /// The database value.
+    /// </returns>
     internal static string ToDatabaseName(NotificationName name)
     {
         StringBuilder builder = new();
@@ -67,8 +71,12 @@ internal static partial class NotificationCategories
     /// <summary>
     /// Gets the category of a notification name.
     /// </summary>
-    /// <param name="name">The notification name.</param>
-    /// <returns>The category.</returns>
+    /// <param name="name">
+    /// The notification name.
+    /// </param>
+    /// <returns>
+    /// The category.
+    /// </returns>
     internal static string CategoryOf(NotificationName name)
     {
         return NameToCategory.TryGetValue(name, out string? category) ? category : ToDatabaseName(name);
@@ -77,8 +85,12 @@ internal static partial class NotificationCategories
     /// <summary>
     /// Gets every notification name belonging to a category.
     /// </summary>
-    /// <param name="category">The category.</param>
-    /// <returns>The notification names.</returns>
+    /// <param name="category">
+    /// The category.
+    /// </param>
+    /// <returns>
+    /// The notification names.
+    /// </returns>
     internal static IReadOnlyList<string> NamesInCategory(string category)
     {
         List<string> names = NameToCategory
@@ -93,8 +105,12 @@ internal static partial class NotificationCategories
     /// Extracts the username mentioned in a message: the first
     /// <c>@username</c> token and its spacing variants are considered.
     /// </summary>
-    /// <param name="content">The message content.</param>
-    /// <returns>The username candidates, empty when nothing valid is mentioned.</returns>
+    /// <param name="content">
+    /// The message content.
+    /// </param>
+    /// <returns>
+    /// The username candidates, empty when nothing valid is mentioned.
+    /// </returns>
     internal static IReadOnlyList<string> MentionUsernames(string content)
     {
         Match match = MentionRegex().Match(content);

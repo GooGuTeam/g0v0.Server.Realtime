@@ -380,8 +380,12 @@ public class NotificationWebSocketIntegrationTests
     /// activated chat: join events carry the whole channel object, so the
     /// channel has to exist.
     /// </summary>
-    /// <param name="userId">The user the probe channel is created for.</param>
-    /// <returns>The probe channel ID.</returns>
+    /// <param name="userId">
+    /// The user the probe channel is created for.
+    /// </param>
+    /// <returns>
+    /// The probe channel ID.
+    /// </returns>
     private async Task<int> GetOrCreateProbeChannelAsync(int userId)
     {
         int probeChannelId = 1000 + userId;

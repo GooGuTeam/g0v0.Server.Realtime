@@ -12,8 +12,12 @@ public static class SpectatorStateExtensions
     /// <summary>
     /// Determines whether a spectator state represents an active play session.
     /// </summary>
-    /// <param name="state">The spectator state.</param>
-    /// <returns><see langword="true"/> if the player is playing or has just failed.</returns>
+    /// <param name="state">
+    /// The spectator state.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the player is playing or has just failed.
+    /// </returns>
     public static bool IsPlaying(this SpectatorState state)
     {
         SpectatedUserState userState = state.State;

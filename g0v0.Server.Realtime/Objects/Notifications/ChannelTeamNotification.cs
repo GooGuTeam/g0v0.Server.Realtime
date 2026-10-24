@@ -12,8 +12,12 @@ public sealed class ChannelTeamNotification : ChannelNotificationBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ChannelTeamNotification"/> class.
     /// </summary>
-    /// <param name="sourceUserId">The sender user ID.</param>
-    /// <param name="receiverIds">The receiving user IDs.</param>
+    /// <param name="sourceUserId">
+    /// The sender user ID.
+    /// </param>
+    /// <param name="receiverIds">
+    /// The receiving user IDs.
+    /// </param>
     public ChannelTeamNotification(int sourceUserId, IReadOnlyList<int> receiverIds)
         : base(sourceUserId, receiverIds)
     {

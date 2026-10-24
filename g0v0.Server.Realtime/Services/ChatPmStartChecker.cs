@@ -14,8 +14,12 @@ namespace g0v0.Server.Realtime.Services;
 /// bot exemption and the block/friends-only rules of
 /// <c>OsuAuthorize::checkChatPmStart</c> are implemented.
 /// </remarks>
-/// <param name="userRepository">The user repository.</param>
-/// <param name="relationshipRepository">The relationship repository backing the block and friend checks.</param>
+/// <param name="userRepository">
+/// The user repository.
+/// </param>
+/// <param name="relationshipRepository">
+/// The relationship repository backing the block and friend checks.
+/// </param>
 public sealed class ChatPmStartChecker(IUserRepository userRepository, IRelationshipRepository relationshipRepository)
 {
     /// <summary>
@@ -36,12 +40,24 @@ public sealed class ChatPmStartChecker(IUserRepository userRepository, IRelation
     /// <summary>
     /// Applies the authorization rules to already loaded relationship data.
     /// </summary>
-    /// <param name="sender">The user starting the conversation.</param>
-    /// <param name="target">The user the conversation is started with.</param>
-    /// <param name="senderFollowsTarget">Whether the sender has the target on their friends list.</param>
-    /// <param name="targetFollowsSender">Whether the target has the sender on their friends list.</param>
-    /// <param name="anyBlock">Whether either user blocked the other.</param>
-    /// <returns><see langword="null"/> when allowed; otherwise the error message.</returns>
+    /// <param name="sender">
+    /// The user starting the conversation.
+    /// </param>
+    /// <param name="target">
+    /// The user the conversation is started with.
+    /// </param>
+    /// <param name="senderFollowsTarget">
+    /// Whether the sender has the target on their friends list.
+    /// </param>
+    /// <param name="targetFollowsSender">
+    /// Whether the target has the sender on their friends list.
+    /// </param>
+    /// <param name="anyBlock">
+    /// Whether either user blocked the other.
+    /// </param>
+    /// <returns>
+    /// <see langword="null"/> when allowed; otherwise the error message.
+    /// </returns>
     public static string? Evaluate(
         User sender,
         User target,
@@ -74,9 +90,15 @@ public sealed class ChatPmStartChecker(IUserRepository userRepository, IRelation
     /// Checks whether <paramref name="senderId"/> may start a private conversation
     /// with <paramref name="targetId"/>.
     /// </summary>
-    /// <param name="senderId">The user starting the conversation.</param>
-    /// <param name="targetId">The user the conversation is started with.</param>
-    /// <returns><see langword="null"/> when allowed; otherwise the error message.</returns>
+    /// <param name="senderId">
+    /// The user starting the conversation.
+    /// </param>
+    /// <param name="targetId">
+    /// The user the conversation is started with.
+    /// </param>
+    /// <returns>
+    /// <see langword="null"/> when allowed; otherwise the error message.
+    /// </returns>
     public async Task<string?> CheckAsync(int senderId, int targetId)
     {
         User? sender = await userRepository.GetByIdAsync(senderId);

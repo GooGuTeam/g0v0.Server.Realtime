@@ -13,9 +13,15 @@ public static class LazerUserActivityExtension
     /// <summary>
     /// Converts a lazer activity payload into the corresponding realtime activity.
     /// </summary>
-    /// <param name="activity">The lazer activity payload.</param>
-    /// <returns>The equivalent realtime activity.</returns>
-    /// <exception cref="NotSupportedException">Thrown when the activity type is unknown.</exception>
+    /// <param name="activity">
+    /// The lazer activity payload.
+    /// </param>
+    /// <returns>
+    /// The equivalent realtime activity.
+    /// </returns>
+    /// <exception cref="NotSupportedException">
+    /// Thrown when the activity type is unknown.
+    /// </exception>
     public static IUserActivity ToRealtimeActivity(this UserActivity? activity)
     {
         return activity switch

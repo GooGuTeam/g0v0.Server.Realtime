@@ -20,11 +20,21 @@ namespace g0v0.Server.Realtime.Notifications;
 /// Tracks real-time chat connections, persists messages and memberships, and
 /// broadcasts chat/notification events to the connected <see cref="IPlayer"/> instances.
 /// </summary>
-/// <param name="logger">The logger.</param>
-/// <param name="rankedCache">The sorted-set cache holding channel activity markers and message throttles.</param>
-/// <param name="configManager">The configuration manager used to read the chat limits.</param>
-/// <param name="playerManager">The player registry.</param>
-/// <param name="scopeFactory">The scope factory used to resolve repositories.</param>
+/// <param name="logger">
+/// The logger.
+/// </param>
+/// <param name="rankedCache">
+/// The sorted-set cache holding channel activity markers and message throttles.
+/// </param>
+/// <param name="configManager">
+/// The configuration manager used to read the chat limits.
+/// </param>
+/// <param name="playerManager">
+/// The player registry.
+/// </param>
+/// <param name="scopeFactory">
+/// The scope factory used to resolve repositories.
+/// </param>
 public class NotificationServer(
     ILogger<NotificationServer> logger,
     IRankedCache rankedCache,
@@ -306,9 +316,15 @@ public class NotificationServer(
     /// are skipped, PM/team/announcement channels notify their users, and public
     /// channels only notify mentioned users.
     /// </summary>
-    /// <param name="channel">The channel the message was posted in.</param>
-    /// <param name="message">The persisted message.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="channel">
+    /// The channel the message was posted in.
+    /// </param>
+    /// <param name="message">
+    /// The persisted message.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task DispatchNotificationAsync(ChatChannel? channel, ChatMessage message)
     {
         if (channel == null || ChatConventions.IsUserCommand(message.Content))
@@ -329,9 +345,15 @@ public class NotificationServer(
     /// Builds the notification detail of a sent message, or
     /// <see langword="null"/> when the message must not notify anyone.
     /// </summary>
-    /// <param name="channel">The channel the message was posted in.</param>
-    /// <param name="message">The persisted message.</param>
-    /// <returns>The notification detail, or <see langword="null"/>.</returns>
+    /// <param name="channel">
+    /// The channel the message was posted in.
+    /// </param>
+    /// <param name="message">
+    /// The persisted message.
+    /// </param>
+    /// <returns>
+    /// The notification detail, or <see langword="null"/>.
+    /// </returns>
     private async Task<NotificationDetail?> CreateMessageNotificationAsync(ChatChannel channel, ChatMessage message)
     {
         switch (channel.Type)
@@ -375,9 +397,15 @@ public class NotificationServer(
     /// Builds the mention notification of a public channel message, or
     /// <see langword="null"/> when nothing mentions a known user.
     /// </summary>
-    /// <param name="channel">The public channel the message was posted in.</param>
-    /// <param name="message">The persisted message.</param>
-    /// <returns>The mention notification, or <see langword="null"/>.</returns>
+    /// <param name="channel">
+    /// The public channel the message was posted in.
+    /// </param>
+    /// <param name="message">
+    /// The persisted message.
+    /// </param>
+    /// <returns>
+    /// The mention notification, or <see langword="null"/>.
+    /// </returns>
     private async Task<ChannelMentionNotification?> CreateMentionNotificationAsync(ChatChannel channel, ChatMessage message)
     {
         IReadOnlyList<string> usernames = NotificationCategories.MentionUsernames(message.Content);
@@ -421,12 +449,24 @@ public class NotificationServer(
     /// message content, the lower-cased channel type, the sender's avatar and
     /// username, and the channel name.
     /// </summary>
-    /// <param name="detail">The notification to fill.</param>
-    /// <param name="channel">The channel the message was posted in.</param>
-    /// <param name="message">The persisted message.</param>
-    /// <param name="titleLimit">The title truncation limit; <c>null</c> uses the mention limit of 200 or the default of 36.</param>
-    /// <typeparam name="TDetail">The concrete notification type.</typeparam>
-    /// <returns>The filled notification.</returns>
+    /// <param name="detail">
+    /// The notification to fill.
+    /// </param>
+    /// <param name="channel">
+    /// The channel the message was posted in.
+    /// </param>
+    /// <param name="message">
+    /// The persisted message.
+    /// </param>
+    /// <param name="titleLimit">
+    /// The title truncation limit; <c>null</c> uses the mention limit of 200 or the default of 36.
+    /// </param>
+    /// <typeparam name="TDetail">
+    /// The concrete notification type.
+    /// </typeparam>
+    /// <returns>
+    /// The filled notification.
+    /// </returns>
     private async Task<TDetail> FillNotificationAsync<TDetail>(TDetail detail, ChatChannel channel, ChatMessage message, int titleLimit)
         where TDetail : ChannelNotificationBase
     {
@@ -576,9 +616,15 @@ public class NotificationServer(
     /// <summary>
     /// Resolves the recipients of a message.
     /// </summary>
-    /// <param name="channel">The channel the message was posted in.</param>
-    /// <param name="message">The message.</param>
-    /// <returns>The user IDs the message is delivered to.</returns>
+    /// <param name="channel">
+    /// The channel the message was posted in.
+    /// </param>
+    /// <param name="message">
+    /// The message.
+    /// </param>
+    /// <returns>
+    /// The user IDs the message is delivered to.
+    /// </returns>
     private async Task<int[]> GetMessageReceiverIdsAsync(ChatChannel? channel, ChatMessage message)
     {
         ChatConfig chatConfig = GetChatConfig();

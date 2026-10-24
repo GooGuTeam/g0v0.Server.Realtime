@@ -5,7 +5,9 @@ namespace g0v0.Server.Realtime;
 /// <summary>
 /// Provides the runtime base path used to resolve configuration files in the web host.
 /// </summary>
-/// <param name="env">The current host environment.</param>
+/// <param name="env">
+/// The current host environment.
+/// </param>
 public class WebPathProvider(IHostEnvironment env) : IPathProvider
 {
     /// <inheritdoc />

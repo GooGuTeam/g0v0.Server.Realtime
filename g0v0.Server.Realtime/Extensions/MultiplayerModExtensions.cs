@@ -21,9 +21,15 @@ internal static class MultiplayerModExtensions
     /// Ensures that a <see cref="MultiplayerPlaylistItem"/>'s required and allowed
     /// mods are compatible with each other and the item's ruleset.
     /// </summary>
-    /// <param name="item">The playlist item to validate.</param>
-    /// <param name="rulesetManager">The ruleset manager used to resolve the item's ruleset.</param>
-    /// <exception cref="InvalidStateException">If the mods are invalid.</exception>
+    /// <param name="item">
+    /// The playlist item to validate.
+    /// </param>
+    /// <param name="rulesetManager">
+    /// The ruleset manager used to resolve the item's ruleset.
+    /// </param>
+    /// <exception cref="InvalidStateException">
+    /// If the mods are invalid.
+    /// </exception>
     public static void EnsureModsValid(this MultiplayerPlaylistItem item, RulesetManager rulesetManager)
     {
         Ruleset ruleset = GetRuleset(rulesetManager, item.RulesetID);
@@ -75,12 +81,24 @@ internal static class MultiplayerModExtensions
     /// Checks whether the given mods are compatible with the current playlist
     /// item's mods and ruleset.
     /// </summary>
-    /// <param name="item">The <see cref="MultiplayerPlaylistItem"/> to validate the user mods against.</param>
-    /// <param name="user">The <see cref="MultiplayerRoomUser"/> whose mods to validate.</param>
-    /// <param name="proposedMods">The proposed user mods to check against the <see cref="MultiplayerPlaylistItem"/>.</param>
-    /// <param name="rulesetManager">The ruleset manager used to resolve the ruleset.</param>
-    /// <param name="validMods">The set of mods which <i>are</i> valid.</param>
-    /// <returns>Whether all user mods are valid for the <see cref="MultiplayerPlaylistItem"/>.</returns>
+    /// <param name="item">
+    /// The <see cref="MultiplayerPlaylistItem"/> to validate the user mods against.
+    /// </param>
+    /// <param name="user">
+    /// The <see cref="MultiplayerRoomUser"/> whose mods to validate.
+    /// </param>
+    /// <param name="proposedMods">
+    /// The proposed user mods to check against the <see cref="MultiplayerPlaylistItem"/>.
+    /// </param>
+    /// <param name="rulesetManager">
+    /// The ruleset manager used to resolve the ruleset.
+    /// </param>
+    /// <param name="validMods">
+    /// The set of mods which <i>are</i> valid.
+    /// </param>
+    /// <returns>
+    /// Whether all user mods are valid for the <see cref="MultiplayerPlaylistItem"/>.
+    /// </returns>
     public static bool ValidateUserMods(
         this MultiplayerPlaylistItem item,
         MultiplayerRoomUser user,

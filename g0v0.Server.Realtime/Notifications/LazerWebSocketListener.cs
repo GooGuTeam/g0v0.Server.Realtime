@@ -45,8 +45,12 @@ public class LazerWebSocketListener(
     /// <summary>
     /// Handles a WebSocket connection.
     /// </summary>
-    /// <param name="context">The HTTP context.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="context">
+    /// The HTTP context.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task HandleAsync(HttpContext context)
     {
         if (!context.WebSockets.IsWebSocketRequest)
@@ -84,10 +88,18 @@ public class LazerWebSocketListener(
     /// Returns a new handler list with the given handler removed, leaving the
     /// other connections' entries untouched.
     /// </summary>
-    /// <typeparam name="THandler">The callback type.</typeparam>
-    /// <param name="handlers">The current handler list.</param>
-    /// <param name="handler">The handler of the disconnecting connection.</param>
-    /// <returns>A new list without the handler.</returns>
+    /// <typeparam name="THandler">
+    /// The callback type.
+    /// </typeparam>
+    /// <param name="handlers">
+    /// The current handler list.
+    /// </param>
+    /// <param name="handler">
+    /// The handler of the disconnecting connection.
+    /// </param>
+    /// <returns>
+    /// A new list without the handler.
+    /// </returns>
     private static List<THandler> WithoutHandler<THandler>(IReadOnlyList<THandler> handlers, THandler handler)
     {
         List<THandler> remaining = [.. handlers];
@@ -123,9 +135,15 @@ public class LazerWebSocketListener(
     /// Binds the player's chat callbacks to one WebSocket connection until the
     /// client disconnects, then removes them again.
     /// </summary>
-    /// <param name="connection">The connection carrying the frames.</param>
-    /// <param name="player">The player bound to the connection.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="connection">
+    /// The connection carrying the frames.
+    /// </param>
+    /// <param name="player">
+    /// The player bound to the connection.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     private async Task RunConnectionAsync(NotificationConnection connection, LazerPlayer player)
     {
         bool chatActive = false;
@@ -189,7 +207,9 @@ public class LazerWebSocketListener(
     /// Owns a single notification WebSocket connection: it serializes outgoing
     /// frames and reads the client's <c>chat.start</c>/<c>chat.end</c> messages.
     /// </summary>
-    /// <param name="webSocket">The accepted WebSocket.</param>
+    /// <param name="webSocket">
+    /// The accepted WebSocket.
+    /// </param>
     private sealed class NotificationConnection(WebSocket webSocket) : IDisposable
     {
         private readonly SemaphoreSlim _sendLock = new(1, 1);
@@ -197,9 +217,15 @@ public class LazerWebSocketListener(
         /// <summary>
         /// Sends one event frame to the client.
         /// </summary>
-        /// <param name="eventName">The event name.</param>
-        /// <param name="data">The event payload.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <param name="eventName">
+        /// The event name.
+        /// </param>
+        /// <param name="data">
+        /// The event payload.
+        /// </param>
+        /// <returns>
+        /// A task representing the asynchronous operation.
+        /// </returns>
         public async Task SendEventAsync(string eventName, object? data)
         {
             string payload = JsonConvert.SerializeObject(new SocketMessage { Event = eventName, Data = data }, JsonSettings);
@@ -221,9 +247,15 @@ public class LazerWebSocketListener(
         /// <summary>
         /// Reads client frames until the socket closes.
         /// </summary>
-        /// <param name="startChat">Invoked when the client sends <c>chat.start</c>.</param>
-        /// <param name="stopChat">Invoked when the client sends <c>chat.end</c>.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <param name="startChat">
+        /// Invoked when the client sends <c>chat.start</c>.
+        /// </param>
+        /// <param name="stopChat">
+        /// Invoked when the client sends <c>chat.end</c>.
+        /// </param>
+        /// <returns>
+        /// A task representing the asynchronous operation.
+        /// </returns>
         public async Task ReadLoopAsync(Action startChat, Action stopChat)
         {
             byte[] buffer = new byte[4096];
@@ -251,10 +283,18 @@ public class LazerWebSocketListener(
         /// <summary>
         /// Reads client frames until the socket closes or a frame error occurs.
         /// </summary>
-        /// <param name="buffer">The shared receive buffer.</param>
-        /// <param name="startChat">Invoked when the client sends <c>chat.start</c>.</param>
-        /// <param name="stopChat">Invoked when the client sends <c>chat.end</c>.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <param name="buffer">
+        /// The shared receive buffer.
+        /// </param>
+        /// <param name="startChat">
+        /// Invoked when the client sends <c>chat.start</c>.
+        /// </param>
+        /// <param name="stopChat">
+        /// Invoked when the client sends <c>chat.end</c>.
+        /// </param>
+        /// <returns>
+        /// A task representing the asynchronous operation.
+        /// </returns>
         private async Task ReadFramesAsync(byte[] buffer, Action startChat, Action stopChat)
         {
             while (webSocket.State == WebSocketState.Open)

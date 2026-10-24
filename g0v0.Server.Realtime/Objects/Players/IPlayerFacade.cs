@@ -56,7 +56,9 @@ public interface IPlayerFacade
     /// <summary>
     /// Copies non-null optional dependencies from another facade.
     /// </summary>
-    /// <param name="facade">The facade to copy dependencies from.</param>
+    /// <param name="facade">
+    /// The facade to copy dependencies from.
+    /// </param>
     void ApplyNonNullDependenciesFrom(IPlayerFacade facade)
     {
         ArgumentNullException.ThrowIfNull(facade);

@@ -16,8 +16,12 @@ public class JwtUserIdProvider(ILoggerFactory loggerFactory) : IUserIdProvider
     /// <summary>
     /// Resolves the user identifier from the current connection's claims.
     /// </summary>
-    /// <param name="connection">The hub connection.</param>
-    /// <returns>The resolved user identifier, or <see langword="null"/> if none was found.</returns>
+    /// <param name="connection">
+    /// The hub connection.
+    /// </param>
+    /// <returns>
+    /// The resolved user identifier, or <see langword="null"/> if none was found.
+    /// </returns>
     public string? GetUserId(HubConnectionContext connection)
     {
         string? userId = connection.User.FindFirst(OAuthClaimTypes.UserId)?.Value;

@@ -16,11 +16,21 @@ internal static class ChatMessageFilter
     /// than the backlog limit, and other users' bancho commands never reach the
     /// visible history.
     /// </summary>
-    /// <param name="messages">The messages to filter, oldest first.</param>
-    /// <param name="channel">The channel the messages belong to.</param>
-    /// <param name="requestingUserId">The user the history is built for.</param>
-    /// <param name="publicBacklogLimit">The age limit applied to public channels.</param>
-    /// <returns>The visible messages.</returns>
+    /// <param name="messages">
+    /// The messages to filter, oldest first.
+    /// </param>
+    /// <param name="channel">
+    /// The channel the messages belong to.
+    /// </param>
+    /// <param name="requestingUserId">
+    /// The user the history is built for.
+    /// </param>
+    /// <param name="publicBacklogLimit">
+    /// The age limit applied to public channels.
+    /// </param>
+    /// <returns>
+    /// The visible messages.
+    /// </returns>
     internal static IEnumerable<ChatMessage> Apply(
         IReadOnlyList<ChatMessage> messages,
         ChatChannel channel,

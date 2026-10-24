@@ -70,9 +70,15 @@ public sealed class ScoreProcessedNotificationService
     /// Initializes a new instance of the <see cref="ScoreProcessedNotificationService"/> class
     /// and registers the <c>score_processed</c> IPC notice handler.
     /// </summary>
-    /// <param name="ipcClient">The inter-process communication client.</param>
-    /// <param name="scopeFactory">The service scope factory.</param>
-    /// <param name="logger">The logger.</param>
+    /// <param name="ipcClient">
+    /// The inter-process communication client.
+    /// </param>
+    /// <param name="scopeFactory">
+    /// The service scope factory.
+    /// </param>
+    /// <param name="logger">
+    /// The logger.
+    /// </param>
     public ScoreProcessedNotificationService(
         InterProcessCommunicationClient ipcClient,
         IServiceScopeFactory scopeFactory,
@@ -101,9 +107,15 @@ public sealed class ScoreProcessedNotificationService
     /// Registers a player to be notified when the score associated with
     /// <paramref name="scoreToken"/> is processed.
     /// </summary>
-    /// <param name="player">The player to notify once the score is processed.</param>
-    /// <param name="scoreToken">The score upload token ID.</param>
-    /// <returns>A task representing the asynchronous registration.</returns>
+    /// <param name="player">
+    /// The player to notify once the score is processed.
+    /// </param>
+    /// <param name="scoreToken">
+    /// The score upload token ID.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous registration.
+    /// </returns>
     /// <remarks>
     /// If the score already exists and has <see cref="Common.Database.Models.Score.Processed"/>
     /// set to <see langword="true"/>, <paramref name="player"/> is notified immediately.

@@ -18,7 +18,9 @@ public class ChatMessageRejectedException : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatMessageRejectedException"/> class.
     /// </summary>
-    /// <param name="message">The error message reported to the client.</param>
+    /// <param name="message">
+    /// The error message reported to the client.
+    /// </param>
     public ChatMessageRejectedException(string message)
         : this(RejectionReason.Empty, message)
     {
@@ -27,8 +29,12 @@ public class ChatMessageRejectedException : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatMessageRejectedException"/> class.
     /// </summary>
-    /// <param name="message">The error message reported to the client.</param>
-    /// <param name="innerException">The exception that caused this one.</param>
+    /// <param name="message">
+    /// The error message reported to the client.
+    /// </param>
+    /// <param name="innerException">
+    /// The exception that caused this one.
+    /// </param>
     public ChatMessageRejectedException(string message, Exception innerException)
         : base(message, innerException)
     {
@@ -38,8 +44,12 @@ public class ChatMessageRejectedException : Exception
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatMessageRejectedException"/> class.
     /// </summary>
-    /// <param name="reason">The reason the message was rejected.</param>
-    /// <param name="message">The error message reported to the client.</param>
+    /// <param name="reason">
+    /// The reason the message was rejected.
+    /// </param>
+    /// <param name="message">
+    /// The error message reported to the client.
+    /// </param>
     public ChatMessageRejectedException(RejectionReason reason, string message)
         : base(message)
     {

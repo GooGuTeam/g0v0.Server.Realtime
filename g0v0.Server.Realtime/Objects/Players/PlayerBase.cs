@@ -18,9 +18,15 @@ namespace g0v0.Server.Realtime.Objects.Players;
 /// <summary>
 /// Provides shared state and lifecycle handling for connected players.
 /// </summary>
-/// <param name="playerId">The player ID.</param>
-/// <param name="facade">The player dependency facade.</param>
-/// <param name="state">The initial player state.</param>
+/// <param name="playerId">
+/// The player ID.
+/// </param>
+/// <param name="facade">
+/// The player dependency facade.
+/// </param>
+/// <param name="state">
+/// The initial player state.
+/// </param>
 public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState? state = null) : IPlayer
 {
     /// <inheritdoc />
@@ -349,8 +355,12 @@ public abstract class PlayerBase(int playerId, IPlayerFacade facade, PlayerState
     /// <summary>
     /// Determines whether another player has the same identity.
     /// </summary>
-    /// <param name="other">The player to compare.</param>
-    /// <returns><see langword="true"/> when both players have the same ID and server.</returns>
+    /// <param name="other">
+    /// The player to compare.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when both players have the same ID and server.
+    /// </returns>
     public bool Equals(IPlayer? other)
     {
         return other != null && (other.PlayerId == PlayerId && string.Equals(other.Server, Server, StringComparison.Ordinal));

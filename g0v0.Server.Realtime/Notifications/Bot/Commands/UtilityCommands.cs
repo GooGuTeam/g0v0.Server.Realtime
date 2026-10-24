@@ -13,10 +13,18 @@ public sealed class UtilityCommands(IServiceScopeFactory scopeFactory) : BanchoB
     /// <summary>
     /// Shows available commands or usage for a specific command.
     /// </summary>
-    /// <param name="senderId">The sender user ID.</param>
-    /// <param name="args">The command arguments.</param>
-    /// <param name="availableCommands">The registered command names.</param>
-    /// <returns>The reply text.</returns>
+    /// <param name="senderId">
+    /// The sender user ID.
+    /// </param>
+    /// <param name="args">
+    /// The command arguments.
+    /// </param>
+    /// <param name="availableCommands">
+    /// The registered command names.
+    /// </param>
+    /// <returns>
+    /// The reply text.
+    /// </returns>
     [BotCommand("help")]
     public Task<string?> HelpAsync(int senderId, string[] args, IReadOnlyCollection<string> availableCommands)
     {
@@ -35,9 +43,15 @@ public sealed class UtilityCommands(IServiceScopeFactory scopeFactory) : BanchoB
     /// <summary>
     /// Rolls a random number between 1 and the specified max (default 100).
     /// </summary>
-    /// <param name="senderId">The sender user ID.</param>
-    /// <param name="args">The command arguments.</param>
-    /// <returns>The reply text.</returns>
+    /// <param name="senderId">
+    /// The sender user ID.
+    /// </param>
+    /// <param name="args">
+    /// The command arguments.
+    /// </param>
+    /// <returns>
+    /// The reply text.
+    /// </returns>
     [BotCommand("roll")]
     public async Task<string?> RollAsync(int senderId, string[] args)
     {

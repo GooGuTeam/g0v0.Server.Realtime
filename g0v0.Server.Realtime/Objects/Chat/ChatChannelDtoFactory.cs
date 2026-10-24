@@ -18,10 +18,18 @@ namespace g0v0.Server.Realtime.Objects.Chat;
 /// friends-only rules follow <c>Channel::isVisibleFor</c> and
 /// <c>OsuAuthorize::checkChatPmStart</c>.
 /// </remarks>
-/// <param name="chatRepository">The chat persistence repository.</param>
-/// <param name="userRepository">The user repository used for display names, message senders and PM checks.</param>
-/// <param name="relationshipRepository">The relationship repository backing the block and friend checks.</param>
-/// <param name="configManager">The configuration manager used to read the chat limits.</param>
+/// <param name="chatRepository">
+/// The chat persistence repository.
+/// </param>
+/// <param name="userRepository">
+/// The user repository used for display names, message senders and PM checks.
+/// </param>
+/// <param name="relationshipRepository">
+/// The relationship repository backing the block and friend checks.
+/// </param>
+/// <param name="configManager">
+/// The configuration manager used to read the chat limits.
+/// </param>
 public sealed class ChatChannelDtoFactory(
     IChatRepository chatRepository,
     IUserRepository userRepository,
@@ -39,11 +47,21 @@ public sealed class ChatChannelDtoFactory(
     /// <summary>
     /// Builds the DTO of a single channel for the requesting user.
     /// </summary>
-    /// <param name="channel">The database channel.</param>
-    /// <param name="requestingUserId">The user the response is built for.</param>
-    /// <param name="membership">The membership row of the user, when known.</param>
-    /// <param name="includeRecentMessages">Whether to attach the recent messages of the channel.</param>
-    /// <returns>The channel DTO.</returns>
+    /// <param name="channel">
+    /// The database channel.
+    /// </param>
+    /// <param name="requestingUserId">
+    /// The user the response is built for.
+    /// </param>
+    /// <param name="membership">
+    /// The membership row of the user, when known.
+    /// </param>
+    /// <param name="includeRecentMessages">
+    /// Whether to attach the recent messages of the channel.
+    /// </param>
+    /// <returns>
+    /// The channel DTO.
+    /// </returns>
     public async Task<ChatChannelDto> CreateChannelAsync(
         ChatChannel channel,
         int requestingUserId,
@@ -65,8 +83,12 @@ public sealed class ChatChannelDtoFactory(
     /// Lists every joinable public channel: the plain channel transform without
     /// any include, ordered by channel ID.
     /// </summary>
-    /// <param name="requestingUserId">The user the response is built for.</param>
-    /// <returns>The public channels.</returns>
+    /// <param name="requestingUserId">
+    /// The user the response is built for.
+    /// </param>
+    /// <returns>
+    /// The public channels.
+    /// </returns>
     public async Task<IReadOnlyList<ChatChannelDto>> CreatePublicChannelListAsync(int requestingUserId)
     {
         IReadOnlyList<ChatChannel> channels = await chatRepository.GetPublicChannelsAsync();
@@ -81,9 +103,15 @@ public sealed class ChatChannelDtoFactory(
     /// ordered by channel ID, with hidden channels and channels of blocked users
     /// left out.
     /// </summary>
-    /// <param name="userId">The user the response is built for.</param>
-    /// <param name="includeRecentMessages">Whether to attach the recent messages of each channel.</param>
-    /// <returns>The channel DTOs.</returns>
+    /// <param name="userId">
+    /// The user the response is built for.
+    /// </param>
+    /// <param name="includeRecentMessages">
+    /// Whether to attach the recent messages of each channel.
+    /// </param>
+    /// <returns>
+    /// The channel DTOs.
+    /// </returns>
     public async Task<IReadOnlyList<ChatChannelDto>> CreateChannelListAsync(int userId, bool includeRecentMessages = false)
     {
         ChatConfig chatConfig = GetChatConfig();
@@ -156,9 +184,15 @@ public sealed class ChatChannelDtoFactory(
     /// <summary>
     /// Gets the reason a user cannot post in a channel.
     /// </summary>
-    /// <param name="channel">The channel.</param>
-    /// <param name="userId">The user posting.</param>
-    /// <returns><see langword="null"/> when posting is allowed; otherwise the error message.</returns>
+    /// <param name="channel">
+    /// The channel.
+    /// </param>
+    /// <param name="userId">
+    /// The user posting.
+    /// </param>
+    /// <returns>
+    /// <see langword="null"/> when posting is allowed; otherwise the error message.
+    /// </returns>
     public async Task<string?> GetCanMessageErrorAsync(ChatChannel channel, int userId)
     {
         if (channel.Type != ChannelType.PM)
@@ -189,9 +223,15 @@ public sealed class ChatChannelDtoFactory(
     /// <summary>
     /// Gets the PM participant that is not the requesting user.
     /// </summary>
-    /// <param name="channel">The channel.</param>
-    /// <param name="requestingUserId">The user the response is built for.</param>
-    /// <returns>The target user ID, or <see langword="null"/> for non-PM channels.</returns>
+    /// <param name="channel">
+    /// The channel.
+    /// </param>
+    /// <param name="requestingUserId">
+    /// The user the response is built for.
+    /// </param>
+    /// <returns>
+    /// The target user ID, or <see langword="null"/> for non-PM channels.
+    /// </returns>
     private static int? GetPmTargetId(ChatChannel channel, int requestingUserId)
     {
         return channel.Type == ChannelType.PM && ChatConventions.TryGetPmUserIds(channel.Name, out int[] userIds)
@@ -334,7 +374,9 @@ public sealed class ChatChannelDtoFactory(
     /// Joins the user to the default public channel when they have no membership
     /// row for it yet, as in osu-web where every user starts in <c>#osu</c>.
     /// </summary>
-    /// <param name="userId">The user to seed the membership for.</param>
+    /// <param name="userId">
+    /// The user to seed the membership for.
+    /// </param>
     private async Task EnsureDefaultChannelJoinedAsync(int userId)
     {
         ChatChannel? defaultChannel = await chatRepository.GetChannelByNameAsync(DefaultChannelName);
@@ -402,10 +444,18 @@ public sealed class ChatChannelDtoFactory(
     /// The relationship sets the listing needs, loaded with two preloading
     /// queries.
     /// </summary>
-    /// <param name="FollowedIds">Users the requesting user has on their friends list.</param>
-    /// <param name="FollowerIds">Users that have the requesting user on their friends list.</param>
-    /// <param name="BlockedIds">Users the requesting user blocked.</param>
-    /// <param name="BlockerIds">Users that blocked the requesting user.</param>
+    /// <param name="FollowedIds">
+    /// Users the requesting user has on their friends list.
+    /// </param>
+    /// <param name="FollowerIds">
+    /// Users that have the requesting user on their friends list.
+    /// </param>
+    /// <param name="BlockedIds">
+    /// Users the requesting user blocked.
+    /// </param>
+    /// <param name="BlockerIds">
+    /// Users that blocked the requesting user.
+    /// </param>
     private sealed record ChatRelationships(
         HashSet<int> FollowedIds,
         HashSet<int> FollowerIds,
@@ -415,29 +465,45 @@ public sealed class ChatChannelDtoFactory(
         /// <summary>
         /// Gets a value indicating whether the requesting user follows the given user.
         /// </summary>
-        /// <param name="userId">The other user ID.</param>
-        /// <returns><see langword="true"/> when the user is on the friends list.</returns>
+        /// <param name="userId">
+        /// The other user ID.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> when the user is on the friends list.
+        /// </returns>
         public bool Follows(int userId) => FollowedIds.Contains(userId);
 
         /// <summary>
         /// Gets a value indicating whether the given user follows the requesting user.
         /// </summary>
-        /// <param name="userId">The other user ID.</param>
-        /// <returns><see langword="true"/> when the requesting user is on their friends list.</returns>
+        /// <param name="userId">
+        /// The other user ID.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> when the requesting user is on their friends list.
+        /// </returns>
         public bool FollowedBy(int userId) => FollowerIds.Contains(userId);
 
         /// <summary>
         /// Gets a value indicating whether the requesting user blocked the given user.
         /// </summary>
-        /// <param name="userId">The other user ID.</param>
-        /// <returns><see langword="true"/> when the user is blocked by the requesting user.</returns>
+        /// <param name="userId">
+        /// The other user ID.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> when the user is blocked by the requesting user.
+        /// </returns>
         public bool BlockedByMe(int userId) => BlockedIds.Contains(userId);
 
         /// <summary>
         /// Gets a value indicating whether either user blocked the other.
         /// </summary>
-        /// <param name="userId">The other user ID.</param>
-        /// <returns><see langword="true"/> when a block exists in either direction.</returns>
+        /// <param name="userId">
+        /// The other user ID.
+        /// </param>
+        /// <returns>
+        /// <see langword="true"/> when a block exists in either direction.
+        /// </returns>
         public bool AnyBlock(int userId) => BlockedIds.Contains(userId) || BlockerIds.Contains(userId);
     }
 }

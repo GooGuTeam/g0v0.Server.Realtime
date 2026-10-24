@@ -19,17 +19,39 @@ namespace g0v0.Server.Realtime.Hubs;
 /// <summary>
 /// Handles spectator play-session streaming and watch subscriptions for lazer clients.
 /// </summary>
-/// <param name="playerManager">The player manager.</param>
-/// <param name="configManager">The configuration manager.</param>
-/// <param name="hubContext">The typed spectator hub context.</param>
-/// <param name="userRepository">The user repository.</param>
-/// <param name="beatmapRepository">The beatmap repository.</param>
-/// <param name="scoreBuffer">The score buffer.</param>
-/// <param name="rulesetManager">The ruleset manager.</param>
-/// <param name="scoreUploader">The score uploader.</param>
-/// <param name="scoreProcessedNotificationService">The score processed notification service.</param>
-/// <param name="logger">The logger.</param>
-/// <param name="scopeFactory">The service scope factory.</param>
+/// <param name="playerManager">
+/// The player manager.
+/// </param>
+/// <param name="configManager">
+/// The configuration manager.
+/// </param>
+/// <param name="hubContext">
+/// The typed spectator hub context.
+/// </param>
+/// <param name="userRepository">
+/// The user repository.
+/// </param>
+/// <param name="beatmapRepository">
+/// The beatmap repository.
+/// </param>
+/// <param name="scoreBuffer">
+/// The score buffer.
+/// </param>
+/// <param name="rulesetManager">
+/// The ruleset manager.
+/// </param>
+/// <param name="scoreUploader">
+/// The score uploader.
+/// </param>
+/// <param name="scoreProcessedNotificationService">
+/// The score processed notification service.
+/// </param>
+/// <param name="logger">
+/// The logger.
+/// </param>
+/// <param name="scopeFactory">
+/// The service scope factory.
+/// </param>
 public class SpectatorHub(
     PlayerManager playerManager,
     ConfigManager configManager,
@@ -269,9 +291,15 @@ public class SpectatorHub(
     /// Begins a play session using the V2 spectator API, which supports multiple concurrent started scores
     /// identified by explicit score tokens.
     /// </summary>
-    /// <param name="scoreToken">The score token associated with the started score, if any.</param>
-    /// <param name="state">The state of gameplay.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="scoreToken">
+    /// The score token associated with the started score, if any.
+    /// </param>
+    /// <param name="state">
+    /// The state of gameplay.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task BeginPlaySessionV2(long? scoreToken, SpectatorState state)
     {
         int playerId = Context.GetUserId();
@@ -319,9 +347,15 @@ public class SpectatorHub(
     /// <summary>
     /// Sends frame data for a specific started score using the V2 spectator API.
     /// </summary>
-    /// <param name="scoreToken">The score token of the started score the data belongs to, if any.</param>
-    /// <param name="data">The frame data bundle.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="scoreToken">
+    /// The score token of the started score the data belongs to, if any.
+    /// </param>
+    /// <param name="data">
+    /// The frame data bundle.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task SendFrameDataV2(long? scoreToken, FrameDataBundle data)
     {
         LazerPlayer player = GetPlayer();
@@ -356,9 +390,15 @@ public class SpectatorHub(
     /// <summary>
     /// Finishes a started score and potentially the play session using the V2 spectator API.
     /// </summary>
-    /// <param name="scoreToken">The score token of the finished score, if any.</param>
-    /// <param name="finalState">The final state of gameplay.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="scoreToken">
+    /// The score token of the finished score, if any.
+    /// </param>
+    /// <param name="finalState">
+    /// The final state of gameplay.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task EndPlaySessionV2(long? scoreToken, SpectatedUserState finalState)
     {
         LazerPlayer player = GetPlayer();
@@ -428,9 +468,15 @@ public class SpectatorHub(
     /// <summary>
     /// Validates a spectator begin-play request and creates the initial score object to buffer.
     /// </summary>
-    /// <param name="scoreToken">The score token associated with the request, if any.</param>
-    /// <param name="state">The state of gameplay.</param>
-    /// <returns>The created score, or <see langword="null"/> when the request is invalid.</returns>
+    /// <param name="scoreToken">
+    /// The score token associated with the request, if any.
+    /// </param>
+    /// <param name="state">
+    /// The state of gameplay.
+    /// </param>
+    /// <returns>
+    /// The created score, or <see langword="null"/> when the request is invalid.
+    /// </returns>
     private async Task<Score?> TryCreateScoreAsync(long? scoreToken, SpectatorState state)
     {
         int playerId = Context.GetUserId();

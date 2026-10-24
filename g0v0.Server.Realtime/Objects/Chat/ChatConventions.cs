@@ -63,17 +63,27 @@ internal static class ChatConventions
     /// <summary>
     /// Determines whether a channel keeps its membership row when a user leaves.
     /// </summary>
-    /// <param name="type">The channel type.</param>
-    /// <returns><see langword="true"/> when leaving the channel only hides it.</returns>
+    /// <param name="type">
+    /// The channel type.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when leaving the channel only hides it.
+    /// </returns>
     internal static bool IsHideable(ChannelType type) => type is ChannelType.PM or ChannelType.Announce;
 
     /// <summary>
     /// Parses the two user IDs of a PM channel name, accepting the
     /// <c>pm_1_2</c> and <c>#pm_1-2</c> conventions.
     /// </summary>
-    /// <param name="channelName">The channel name.</param>
-    /// <param name="userIds">The parsed user IDs, in name order.</param>
-    /// <returns><see langword="true"/> when the name is a PM channel name.</returns>
+    /// <param name="channelName">
+    /// The channel name.
+    /// </param>
+    /// <param name="userIds">
+    /// The parsed user IDs, in name order.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the name is a PM channel name.
+    /// </returns>
     internal static bool TryGetPmUserIds(string channelName, out int[] userIds)
     {
         userIds = [];
@@ -100,9 +110,15 @@ internal static class ChatConventions
     /// Truncates a message for a notification title: texts longer than the limit
     /// are cut and the ellipsis fills into the limit.
     /// </summary>
-    /// <param name="content">The message content.</param>
-    /// <param name="limit">The maximum length of the result.</param>
-    /// <returns>The truncated content.</returns>
+    /// <param name="content">
+    /// The message content.
+    /// </param>
+    /// <param name="limit">
+    /// The maximum length of the result.
+    /// </param>
+    /// <returns>
+    /// The truncated content.
+    /// </returns>
     internal static string Truncate(string content, int limit)
     {
         const string ellipsis = "...";

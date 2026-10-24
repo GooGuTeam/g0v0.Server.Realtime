@@ -39,8 +39,12 @@ public class BanchoBot(
     /// channel type (private conversations included) receives the reply in the
     /// channel the command was sent in.
     /// </summary>
-    /// <param name="channelType">The channel type.</param>
-    /// <returns><see langword="true"/> when the reply should be sent through PM.</returns>
+    /// <param name="channelType">
+    /// The channel type.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the reply should be sent through PM.
+    /// </returns>
     public static bool UsesPmReply(ChannelType channelType)
     {
         return channelType == ChannelType.Public;
@@ -49,8 +53,12 @@ public class BanchoBot(
     /// <summary>
     /// Parses a message for a command.
     /// </summary>
-    /// <param name="content">The message content.</param>
-    /// <returns>The command name and arguments, or <see langword="null"/> when the message is not a command.</returns>
+    /// <param name="content">
+    /// The message content.
+    /// </param>
+    /// <returns>
+    /// The command name and arguments, or <see langword="null"/> when the message is not a command.
+    /// </returns>
     public static (string? Command, List<string> Arguments) Parse(string content)
     {
         if (string.IsNullOrWhiteSpace(content) || !content.StartsWith('!'))
@@ -76,7 +84,9 @@ public class BanchoBot(
     /// <summary>
     /// Registers all <see cref="BotCommandAttribute"/>-marked methods of a command set.
     /// </summary>
-    /// <param name="commandSet">The command set instance.</param>
+    /// <param name="commandSet">
+    /// The command set instance.
+    /// </param>
     public void RegisterCommandSet(BanchoBotCommandSet commandSet)
     {
         foreach (MethodInfo method in commandSet.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance))

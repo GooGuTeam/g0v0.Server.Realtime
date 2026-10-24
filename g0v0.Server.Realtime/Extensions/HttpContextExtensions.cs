@@ -13,9 +13,15 @@ public static class HttpContextExtensions
     /// <summary>
     /// Returns the osu! user ID for the supplied <paramref name="context"/>.
     /// </summary>
-    /// <param name="context">The HTTP context.</param>
-    /// <returns>The user ID.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when no user identifier can be resolved.</exception>
+    /// <param name="context">
+    /// The HTTP context.
+    /// </param>
+    /// <returns>
+    /// The user ID.
+    /// </returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when no user identifier can be resolved.
+    /// </exception>
     public static int GetUserId(this HttpContext context)
     {
         Claim? claim = context.User.FindFirst(OAuthClaimTypes.UserId);

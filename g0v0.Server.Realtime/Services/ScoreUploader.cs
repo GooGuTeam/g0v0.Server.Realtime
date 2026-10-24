@@ -30,10 +30,18 @@ public class ScoreUploader : IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="ScoreUploader"/> class.
     /// </summary>
-    /// <param name="configManager">The configuration manager.</param>
-    /// <param name="scopeFactory">The service scope factory.</param>
-    /// <param name="logger">The logger.</param>
-    /// <param name="scoreStorage">The storage service used for replay files.</param>
+    /// <param name="configManager">
+    /// The configuration manager.
+    /// </param>
+    /// <param name="scopeFactory">
+    /// The service scope factory.
+    /// </param>
+    /// <param name="logger">
+    /// The logger.
+    /// </param>
+    /// <param name="scoreStorage">
+    /// The storage service used for replay files.
+    /// </param>
     public ScoreUploader(
         ConfigManager configManager,
         IServiceScopeFactory scopeFactory,
@@ -69,9 +77,15 @@ public class ScoreUploader : IDisposable
     /// <summary>
     /// Enqueues a score replay for upload if replay persistence is enabled and the beatmap exists.
     /// </summary>
-    /// <param name="token">The score token ID.</param>
-    /// <param name="score">The score containing replay frames.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <param name="token">
+    /// The score token ID.
+    /// </param>
+    /// <param name="score">
+    /// The score containing replay frames.
+    /// </param>
+    /// <returns>
+    /// A task representing the asynchronous operation.
+    /// </returns>
     public async Task EnqueueAsync(long token, Score score)
     {
         if (!_configManager.Get<RealtimeConfig>().SaveReplays)

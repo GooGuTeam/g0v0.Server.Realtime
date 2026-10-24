@@ -18,8 +18,12 @@ public class HeadToHeadRoom : StandardRoom
     /// <summary>
     /// Initializes a new instance of the <see cref="HeadToHeadRoom"/> class.
     /// </summary>
-    /// <param name="room">The database room.</param>
-    /// <param name="facade">The room dependency facade.</param>
+    /// <param name="room">
+    /// The database room.
+    /// </param>
+    /// <param name="facade">
+    /// The room dependency facade.
+    /// </param>
     public HeadToHeadRoom(Room room, IRoomFacade facade)
         : base(room, facade)
     {
