@@ -889,6 +889,15 @@ public class SpectatorHubTests
             }
         }
 
+        public Task<IReadOnlyList<DbBeatmap>> GetByFilenameAsync(string filename)
+        {
+            string? version = g0v0.Server.Common.Database.Repository.BeatmapFilename.ExtractVersion(filename);
+            IReadOnlyList<DbBeatmap> matches = version is null
+                ? []
+                : _beatmapsById.Values.Where(beatmap => beatmap.Version == version).ToArray();
+            return Task.FromResult(matches);
+        }
+
         public Task<DbBeatmap?> GetByIdAsync(int beatmapId) =>
             Task.FromResult(_beatmapsById.TryGetValue(beatmapId, out DbBeatmap? value) ? value : null);
 

@@ -1190,6 +1190,9 @@ public class MultiplayerHubTests
         public Task<Beatmap?> GetByIdAsync(int beatmapId)
             => Task.FromResult(_beatmaps.Find(b => b.Id == beatmapId));
 
+        public Task<IReadOnlyList<g0v0.Server.Common.Database.Models.Beatmap>> GetByFilenameAsync(string filename)
+            => throw new NotSupportedException();
+
         public Task<Beatmap?> GetByChecksumAsync(string checksum) => Task.FromResult<Beatmap?>(null);
 
         public Task<Beatmap> GetOrFetchByIdAsync(int beatmapId, g0v0.Server.Common.Fetching.IFetcher fetcher, CancellationToken cancellationToken = default)

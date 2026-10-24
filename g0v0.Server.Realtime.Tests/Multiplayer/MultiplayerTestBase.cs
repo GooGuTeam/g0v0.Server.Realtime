@@ -253,9 +253,7 @@ public abstract class MultiplayerTestBase
     /// <summary>
     /// Sets the multiplayer hub's current user context.
     /// </summary>
-    /// <param name="context">
-    /// The user context.
-    /// </param>
+    /// <param name="context">The user context.</param>
     protected void SetUserContext(Mock<HubCallerContext> context) => Hub.Context = context.Object;
 
     protected async Task MarkCurrentUserReadyAndAvailable()
@@ -316,12 +314,8 @@ public class TestMultiplayerHub : MultiplayerHub
     /// <summary>
     /// Joins the room with the given ID, creating it first if it does not exist.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <returns>
-    /// The joined room.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <returns>The joined room.</returns>
     public new Task<MultiplayerRoom> JoinRoom(long roomId)
         => JoinRoomWithPassword(roomId, string.Empty);
 
@@ -329,15 +323,9 @@ public class TestMultiplayerHub : MultiplayerHub
     /// Joins the room with the given ID and password, creating it first if it
     /// does not exist.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <param name="password">
-    /// The room password.
-    /// </param>
-    /// <returns>
-    /// The joined room.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <param name="password">The room password.</param>
+    /// <returns>The joined room.</returns>
     public new Task<MultiplayerRoom> JoinRoomWithPassword(long roomId, string password)
     {
         if (CheckRoomExists(roomId))
@@ -373,50 +361,32 @@ public class TestMultiplayerHub : MultiplayerHub
     /// <summary>
     /// Joins the room with the given ID without creating it.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <returns>
-    /// The joined room.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <returns>The joined room.</returns>
     public Task<MultiplayerRoom> JoinRoomExplicit(long roomId)
         => base.JoinRoom(roomId);
 
     /// <summary>
     /// Joins the room with the given ID and password without creating it.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <param name="password">
-    /// The room password.
-    /// </param>
-    /// <returns>
-    /// The joined room.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <param name="password">The room password.</param>
+    /// <returns>The joined room.</returns>
     public Task<MultiplayerRoom> JoinRoomWithPasswordExplicit(long roomId, string password)
         => base.JoinRoomWithPassword(roomId, password);
 
     /// <summary>
     /// Gets the room with the given ID from the room manager.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <returns>
-    /// The room, or <see langword="null"/> if not tracked.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <returns>The room, or <see langword="null"/> if not tracked.</returns>
     public IRoom? GetRoom(long roomId) => _roomManager.GetRoom(roomId);
 
     /// <summary>
     /// Determines whether a room with the given ID is currently tracked.
     /// </summary>
-    /// <param name="roomId">
-    /// The room ID.
-    /// </param>
-    /// <returns>
-    /// <see langword="true"/> when the room exists.
-    /// </returns>
+    /// <param name="roomId">The room ID.</param>
+    /// <returns><see langword="true"/> when the room exists.</returns>
     public bool CheckRoomExists(long roomId) => _roomManager.GetRoom(roomId) != null;
 }
 
@@ -492,6 +462,15 @@ internal sealed class FakeBeatmapRepository : IBeatmapRepository
     /// Gets the set of beatmap IDs which resolve to <see langword="null"/>.
     /// </summary>
     public HashSet<int> MissingBeatmapIds { get; } = new();
+
+    public Task<IReadOnlyList<Beatmap>> GetByFilenameAsync(string filename)
+    {
+        string? version = BeatmapFilename.ExtractVersion(filename);
+        IReadOnlyList<Beatmap> matches = version is null
+            ? []
+            : Beatmaps.Where(beatmap => beatmap.Version == version).ToArray();
+        return Task.FromResult(matches);
+    }
 
     public Task<Beatmap?> GetByIdAsync(int beatmapId)
     {
