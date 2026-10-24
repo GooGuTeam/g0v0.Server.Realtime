@@ -239,6 +239,10 @@ public class ScoreProcessedNotificationServiceTests
         private readonly ConcurrentDictionary<long, DbScore> _scoresByToken = new();
         private readonly ConcurrentDictionary<long, DbScore> _scoresById = new();
 
+        public Task<IReadOnlyList<g0v0.Server.Common.Database.Models.Score>> GetUnprocessedScoresAsync(long afterId, int limit, string? type = null) => throw new NotSupportedException();
+
+        public Task CompleteProcessingAsync(g0v0.Server.Common.Database.Models.Score score, int playTime = 0) => throw new NotSupportedException();
+
         public void SetScoreByToken(long token, DbScore score)
         {
             _scoresByToken[token] = score;
@@ -267,6 +271,42 @@ public class ScoreProcessedNotificationServiceTests
         public Task<IReadOnlyList<DbScore>> GetRecentByUserIdAndModeAsync(int userId, int mode, int limit) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<DbScore>> GetBestByUserIdAndModeAsync(int userId, int mode, int limit) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<DbScore>> GetBeatmapLeaderboardAsync(
+            int beatmapId,
+            int mode,
+            int limit,
+            bool legacyOnly = false,
+            IReadOnlyCollection<int>? userIds = null,
+            string? countryCode = null,
+            IReadOnlyCollection<string>? modAcronyms = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<int> CountBeatmapLeaderboardAsync(
+            int beatmapId,
+            int mode,
+            bool legacyOnly = false,
+            IReadOnlyCollection<int>? userIds = null,
+            string? countryCode = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<DbScore?> GetBestBeatmapScoreAsync(
+            int beatmapId,
+            int mode,
+            int userId,
+            bool legacyOnly = false,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<int> GetBeatmapLeaderboardRankAsync(
+            int beatmapId,
+            int mode,
+            int userId,
+            bool legacyOnly = false,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
 
         public Task CreateAsync(DbScore score) => throw new NotSupportedException();
 

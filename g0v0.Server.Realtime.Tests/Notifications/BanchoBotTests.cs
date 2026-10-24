@@ -166,6 +166,10 @@ public class BanchoBotTests
 
     private sealed class FakeScoreRepository : IScoreRepository
     {
+        public Task<IReadOnlyList<g0v0.Server.Common.Database.Models.Score>> GetUnprocessedScoresAsync(long afterId, int limit, string? type = null) => throw new NotSupportedException();
+
+        public Task CompleteProcessingAsync(g0v0.Server.Common.Database.Models.Score score, int playTime = 0) => throw new NotSupportedException();
+
         public Task<Score?> GetByIdAsync(long scoreId) => Task.FromResult<Score?>(null);
 
         public Task<IReadOnlyList<Score>> GetPassingScoresForRoomAsync(long roomId)
@@ -192,6 +196,42 @@ public class BanchoBotTests
 
         public Task<IReadOnlyList<Score>> GetBestByUserIdAndModeAsync(int userId, int mode, int limit)
             => Task.FromResult<IReadOnlyList<Score>>([]);
+
+        public Task<IReadOnlyList<Score>> GetBeatmapLeaderboardAsync(
+            int beatmapId,
+            int mode,
+            int limit,
+            bool legacyOnly = false,
+            IReadOnlyCollection<int>? userIds = null,
+            string? countryCode = null,
+            IReadOnlyCollection<string>? modAcronyms = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<int> CountBeatmapLeaderboardAsync(
+            int beatmapId,
+            int mode,
+            bool legacyOnly = false,
+            IReadOnlyCollection<int>? userIds = null,
+            string? countryCode = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<Score?> GetBestBeatmapScoreAsync(
+            int beatmapId,
+            int mode,
+            int userId,
+            bool legacyOnly = false,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<int> GetBeatmapLeaderboardRankAsync(
+            int beatmapId,
+            int mode,
+            int userId,
+            bool legacyOnly = false,
+            CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
 
         public Task<Score?> GetScoreByToken(long scoreToken) => Task.FromResult<Score?>(null);
 
