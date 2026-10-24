@@ -105,6 +105,7 @@ public static class Program
         builder.Services.AddSingleton<ScoreBuffer>();
         builder.Services.AddSingleton<ScoreUploader>();
         builder.Services.AddSingleton<ScoreProcessedNotificationService>();
+        builder.Services.AddSingleton<MultiplayerRoomMetadataService>();
         builder.Services.AddSingleton<MultiplayerEventDispatcher>();
         builder.Services.AddSingleton<INotificationServer, NotificationServer>();
         builder.Services.AddScoped<ChatPmStartChecker>();
@@ -169,6 +170,9 @@ public static class Program
         // ("new_notification") on the IPC client; nothing else resolves it, so
         // without this the notices would be silently dropped.
         _ = app.Services.GetRequiredService<ChatIpcHandler>();
+
+        // Room watchers need score notices even before any spectator connects.
+        _ = app.Services.GetRequiredService<ScoreProcessedNotificationService>();
 
         if (app.Environment.IsDevelopment())
         {

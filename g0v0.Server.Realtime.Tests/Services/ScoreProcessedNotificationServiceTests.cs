@@ -257,6 +257,9 @@ public class ScoreProcessedNotificationServiceTests
             return Task.FromResult(value);
         }
 
+        public Task<IReadOnlyList<g0v0.Server.Common.Database.Models.Score>> GetPassingScoresForRoomAsync(long roomId)
+            => throw new NotSupportedException();
+
         public Task<IReadOnlyList<DbScore>> GetByBeatmapIdAsync(int beatmapId) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<DbScore>> GetByUserIdAsync(int userId) => throw new NotSupportedException();

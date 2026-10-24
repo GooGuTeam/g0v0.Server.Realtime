@@ -168,6 +168,9 @@ public class BanchoBotTests
     {
         public Task<Score?> GetByIdAsync(long scoreId) => Task.FromResult<Score?>(null);
 
+        public Task<IReadOnlyList<Score>> GetPassingScoresForRoomAsync(long roomId)
+            => throw new NotSupportedException();
+
         public Task<IReadOnlyList<Score>> GetByBeatmapIdAsync(int beatmapId) => Task.FromResult<IReadOnlyList<Score>>([]);
 
         public Task<IReadOnlyList<Score>> GetByUserIdAsync(int userId) => Task.FromResult<IReadOnlyList<Score>>([]);

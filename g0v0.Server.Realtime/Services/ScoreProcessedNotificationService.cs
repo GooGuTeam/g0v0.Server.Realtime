@@ -175,6 +175,13 @@ public sealed class ScoreProcessedNotificationService
         {
             LogNoPendingScoreRegistration(_logger, payload.ScoreId, arg3: null);
         }
+
+        using IServiceScope scope = _scopeFactory.CreateScope();
+        MultiplayerRoomMetadataService? roomMetadataService = scope.ServiceProvider.GetService<MultiplayerRoomMetadataService>();
+        if (roomMetadataService != null)
+        {
+            await roomMetadataService.NotifyScoreProcessedAsync(payload.ScoreId).ConfigureAwait(false);
+        }
     }
 
     private sealed class ScoreProcessedPayload

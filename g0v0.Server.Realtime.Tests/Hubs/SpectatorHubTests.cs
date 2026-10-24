@@ -916,6 +916,9 @@ public class SpectatorHubTests
     {
         public Task<Score?> GetByIdAsync(long scoreId) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<g0v0.Server.Common.Database.Models.Score>> GetPassingScoresForRoomAsync(long roomId)
+            => throw new NotSupportedException();
+
         public Task<IReadOnlyList<Score>> GetByBeatmapIdAsync(int beatmapId) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<Score>> GetByUserIdAsync(int userId) => throw new NotSupportedException();

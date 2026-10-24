@@ -9,9 +9,12 @@ using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.States;
 using g0v0.Server.Realtime.Objects.States.Activity;
+using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NUnit.Framework;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
@@ -21,6 +24,139 @@ namespace g0v0.Server.Realtime.Tests.Hubs;
 [TestFixture]
 public class MetadataHubTests
 {
+    [Test]
+    public async Task BeginWatchingMultiplayerRoom_ReturnsAllItemsAndScoreDistribution()
+    {
+        MetadataHubTestEnvironment environment = new();
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ReturnsAsync(new Room
+        {
+            Id = 42,
+            Playlists = [new Playlist { Id = 1 }, new Playlist { Id = 2 }, new Playlist { Id = 3 }],
+        });
+        environment.ScoreRepository.Setup(repository => repository.GetPassingScoresForRoomAsync(42)).ReturnsAsync(
+        [
+            new Score { Id = 10, PlaylistItemId = 2, TotalScore = 99999 },
+            new Score { Id = 11, PlaylistItemId = 2, TotalScore = 100000 },
+            new Score { Id = 12, PlaylistItemId = 2, TotalScore = 1500000 },
+            new Score { Id = 13, PlaylistItemId = 3, TotalScore = 250000 },
+        ]);
+        TestHubHandle watcher = await environment.ConnectAsync(10, "watcher");
+
+        MultiplayerPlaylistItemStats[] stats = await watcher.Hub.BeginWatchingMultiplayerRoom(42);
+        MultiplayerPlaylistItemStats[] repeated = await watcher.Hub.BeginWatchingMultiplayerRoom(42);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stats, Has.Length.EqualTo(3));
+            Assert.That(stats[0].CumulativeScore, Is.Zero);
+            Assert.That(stats[1].CumulativeScore, Is.EqualTo(1699999));
+            Assert.That(stats[1].TotalScoreDistribution[0], Is.EqualTo(1));
+            Assert.That(stats[1].TotalScoreDistribution[1], Is.EqualTo(1));
+            Assert.That(stats[1].TotalScoreDistribution[12], Is.EqualTo(1));
+            Assert.That(stats[1].LastProcessedScoreID, Is.EqualTo(12));
+            Assert.That(stats[2].CumulativeScore, Is.EqualTo(250000));
+            Assert.That(repeated[1].CumulativeScore, Is.EqualTo(stats[1].CumulativeScore));
+            Assert.That(watcher.GroupManager.AddedGroups, Has.All.EqualTo(("watcher", MetadataHub.MultiplayerRoomWatchersGroup(42))));
+        });
+    }
+
+    [Test]
+    public async Task BeginWatchingMultiplayerRoom_WhenLoadingFails_RemovesSubscription()
+    {
+        MetadataHubTestEnvironment environment = new();
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ThrowsAsync(new InvalidOperationException());
+        TestHubHandle watcher = await environment.ConnectAsync(10, "watcher");
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => watcher.Hub.BeginWatchingMultiplayerRoom(42));
+        await environment.RoomMetadataService.NotifyScoreProcessedAsync(99);
+
+        Assert.That(watcher.GroupManager.RemovedGroups, Does.Contain(("watcher", MetadataHub.MultiplayerRoomWatchersGroup(42))));
+        environment.ScoreRepository.Verify(repository => repository.GetByIdAsync(It.IsAny<long>()), Times.Never);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task RoomScoreNotifications_ReachOnlyCurrentWatchers(bool disconnect)
+    {
+        MetadataHubTestEnvironment environment = new();
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ReturnsAsync(new Room
+        {
+            Id = 42,
+            Type = osu.Game.Online.Rooms.MatchType.Playlists,
+            Playlists = [new Playlist { Id = 1 }],
+        });
+        Score score = new() { Id = 99, RoomId = 42, PlaylistItemId = 1, UserId = 30, Passed = true, TotalScore = 500000 };
+        environment.ScoreRepository.Setup(repository => repository.GetByIdAsync(99)).ReturnsAsync(score);
+        environment.ScoreRepository.Setup(repository => repository.GetPassingScoresForRoomAsync(42)).ReturnsAsync(
+        [
+            new Score { Id = 98, RoomId = 42, PlaylistItemId = 1, UserId = 20, TotalScore = 500000 },
+            score,
+        ]);
+        TestHubHandle watcher = await environment.ConnectAsync(10, "watcher");
+        TestHubHandle other = await environment.ConnectAsync(20, "other");
+        await watcher.Hub.BeginWatchingMultiplayerRoom(42);
+        await other.Hub.BeginWatchingMultiplayerRoom(42);
+
+        await environment.SenderIpc.SendNoticeAsync("realtime-tests", "score_processed", new { score_id = 99 });
+        Assert.Multiple(() =>
+        {
+            Assert.That(watcher.Recorder.RoomScores, Has.Count.EqualTo(1));
+            Assert.That(watcher.Recorder.RoomScores[0].NewRank, Is.EqualTo(2));
+            Assert.That(watcher.Recorder.RoomScores[0].ScoreID, Is.EqualTo(99));
+        });
+
+        if (disconnect)
+        {
+            await watcher.Hub.OnDisconnectedAsync(exception: null);
+
+            // SignalR removes disconnected connections from its groups automatically.
+            environment.Router.RemoveFromGroup("watcher", MetadataHub.MultiplayerRoomWatchersGroup(42));
+        }
+        else
+        {
+            await watcher.Hub.EndWatchingMultiplayerRoom(42);
+            await watcher.Hub.EndWatchingMultiplayerRoom(42);
+        }
+
+        await environment.SenderIpc.SendNoticeAsync("realtime-tests", "score_processed", new { score_id = 99 });
+        Assert.Multiple(() =>
+        {
+            Assert.That(watcher.Recorder.RoomScores, Has.Count.EqualTo(1));
+            Assert.That(other.Recorder.RoomScores, Has.Count.EqualTo(2));
+        });
+
+        await other.Hub.EndWatchingMultiplayerRoom(42);
+        environment.ScoreRepository.Invocations.Clear();
+        await environment.SenderIpc.SendNoticeAsync("realtime-tests", "score_processed", new { score_id = 99 });
+        environment.ScoreRepository.Verify(repository => repository.GetByIdAsync(It.IsAny<long>()), Times.Never);
+    }
+
+    [TestCase(false, 400000, osu.Game.Online.Rooms.MatchType.Playlists, 0)]
+    [TestCase(true, 400000, osu.Game.Online.Rooms.MatchType.Playlists, 1)]
+    [TestCase(true, 400000, osu.Game.Online.Rooms.MatchType.HeadToHead, 0)]
+    public async Task RoomScoreNotifications_FilterFailedAndNonPlaylistScores(bool passed, int totalScore, osu.Game.Online.Rooms.MatchType matchType, int count)
+    {
+        MetadataHubTestEnvironment environment = new();
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ReturnsAsync(new Room { Id = 42, Type = matchType });
+        Score score = new() { Id = 99, RoomId = 42, PlaylistItemId = 1, UserId = 30, Passed = passed, TotalScore = totalScore };
+        environment.ScoreRepository.Setup(repository => repository.GetByIdAsync(99)).ReturnsAsync(score);
+        environment.ScoreRepository.Setup(repository => repository.GetPassingScoresForRoomAsync(42)).ReturnsAsync(
+        [
+            new Score { Id = 98, PlaylistItemId = 1, UserId = 30, TotalScore = 500000 },
+            score,
+        ]);
+        TestHubHandle watcher = await environment.ConnectAsync(10, "watcher");
+        await watcher.Hub.BeginWatchingMultiplayerRoom(42);
+
+        await environment.SenderIpc.SendNoticeAsync("realtime-tests", "score_processed", new { score_id = 99 });
+
+        Assert.That(watcher.Recorder.RoomScores, Has.Count.EqualTo(count));
+        if (count > 0)
+        {
+            Assert.That(watcher.Recorder.RoomScores[0].NewRank, Is.Null);
+        }
+    }
+
     [Test]
     public async Task OnConnectedAsync_WhenSameUserReconnects_RequestsOldConnectionDisconnect()
     {
@@ -235,16 +371,34 @@ public class MetadataHubTests
     {
         public MetadataHubTestEnvironment()
         {
-            IpcClient = new InterProcessCommunicationClient(new RecordingTransport(), "realtime-tests");
+            RecordingTransport transport = new();
+            IpcClient = new InterProcessCommunicationClient(transport, "realtime-tests");
+            SenderIpc = new InterProcessCommunicationClient(transport, "lazer");
             PlayerManager = new PlayerManager(NullLogger<PlayerManager>.Instance, IpcClient);
             Router = new MetadataClientRouter();
             RelationshipRepository = new FakeRelationshipRepository();
             HubContext = new FakeHubContext(Router);
+            ServiceCollection services = new();
+            services.AddSingleton(RoomRepository.Object);
+            services.AddSingleton(ScoreRepository.Object);
+            services.AddSingleton<IHubContext<MetadataHub, IMetadataClient>>(HubContext);
+            services.AddSingleton<MultiplayerRoomMetadataService>();
+            ServiceProvider provider = services.BuildServiceProvider();
+            RoomMetadataService = provider.GetRequiredService<MultiplayerRoomMetadataService>();
+            _ = new ScoreProcessedNotificationService(IpcClient, provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<ScoreProcessedNotificationService>.Instance);
         }
+
+        public Mock<IRoomRepository> RoomRepository { get; } = new();
+
+        public Mock<IScoreRepository> ScoreRepository { get; } = new();
+
+        public MultiplayerRoomMetadataService RoomMetadataService { get; }
 
         public FakeHubContext HubContext { get; }
 
         public InterProcessCommunicationClient IpcClient { get; }
+
+        public InterProcessCommunicationClient SenderIpc { get; }
 
         public PlayerManager PlayerManager { get; }
 
@@ -257,7 +411,7 @@ public class MetadataHubTests
             Router.EnsureConnection(connectionId);
 
             FakeGroupManager groupManager = new(Router);
-            MetadataHub hub = new(PlayerManager, RelationshipRepository, HubContext, NullLogger<MetadataHub>.Instance)
+            MetadataHub hub = new(PlayerManager, RelationshipRepository, HubContext, NullLogger<MetadataHub>.Instance, RoomMetadataService)
             {
                 Context = new TestHubCallerContext(connectionId, userId.ToString()),
                 Clients = new FakeHubCallerClients(Router, connectionId),
@@ -281,10 +435,22 @@ public class MetadataHubTests
 
     private sealed class RecordingTransport : IInterProcessCommunicationTransport
     {
-        public Task PublishAsync(string channel, string payload) => Task.CompletedTask;
+        private readonly Dictionary<string, List<Func<string, Task>>> _handlers = new(StringComparer.Ordinal);
+
+        public Task PublishAsync(string channel, string payload)
+            => _handlers.TryGetValue(channel, out List<Func<string, Task>>? handlers)
+                ? Task.WhenAll(handlers.Select(handler => handler(payload)))
+                : Task.CompletedTask;
 
         public void Subscribe(string channel, Func<string, Task> handler)
         {
+            if (!_handlers.TryGetValue(channel, out List<Func<string, Task>>? handlers))
+            {
+                handlers = [];
+                _handlers.Add(channel, handlers);
+            }
+
+            handlers.Add(handler);
         }
     }
 
@@ -514,6 +680,8 @@ public class MetadataHubTests
 
         public List<(int UserId, UserPresence? Presence)> UserPresenceUpdates { get; } = [];
 
+        public List<MultiplayerRoomScoreSetEvent> RoomScores { get; } = [];
+
         public int DisconnectRequestCount { get; private set; }
 
         public Task BeatmapSetsUpdated(BeatmapUpdates beatmapUpdates) => Task.CompletedTask;
@@ -542,7 +710,10 @@ public class MetadataHubTests
         }
 
         public Task MultiplayerRoomScoreSet(MultiplayerRoomScoreSetEvent multiplayerRoomScoreSetEvent)
-            => Task.CompletedTask;
+        {
+            RoomScores.Add(multiplayerRoomScoreSetEvent);
+            return Task.CompletedTask;
+        }
 
         public Task UserPresenceUpdated(int userId, UserPresence? userPresence)
         {

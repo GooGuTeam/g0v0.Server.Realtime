@@ -5,6 +5,7 @@ using g0v0.Server.Realtime.Extensions;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.States;
+using g0v0.Server.Realtime.Services;
 using Microsoft.AspNetCore.SignalR;
 using osu.Game.Online.Metadata;
 using osu.Game.Users;
@@ -18,7 +19,8 @@ public class MetadataHub(
     PlayerManager playerManager,
     IRelationshipRepository relationshipRepository,
     IHubContext<MetadataHub, IMetadataClient> hubContext,
-    ILogger<MetadataHub> logger)
+    ILogger<MetadataHub> logger,
+    MultiplayerRoomMetadataService roomMetadataService)
     : LazerRealtimeHub<IMetadataClient>(playerManager), IMetadataServer
 {
     internal const string OnlinePresenceWatchersGroup = "metadata:online-presence-watchers";
@@ -50,6 +52,8 @@ public class MetadataHub(
     /// <inheritdoc />
     public async override Task OnDisconnectedAsync(Exception? exception)
     {
+        roomMetadataService.UnregisterConnection(Context.ConnectionId);
+
         await base.OnDisconnectedAsync(exception);
 
         LazerPlayer? player = PlayerManager.GetPlayer<LazerPlayer>(Context.GetUserId(), "Lazer");
@@ -97,17 +101,27 @@ public class MetadataHub(
         Groups.RemoveFromGroupAsync(Context.ConnectionId, OnlinePresenceWatchersGroup);
 
     /// <inheritdoc />
-    public Task<MultiplayerPlaylistItemStats[]> BeginWatchingMultiplayerRoom(long id)
+    public async Task<MultiplayerPlaylistItemStats[]> BeginWatchingMultiplayerRoom(long id)
     {
-        throw new NotSupportedException(
-            "Multiplayer room metadata streaming is not implemented by the realtime server.");
+        await Groups.AddToGroupAsync(Context.ConnectionId, MultiplayerRoomWatchersGroup(id));
+        roomMetadataService.Register(Context.ConnectionId, id);
+
+        try
+        {
+            return await roomMetadataService.GetStatsAsync(id);
+        }
+        catch
+        {
+            await EndWatchingMultiplayerRoom(id);
+            throw;
+        }
     }
 
     /// <inheritdoc />
-    public Task EndWatchingMultiplayerRoom(long id)
+    public async Task EndWatchingMultiplayerRoom(long id)
     {
-        throw new NotSupportedException(
-            "Multiplayer room metadata streaming is not implemented by the realtime server.");
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, MultiplayerRoomWatchersGroup(id));
+        roomMetadataService.Unregister(Context.ConnectionId, id);
     }
 
     /// <inheritdoc />
@@ -130,6 +144,8 @@ public class MetadataHub(
                     message: $"Unexpected user status {state.UserStatus}"),
             };
     }
+
+    internal static string MultiplayerRoomWatchersGroup(long roomId) => $"metadata:multiplayer-room-watchers:{roomId}";
 
     internal static string FriendPresenceWatchersGroup(int userId) => $"metadata:online-presence-watchers:{userId}";
 
