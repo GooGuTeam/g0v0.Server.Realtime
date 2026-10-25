@@ -159,7 +159,12 @@ public class BanchoBotTests
 
         public Task<bool> UsernameExistsAsync(string username) => Task.FromResult(true);
 
+        public Task<Common.Database.Models.User?> GetByEmailAsync(string email) => Task.FromResult<Common.Database.Models.User?>(null);
+
         public Task CreateAsync(Common.Database.Models.User user) => Task.CompletedTask;
+
+        public Task CreateAsync(Common.Database.Models.User user, IReadOnlyList<int> statisticsModes, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
 
         public Task UpdateAsync(Common.Database.Models.User user) => Task.CompletedTask;
     }

@@ -870,7 +870,12 @@ public class SpectatorHubTests
 
         public Task<bool> UsernameExistsAsync(string username) => throw new NotSupportedException();
 
+        public Task<User?> GetByEmailAsync(string email) => throw new NotSupportedException();
+
         public Task CreateAsync(User user) => throw new NotSupportedException();
+
+        public Task CreateAsync(User user, IReadOnlyList<int> statisticsModes, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
 
         public Task UpdateAsync(User user) => throw new NotSupportedException();
     }

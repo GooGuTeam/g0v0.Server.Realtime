@@ -580,6 +580,14 @@ internal sealed class FakeUserRepository : IUserRepository
     public Task<bool> UsernameExistsAsync(string username)
         => Task.FromResult(_users.Values.Any(u => string.Equals(u.Username, username, StringComparison.Ordinal)));
 
+    public Task<User?> GetByEmailAsync(string email)
+        => Task.FromResult(_users.Values.FirstOrDefault(u => string.Equals(u.Email, email, StringComparison.Ordinal)));
+
+    public async Task CreateAsync(User user, IReadOnlyList<int> statisticsModes, CancellationToken cancellationToken = default)
+    {
+        await CreateAsync(user).ConfigureAwait(false);
+    }
+
     public Task CreateAsync(User user)
     {
         _users[user.Id] = user;
