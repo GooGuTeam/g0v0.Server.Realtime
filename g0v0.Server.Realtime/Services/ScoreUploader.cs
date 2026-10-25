@@ -185,8 +185,7 @@ public class ScoreUploader : IDisposable
                         item.Token,
                         dbScore.Id);
 
-                    // TODO: `_lazer_replay` is backward compatible with g0v0-server v1.
-                    string replayPath = $"replays/{dbScore.Id}_{dbScore.BeatmapId}_{dbScore.UserId}_lazer_replay.osr";
+                    string replayPath = dbScore.ReplayFilename;
                     await _scoreStorage.WriteFileAsync(replayPath, outStream.GetBuffer(), "application/x-osu-replay", cancellationToken: _cancellationToken);
                 }
 
