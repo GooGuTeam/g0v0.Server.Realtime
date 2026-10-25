@@ -96,7 +96,9 @@ SignalR specifics:
   `GameplayStarted`, `GameplayAborted`, `ResultsReady`, `Invited`, kicked unicast) go to `Clients.User(userId)`.
   `Program.ConfigureServices` registers `MultiplayerEventDispatcher`, `IRoomFacade`/`RoomFacade` and `RoomManager`.
 - `RoomManager` owns the in-memory room registry (`ConcurrentDictionary<long, IRoom>`) and the match-type factory;
-  `GetOrLoadRoom` hydrates an existing DB room (head-to-head/team-versus only, rejects ended rooms). Rooms persist
+  `GetOrLoadRoom` hydrates an existing DB room (head-to-head/team-versus only, rejects ended or foreign-source rooms).
+  Creation, hydration, match-type reloads and metadata lookups explicitly use `ServerIdentify.Realtime`; never use
+  Stable room records even when their match type/category matches. Rooms persist
   through Common's `IRoomRepository` (both MySQL and PostgreSQL backends); there is **no LegacyIO / osu-web interop**
   call — the lazer API's `/app/router/lio.py` semantics (participant dedup, empty-room end) are implemented directly in
   the repository layer.

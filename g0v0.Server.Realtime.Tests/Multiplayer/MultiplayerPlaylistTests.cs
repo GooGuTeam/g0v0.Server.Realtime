@@ -2,6 +2,7 @@
 
 #pragma warning disable SA1117
 
+using g0v0.Server.Common.Communication;
 using Moq;
 using NUnit.Framework;
 using osu.Game.Online.Multiplayer;
@@ -676,6 +677,7 @@ public class MultiplayerPlaylistTests : MultiplayerTestBase
                 },
                 Playlist = playlist,
             },
-            UserId);
+            UserId,
+            ServerIdentify.Realtime);
     }
 }

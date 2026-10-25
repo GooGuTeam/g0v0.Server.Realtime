@@ -22,6 +22,11 @@ each feature.
     - [x] Private notifications (IPC + WebSocket)
 - [ ] g0v0 Hub for other servers
 
+Multiplayer room creation, loading and metadata queries use `source = Realtime`; Stable rooms are
+excluded. Apply Common's `AddRoomSource` PostgreSQL migration or
+the `84cceb652fe5` room-source Alembic migration in `osu_lazer_api` before deploying this version. Existing room records
+default to `Realtime`.
+
 ## Try this project
 
 **CRITICAL:** This project is under development. It is not recommended to use it in production environment.

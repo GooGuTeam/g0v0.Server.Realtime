@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Realtime.Objects.Rooms;
 using NUnit.Framework;
 using osu.Game.Online.API;
@@ -22,6 +23,7 @@ public class RoomManagerTests : MultiplayerTestBase
         IRoom room = await RoomManager.CreateRoom(CreateRoomRequest(), UserId);
 
         Assert.That(room, Is.TypeOf<HeadToHeadRoom>());
+        Assert.That(RoomRepository.Rooms.Single().Source, Is.EqualTo(ServerIdentify.Realtime));
         Assert.That(RoomManager.GetRoom(room.RoomId), Is.SameAs(room));
         Assert.That(RoomManager.GetAllRooms().ToArray(), Has.Length.EqualTo(1));
     }
@@ -70,6 +72,21 @@ public class RoomManagerTests : MultiplayerTestBase
         IRoom? loaded = await RoomManager.GetOrLoadRoom(room.RoomId);
         Assert.That(loaded, Is.Not.Null);
         Assert.That(loaded!.RoomId, Is.EqualTo(room.RoomId));
+    }
+
+    [TestCase(ServerIdentify.Stable)]
+    [TestCase(ServerIdentify.Lazer)]
+    public async Task GetOrLoadRoom_ForeignRoom_ReturnsNullWithoutChangingIt(ServerIdentify source)
+    {
+        Common.Database.Models.Room foreign = await RoomRepository.CreateRoom(CreateRoomRequest(), UserId, source);
+        DateTimeOffset endDate = DateTimeOffset.UtcNow.AddMinutes(30);
+        await RoomRepository.SetRoomEndDate(foreign.Id, endDate);
+
+        Assert.That(await RoomManager.GetOrLoadRoom(foreign.Id), Is.Null);
+        Assert.That(RoomManager.GetAllRooms(), Is.Empty);
+        Assert.That(foreign.EndsAt, Is.EqualTo(endDate));
+        Assert.That(foreign.ChannelId, Is.Zero);
+        Assert.That(foreign.Source, Is.EqualTo(source));
     }
 
     [Test]

@@ -28,7 +28,7 @@ public class MetadataHubTests
     public async Task BeginWatchingMultiplayerRoom_ReturnsAllItemsAndScoreDistribution()
     {
         MetadataHubTestEnvironment environment = new();
-        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ReturnsAsync(new Room
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42, ServerIdentify.Realtime)).ReturnsAsync(new Room
         {
             Id = 42,
             Playlists = [new Playlist { Id = 1 }, new Playlist { Id = 2 }, new Playlist { Id = 3 }],
@@ -60,11 +60,37 @@ public class MetadataHubTests
         });
     }
 
+    [TestCase(ServerIdentify.Stable)]
+    [TestCase(ServerIdentify.Lazer)]
+    public async Task ForeignRoom_DoesNotExposeStatisticsOrScoreNotifications(ServerIdentify source)
+    {
+        MetadataHubTestEnvironment environment = new();
+        Room foreign = new()
+        {
+            Id = 42,
+            Source = source,
+            Type = osu.Game.Online.Rooms.MatchType.Playlists,
+            Playlists = [new Playlist { Id = 1 }],
+        };
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42, It.IsAny<ServerIdentify>()))
+            .ReturnsAsync((long _, ServerIdentify reader) => reader == foreign.Source ? foreign : null);
+        environment.ScoreRepository.Setup(repository => repository.GetByIdAsync(99))
+            .ReturnsAsync(new Score { Id = 99, RoomId = 42, PlaylistItemId = 1, Passed = true });
+        TestHubHandle watcher = await environment.ConnectAsync(10, "watcher");
+
+        Assert.That(await watcher.Hub.BeginWatchingMultiplayerRoom(42), Is.Empty);
+        await environment.RoomMetadataService.NotifyScoreProcessedAsync(99);
+
+        Assert.That(watcher.Recorder.RoomScores, Is.Empty);
+        environment.RoomRepository.Verify(repository => repository.GetRoom(42, ServerIdentify.Realtime), Times.Exactly(2));
+        environment.ScoreRepository.Verify(repository => repository.GetPassingScoresForRoomAsync(42), Times.Never);
+    }
+
     [Test]
     public async Task BeginWatchingMultiplayerRoom_WhenLoadingFails_RemovesSubscription()
     {
         MetadataHubTestEnvironment environment = new();
-        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ThrowsAsync(new InvalidOperationException());
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42, ServerIdentify.Realtime)).ThrowsAsync(new InvalidOperationException());
         TestHubHandle watcher = await environment.ConnectAsync(10, "watcher");
 
         Assert.ThrowsAsync<InvalidOperationException>(() => watcher.Hub.BeginWatchingMultiplayerRoom(42));
@@ -79,7 +105,7 @@ public class MetadataHubTests
     public async Task RoomScoreNotifications_ReachOnlyCurrentWatchers(bool disconnect)
     {
         MetadataHubTestEnvironment environment = new();
-        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ReturnsAsync(new Room
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42, ServerIdentify.Realtime)).ReturnsAsync(new Room
         {
             Id = 42,
             Type = osu.Game.Online.Rooms.MatchType.Playlists,
@@ -137,7 +163,7 @@ public class MetadataHubTests
     public async Task RoomScoreNotifications_FilterFailedAndNonPlaylistScores(bool passed, int totalScore, osu.Game.Online.Rooms.MatchType matchType, int count)
     {
         MetadataHubTestEnvironment environment = new();
-        environment.RoomRepository.Setup(repository => repository.GetRoom(42)).ReturnsAsync(new Room { Id = 42, Type = matchType });
+        environment.RoomRepository.Setup(repository => repository.GetRoom(42, ServerIdentify.Realtime)).ReturnsAsync(new Room { Id = 42, Type = matchType });
         Score score = new() { Id = 99, RoomId = 42, PlaylistItemId = 1, UserId = 30, Passed = passed, TotalScore = totalScore };
         environment.ScoreRepository.Setup(repository => repository.GetByIdAsync(99)).ReturnsAsync(score);
         environment.ScoreRepository.Setup(repository => repository.GetPassingScoresForRoomAsync(42)).ReturnsAsync(

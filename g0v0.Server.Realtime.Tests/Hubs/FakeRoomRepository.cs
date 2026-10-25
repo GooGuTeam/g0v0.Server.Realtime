@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using osu.Game.Online.Multiplayer;
@@ -43,6 +44,7 @@ internal sealed class FakeRoomRepository : IRoomRepository
     public async Task<Room> CreateRoom(
         MultiplayerRoom room,
         int hostUserId,
+        ServerIdentify source,
         G0V0RoomCategory category = G0V0RoomCategory.Normal,
         bool tournamentMode = false)
     {
@@ -56,6 +58,7 @@ internal sealed class FakeRoomRepository : IRoomRepository
             Name = room.Settings.Name,
             HostId = hostUserId,
             Category = category,
+            Source = source,
             Status = RoomStatus.Idle,
             Type = room.Settings.MatchType,
             Password = room.Settings.Password,
@@ -78,9 +81,9 @@ internal sealed class FakeRoomRepository : IRoomRepository
         return dbRoom;
     }
 
-    public Task<Room?> GetRoom(long roomId)
+    public Task<Room?> GetRoom(long roomId, ServerIdentify source)
     {
-        Room? room = _rooms.Find(r => r.Id == roomId);
+        Room? room = _rooms.Find(r => r.Id == roomId && r.Source == source);
         if (room == null)
         {
             return Task.FromResult<Room?>(null);

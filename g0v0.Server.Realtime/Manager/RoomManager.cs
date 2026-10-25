@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Collections.Concurrent;
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Extensions;
@@ -90,7 +91,7 @@ public class RoomManager(
             }
         }
 
-        Room dbRoom = await roomRepository.CreateRoom(room, hostUserId, G0V0RoomCategory.Realtime, tournamentMode);
+        Room dbRoom = await roomRepository.CreateRoom(room, hostUserId, ServerIdentify.Realtime, G0V0RoomCategory.Realtime, tournamentMode);
 
         IRoom roomInstance;
         try
@@ -134,7 +135,7 @@ public class RoomManager(
 
         using IServiceScope scope = scopeFactory.CreateScope();
         IRoomRepository roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
-        Room? dbRoom = await roomRepository.GetRoom(roomId);
+        Room? dbRoom = await roomRepository.GetRoom(roomId, ServerIdentify.Realtime);
 
         if (dbRoom == null)
         {
@@ -209,7 +210,7 @@ public class RoomManager(
             // Build the new instance from the same database room (same id/settings).
             using IServiceScope scope = scopeFactory.CreateScope();
             IRoomRepository roomRepository = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
-            Room dbRoom = await roomRepository.GetRoom(roomId)
+            Room dbRoom = await roomRepository.GetRoom(roomId, ServerIdentify.Realtime)
                           ?? throw new InvalidStateException("Room not found.");
 
             IRoom newInstance = CreateRoomInstance(dbRoom, newType);

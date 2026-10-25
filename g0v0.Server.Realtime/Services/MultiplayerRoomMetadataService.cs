@@ -1,5 +1,6 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using g0v0.Server.Common.Communication;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Hubs;
@@ -67,7 +68,7 @@ public sealed class MultiplayerRoomMetadataService(
     {
         using IServiceScope scope = scopeFactory.CreateScope();
         IRoomRepository rooms = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
-        Room? room = await rooms.GetRoom(roomId);
+        Room? room = await rooms.GetRoom(roomId, ServerIdentify.Realtime);
         if (room == null)
         {
             return [];
@@ -111,7 +112,7 @@ public sealed class MultiplayerRoomMetadataService(
         }
 
         IRoomRepository rooms = scope.ServiceProvider.GetRequiredService<IRoomRepository>();
-        Room? room = await rooms.GetRoom(roomId);
+        Room? room = await rooms.GetRoom(roomId, ServerIdentify.Realtime);
         if (room?.Type != MatchType.Playlists)
         {
             return;
