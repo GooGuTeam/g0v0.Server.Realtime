@@ -15,6 +15,15 @@
         <!-- Treat analyzer warnings as errors in CI (controlled by CI env variable) -->
         <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
 
+        <!-- Gate on warnings, but only for the projects in this repository. GitHub Actions exports
+             CI=true, and this file is what maps it: g0v0.Server.Common is a sibling checkout with
+             its own Directory.Build.props, so it never inherits this and its warnings cannot fail
+             this repository's CI. Reproduce the gate locally with `CI=true dotnet build`.
+             NU190x (NuGet audit) stays a warning: the vulnerable SixLabors.ImageSharp comes in
+             transitively through g0v0.osu.Game and cannot be upgraded from here. -->
+        <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
+        <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+
         <!-- Generate documentation XML -->
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>

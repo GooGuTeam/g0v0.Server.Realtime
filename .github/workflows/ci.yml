@@ -6,6 +6,15 @@ on:
   pull_request:
     branches: [ main ]
 
+# A superseded run on the same ref has nothing left to say.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
 env:
   DOTNET_VERSION: '10.0.x'
   INSPECTCODE_VERSION: '2026.2.1'
@@ -13,15 +22,17 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
-  build-warnaserror:
-    name: Build (warnings as errors)
+  code-quality:
+    name: Code quality
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v7
         with:
           path: g0v0.Server.Realtime
 
+      # The project reference is ../../g0v0.Server.Common/..., so the sibling checkout has to
+      # live next to the repository, exactly like it does on a developer machine.
       - name: Checkout CommonLib
         uses: actions/checkout@v7
         with:
@@ -33,79 +44,86 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: |
-          cd g0v0.Server.Realtime
-          dotnet restore
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props', '**/global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
 
-      - name: Check code formatting
-        run: |
-          cd g0v0.Server.Realtime
-          dotnet format --verify-no-changes --verbosity diagnostic
+      - name: Restore
+        working-directory: g0v0.Server.Realtime
+        run: dotnet restore
 
+      # g0v0.Server.Common comes in as a project reference and carries its own style drift, which must not fail this
+      # repo's CI. Not using `--include` because it silently turns --verify-no-changes into a no-op.
+      - name: Check formatting
+        working-directory: g0v0.Server.Realtime
+        run: >
+          dotnet format g0v0.Server.Realtime.sln --verify-no-changes --no-restore
+          --exclude ../g0v0.Server.Common
+
+      # Debug, because that is the configuration `jb inspectcode --no-build` evaluates below.
+      # TreatWarningsAsErrors is switched on by Directory.Build.props when CI is set, which also
+      # scopes the gate to this repository's projects only.
       - name: Build with analyzers
+        working-directory: g0v0.Server.Realtime
+        run: dotnet build --no-restore --configuration Debug
+
+      - name: InspectCode
+        working-directory: g0v0.Server.Realtime
         run: |
-          cd g0v0.Server.Realtime
-          dotnet build --no-restore --configuration Release /warnaserror
-
-  inspectcode:
-    name: JetBrains InspectCode
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          path: g0v0.Server.Realtime
-
-      - name: Checkout CommonLib
-        uses: actions/checkout@v7
-        with:
-          repository: GooGuTeam/g0v0.Server.Common
-          path: g0v0.Server.Common
-
-      - name: Setup .NET runtime for InspectCode
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '10.0.x'
-
-      - name: Restore dependencies
-        run: |
-          cd g0v0.Server.Realtime
-          dotnet restore
-
-      - name: Build (for InspectCode analysis)
-        run: |
-          cd g0v0.Server.Realtime
-          dotnet build --no-restore --configuration Release
-
-      - name: Install JetBrains InspectCode
-        run: |
-          dotnet tool install --global JetBrains.ReSharper.GlobalTools --version ${{ env.INSPECTCODE_VERSION }}
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-
-      - name: Run JetBrains InspectCode
-        run: |
-          cd g0v0.Server.Realtime
+          dotnet tool install --global JetBrains.ReSharper.GlobalTools --version "$INSPECTCODE_VERSION"
+          export PATH="$PATH:$HOME/.dotnet/tools"
           mkdir -p artifacts
-          jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --swea --output=artifacts/inspectcode.sarif
-          warnings=$(jq '[.runs[].results[] | select(.level == "warning" or .level == "error")] | length' artifacts/inspectcode.sarif)
-          echo "InspectCode warning/error count: $warnings"
-          jq -r '.runs[].results[] | select(.level == "warning" or .level == "error") | [ .level, .ruleId, (.locations[0].physicalLocation.artifactLocation.uri // ""), (.locations[0].physicalLocation.region.startLine // 0), .message.text ] | @tsv' artifacts/inspectcode.sarif
-          test "$warnings" -eq 0
+          jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --swea \
+            --output=artifacts/inspectcode.sarif
 
-      - name: Upload InspectCode report
-        uses: actions/upload-artifact@v7
-        if: always()
+          # A path that escapes the solution directory belongs to g0v0.Server.Common. Drop it here,
+          # once, so the report we upload and the report we gate on are the same file.
+          jq '.runs[].results |= map(
+                select((.locations[0].physicalLocation.artifactLocation.uri // "") | startswith("../") | not)
+              )' artifacts/inspectcode.sarif > artifacts/code-scanning.sarif
+
+      - name: Upload report to code scanning
+        # Fork pull requests get a read-only token and cannot write alerts; the job still gates
+        # on the findings below, the report is additionally kept as a plain artifact.
+        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          name: jetbrains-inspectcode-realtime
-          path: g0v0.Server.Realtime/artifacts/inspectcode.sarif
-          if-no-files-found: error
+          sarif_file: g0v0.Server.Realtime/artifacts/code-scanning.sarif
+          category: resharper-inspectcode
+          # The repository is checked out one level down (see "Checkout CommonLib"), so code
+          # scanning has to be told where the repository root is or every result is dropped
+          # because its path does not resolve inside the repository.
+          checkout_path: ${{ github.workspace }}/g0v0.Server.Realtime
+
+      - name: Upload report as artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inspectcode-report
+          path: g0v0.Server.Realtime/artifacts/code-scanning.sarif
+          if-no-files-found: ignore
+
+      - name: Fail on InspectCode findings
+        working-directory: g0v0.Server.Realtime
+        run: |
+          jq -r '.runs[].results[]
+                 | select(.level == "warning" or .level == "error")
+                 | [.level, .ruleId,
+                    (.locations[0].physicalLocation.artifactLocation.uri // ""),
+                    (.locations[0].physicalLocation.region.startLine // 0),
+                    .message.text] | @tsv' artifacts/code-scanning.sarif
+          problems=$(jq '[.runs[].results[] | select(.level == "warning" or .level == "error")] | length' artifacts/code-scanning.sarif)
+          echo "InspectCode problems in this repository: $problems"
+          [ "$problems" -eq 0 ]
 
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v7
         with:
           path: g0v0.Server.Realtime
@@ -121,24 +139,23 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: |
-          cd g0v0.Server.Realtime
-          dotnet restore
+      - name: Cache NuGet packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props', '**/global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
 
-      - name: Build
-        run: |
-          cd g0v0.Server.Realtime
-          dotnet build --no-restore --configuration Release
-
-      - name: Run tests
-        run: |
-          cd g0v0.Server.Realtime
-          dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+      - name: Test
+        working-directory: g0v0.Server.Realtime
+        run: >
+          dotnet test --configuration Release
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
 
       - name: Upload test results
-        uses: actions/upload-artifact@v7
         if: always()
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: g0v0.Server.Realtime/**/TestResults/**
