@@ -93,8 +93,8 @@ public sealed class MultiplayerCommands(
     private const string UnknownSubCommand = "Unknown mp subcommand. Send !mp help for usage.";
 
     /// <summary>
-    /// The help text. Kept on a single line because chat messages have their line
-    /// breaks normalised away.
+    /// The help text, one command group per line so the reply can be split at
+    /// those boundaries when it exceeds the message length limit.
     /// </summary>
     private const string HelpText = "Available !mp commands:\n"
                                     + "Room: !mp make <name>, !mp close, !mp settings\n"
