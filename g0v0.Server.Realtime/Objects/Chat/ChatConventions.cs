@@ -159,24 +159,21 @@ internal static class ChatConventions
         List<string> parts = [];
         StringBuilder current = new();
 
-        foreach (string rawLine in content.Split('\n'))
+        foreach (string piece in content.Split('\n').SelectMany(rawLine => SplitLine(rawLine.Trim(), limit)))
         {
-            foreach (string piece in SplitLine(rawLine.Trim(), limit))
+            if (current.Length == 0)
             {
-                if (current.Length == 0)
-                {
-                    current.Append(piece);
-                }
-                else if (current.Length + 1 + piece.Length <= limit)
-                {
-                    current.Append(' ').Append(piece);
-                }
-                else
-                {
-                    parts.Add(current.ToString());
-                    current.Clear();
-                    current.Append(piece);
-                }
+                current.Append(piece);
+            }
+            else if (current.Length + 1 + piece.Length <= limit)
+            {
+                current.Append(' ').Append(piece);
+            }
+            else
+            {
+                parts.Add(current.ToString());
+                current.Clear();
+                current.Append(piece);
             }
         }
 
@@ -207,6 +204,7 @@ internal static class ChatConventions
             }
 
             yield return line[..cut].TrimEnd();
+
             line = line[cut..].TrimStart();
         }
 
