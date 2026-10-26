@@ -55,9 +55,13 @@ jobs:
         working-directory: g0v0.Server.Realtime
         run: dotnet restore
 
-      # g0v0.Server.Common comes in as a project reference and carries its own style drift, which must not fail this
-      # repo's CI. Not using `--include` because it silently turns --verify-no-changes into a no-op.
+      # g0v0.Server.Common comes in as a project reference and carries its own style drift, which
+      # must not fail this repo's CI. Not using `--include` because it silently turns
+      # --verify-no-changes into a no-op.
       - name: Check formatting
+        id: format
+        if: ${{ !cancelled() }}
+        continue-on-error: true
         working-directory: g0v0.Server.Realtime
         run: >
           dotnet format g0v0.Server.Realtime.sln --verify-no-changes --no-restore
@@ -67,28 +71,67 @@ jobs:
       # TreatWarningsAsErrors is switched on by Directory.Build.props when CI is set, which also
       # scopes the gate to this repository's projects only.
       - name: Build with analyzers
+        id: build
+        if: ${{ !cancelled() }}
+        continue-on-error: true
         working-directory: g0v0.Server.Realtime
-        run: dotnet build --no-restore --configuration Debug
+        run: |
+          if dotnet build --no-restore --configuration Debug; then
+            exit 0
+          fi
+          echo "::warning::analyzer gate failed; rebuilding with warnings demoted so InspectCode still has assemblies"
+          dotnet build --no-restore --configuration Debug \
+            -p:TreatWarningsAsErrors=false -p:CodeAnalysisTreatWarningsAsErrors=false
+          exit 1
 
       - name: InspectCode
+        id: inspectcode
+        if: ${{ !cancelled() }}
+        continue-on-error: true
         working-directory: g0v0.Server.Realtime
         run: |
           dotnet tool install --global JetBrains.ReSharper.GlobalTools --version "$INSPECTCODE_VERSION"
           export PATH="$PATH:$HOME/.dotnet/tools"
           mkdir -p artifacts
-          jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --swea \
+
+          # `TreatWarningsAsErrors` is a build-gate switch and must not leak into the analysis.
+          # Directory.Build.props turns it on whenever `CI` is set, and InspectCode then re-maps
+          # analyzer severities: measured on this solution, `CI=true` turns 0 findings into 9 CA1822
+          # ("member can be made static") that .globalconfig deliberately keeps at `suggestion`.
+          # Passing the property here also stops the self-build below from failing on those.
+          inspect_args=(--no-updates --severity=WARNING --swea --properties=TreatWarningsAsErrors=false)
+
+          # Reuse the build above when its output is actually there, otherwise let InspectCode build
+          # the solution itself. `--no-build` against a missing assembly produces a report full of
+          # bogus "cannot resolve symbol" errors.
+          if [ -f g0v0.Server.Realtime/bin/Debug/net10.0/g0v0.Server.Realtime.dll ]; then
+            inspect_args+=(--no-build)
+          else
+            echo "::warning::no Debug assembly found; letting InspectCode build the solution"
+          fi
+
+          jb inspectcode g0v0.Server.Realtime.sln "${inspect_args[@]}" \
             --output=artifacts/inspectcode.sarif
 
           # A path that escapes the solution directory belongs to g0v0.Server.Common. Drop it here,
-          # once, so the report we upload and the report we gate on are the same file.
-          jq '.runs[].results |= map(
+          # once, so the report we upload and the report we gate on are the same file. If the
+          # filter itself breaks, fall back to the unfiltered report rather than shipping nothing:
+          # a report with foreign findings is still useful, a missing report is not.
+          if ! jq '.runs[].results |= map(
                 select((.locations[0].physicalLocation.artifactLocation.uri // "") | startswith("../") | not)
-              )' artifacts/inspectcode.sarif > artifacts/code-scanning.sarif
+              )' artifacts/inspectcode.sarif > artifacts/code-scanning.sarif.tmp; then
+            echo "::warning::could not filter the SARIF report; uploading it unfiltered"
+            cp artifacts/inspectcode.sarif artifacts/code-scanning.sarif.tmp
+          fi
+          mv artifacts/code-scanning.sarif.tmp artifacts/code-scanning.sarif
 
       - name: Upload report to code scanning
         # Fork pull requests get a read-only token and cannot write alerts; the job still gates
         # on the findings below, the report is additionally kept as a plain artifact.
-        if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        # `hashFiles` guards the case where InspectCode died before writing anything.
+        if: ${{ !cancelled()
+          && hashFiles('g0v0.Server.Realtime/artifacts/code-scanning.sarif') != ''
+          && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: g0v0.Server.Realtime/artifacts/code-scanning.sarif
@@ -106,18 +149,48 @@ jobs:
           path: g0v0.Server.Realtime/artifacts/code-scanning.sarif
           if-no-files-found: ignore
 
-      - name: Fail on InspectCode findings
+      # The single verdict for this job. Reading `steps.*.outcome` (not `conclusion`) is what makes
+      # the `continue-on-error` above harmless: outcome still reports the real failure.
+      - name: Inspection summary
+        if: ${{ !cancelled() }}
         working-directory: g0v0.Server.Realtime
+        env:
+          FORMAT_OUTCOME: ${{ steps.format.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          INSPECT_OUTCOME: ${{ steps.inspectcode.outcome }}
         run: |
-          jq -r '.runs[].results[]
-                 | select(.level == "warning" or .level == "error")
-                 | [.level, .ruleId,
-                    (.locations[0].physicalLocation.artifactLocation.uri // ""),
-                    (.locations[0].physicalLocation.region.startLine // 0),
-                    .message.text] | @tsv' artifacts/code-scanning.sarif
-          problems=$(jq '[.runs[].results[] | select(.level == "warning" or .level == "error")] | length' artifacts/code-scanning.sarif)
+          fail=0
+          check() {
+            if [ "$2" = "success" ]; then
+              printf 'PASS  %-22s\n' "$1"
+            else
+              printf 'FAIL  %-22s (%s)\n' "$1" "$2"
+              fail=1
+            fi
+          }
+
+          check "format" "$FORMAT_OUTCOME"
+          check "build with analyzers" "$BUILD_OUTCOME"
+          check "InspectCode" "$INSPECT_OUTCOME"
+
+          if [ -s artifacts/code-scanning.sarif ]; then
+            jq -r '.runs[].results[]
+                   | select(.level == "warning" or .level == "error")
+                   | [.level, .ruleId,
+                      (.locations[0].physicalLocation.artifactLocation.uri // ""),
+                      (.locations[0].physicalLocation.region.startLine // 0),
+                      .message.text] | @tsv' artifacts/code-scanning.sarif \
+              || echo "::warning::could not list the findings; see the report artifact"
+            problems=$(jq '[.runs[].results[] | select(.level == "warning" or .level == "error")] | length' artifacts/code-scanning.sarif) \
+              || problems=-1
+          else
+            echo "::error::InspectCode produced no report"
+            problems=-1
+          fi
+
           echo "InspectCode problems in this repository: $problems"
-          [ "$problems" -eq 0 ]
+          [ "$problems" -eq 0 ] || fail=1
+          exit "$fail"
 
   test:
     name: Test

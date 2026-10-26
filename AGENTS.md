@@ -37,6 +37,19 @@ CI (`.github/workflows/ci.yml`) is two jobs:
   `resharper-inspectcode`), and any remaining warning/error fails the job.
 - `test`: `dotnet test --configuration Release`.
 
+The three `code-quality` inspections are deliberately **independent**: each one is `continue-on-error: true` with
+`if: ${{ !cancelled() }}`, so one failing step does not hide the other two's findings, and the final
+`Inspection summary` step is the only thing that fails the job (it reads `steps.*.outcome`, never `conclusion`).
+To keep that working, the analyzer build is re-run with `-p:TreatWarningsAsErrors=false` when the gate fails — a
+promoted warning makes `csc` skip emitting the assembly, and `jb --no-build` without an assembly produces a report
+full of bogus "cannot resolve symbol" errors. If no Debug assembly exists at all, the InspectCode step drops
+`--no-build` and lets the tool build the solution itself.
+
+InspectCode is *also* always passed `--properties=TreatWarningsAsErrors=false`, for a different reason: with the
+property on, ReSharper re-maps analyzer severities and this solution goes from 0 to 9 `CA1822` findings that
+`.globalconfig` deliberately keeps at `suggestion` (verified: `CI=true` → 9, `CI=true` + the property → 0). The
+build gate must not change what the analyzer reports.
+
 Everything is scoped to **this repository**, because `g0v0.Server.Common` is a sibling checkout that must never fail
 this repo's CI: `dotnet format --exclude ../g0v0.Server.Common` (`--include` is *not* usable — it silently turns
 `--verify-no-changes` into a no-op), `TreatWarningsAsErrors` set from `Directory.Build.props` on `$(CI)` only (Common
