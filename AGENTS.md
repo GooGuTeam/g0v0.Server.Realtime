@@ -24,7 +24,7 @@ Run from the repo root:
 - Test all: `dotnet test`
 - Single fixture: `dotnet test --filter "FullyQualifiedName~SpectatorHubTests"`
 - Run server: `dotnet run --project g0v0.Server.Realtime/g0v0.Server.Realtime.csproj`
-- Format check (CI gate): `dotnet format --verify-no-changes --exclude ../g0v0.Server.Common`
+- Format check (CI gate): `dotnet format whitespace --verify-no-changes --exclude ../g0v0.Server.Common`
 - Apply formatting: `dotnet format --exclude ../g0v0.Server.Common`
 - Install InspectCode: `dotnet tool install --global JetBrains.ReSharper.GlobalTools --version 2026.2.1`
 - InspectCode: `dotnet build --configuration Debug` first, then `jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --swea --output=artifacts/inspectcode.sarif`
@@ -32,10 +32,18 @@ Run from the repo root:
 
 CI (`.github/workflows/ci.yml`) is two jobs:
 
-- `code-quality`: `dotnet format --verify-no-changes`, a **Debug** build with warnings as errors, then warning-level
-  JetBrains InspectCode. The SARIF report goes to GitHub code scanning (`Security` → `Code scanning`, category
-  `resharper-inspectcode`), and any remaining warning/error fails the job.
+- `code-quality`: `dotnet format whitespace --verify-no-changes`, a **Debug** build with warnings as errors, then
+  warning-level JetBrains InspectCode. The SARIF report goes to GitHub code scanning (`Security` → `Code scanning`,
+  category `resharper-inspectcode`), and any remaining warning/error fails the job.
 - `test`: `dotnet test --configuration Release -p:TreatWarningsAsErrors=false`.
+
+Each gate owns exactly one thing, so one problem is reported once. The bare `dotnet format` command also runs the
+style and analyzer fixers, which duplicate the build's diagnostics: a single `MA0006` used to appear as two `error`
+annotations in the format step, two more in the build step, twice in the summary, twice in the `test` job and again
+as a code-scanning alert. `whitespace` keeps the format gate on layout only (`dotnet format whitespace` still
+catches indentation drift as `error WHITESPACE`), and analyzer/style rules are the build's business. The summary
+additionally de-duplicates by (file, line, column, rule) and derives its count from the printed list, so the number
+it fails on always equals the number of lines above it.
 
 The three `code-quality` inspections are deliberately **independent**: each one is `continue-on-error: true` with
 `if: ${{ !cancelled() }}`, so one failing step does not hide the other two's findings, and the final

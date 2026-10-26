@@ -55,16 +55,22 @@ jobs:
         working-directory: g0v0.Server.Realtime
         run: dotnet restore
 
+      # Only the whitespace formatter runs here, and that is deliberate. The bare `dotnet format`
+      # command also runs the style and analyzer fixers, which re-report exactly the diagnostics the
+      # build below already fails on: one `MA0006` used to surface as two `error` annotations in this
+      # step, two more in the build step, and twice again in the summary. Each gate now owns one
+      # thing -- this one owns layout, the build owns analyzer diagnostics.
+      #
       # g0v0.Server.Common comes in as a project reference and carries its own style drift, which
       # must not fail this repo's CI. Not using `--include` because it silently turns
       # --verify-no-changes into a no-op.
-      - name: Check formatting
+      - name: Check whitespace formatting
         id: format
         if: ${{ !cancelled() }}
         continue-on-error: true
         working-directory: g0v0.Server.Realtime
         run: >
-          dotnet format g0v0.Server.Realtime.sln --verify-no-changes --no-restore
+          dotnet format whitespace g0v0.Server.Realtime.sln --verify-no-changes --no-restore
           --exclude ../g0v0.Server.Common
 
       # Debug, because that is the configuration `jb inspectcode --no-build` evaluates below.
@@ -173,18 +179,26 @@ jobs:
           check "build with analyzers" "$BUILD_OUTCOME"
           check "InspectCode" "$INSPECT_OUTCOME"
 
-          if [ -s artifacts/code-scanning.sarif ]; then
-            jq -r '.runs[].results[]
-                   | select(.level == "warning" or .level == "error")
-                   | [.level, .ruleId,
-                      (.locations[0].physicalLocation.artifactLocation.uri // ""),
-                      (.locations[0].physicalLocation.region.startLine // 0),
-                      .message.text] | @tsv' artifacts/code-scanning.sarif \
-              || echo "::warning::could not list the findings; see the report artifact"
-            problems=$(jq '[.runs[].results[] | select(.level == "warning" or .level == "error")] | length' artifacts/code-scanning.sarif) \
-              || problems=-1
+          # One diagnostic is one line. InspectCode can emit the same problem once per project it
+          # analyses a file in, and the printed list has to agree with the number that fails the
+          # job -- so the list is de-duplicated once (keyed on file, position and rule; two
+          # different rules on the same line are two real problems and stay separate), written to a
+          # file, and the count is the line count of that same file.
+          if [ -s artifacts/code-scanning.sarif ] && jq -r '[.runs[].results[]
+                 | select(.level == "warning" or .level == "error")]
+                 | unique_by([(.locations[0].physicalLocation.artifactLocation.uri // ""),
+                              (.locations[0].physicalLocation.region.startLine // 0),
+                              (.locations[0].physicalLocation.region.startColumn // 0),
+                              .ruleId])
+                 | .[]
+                 | [.level, .ruleId,
+                    (.locations[0].physicalLocation.artifactLocation.uri // ""),
+                    (.locations[0].physicalLocation.region.startLine // 0),
+                    .message.text] | @tsv' artifacts/code-scanning.sarif > artifacts/findings.tsv; then
+            cat artifacts/findings.tsv
+            problems=$(wc -l < artifacts/findings.tsv)
           else
-            echo "::error::InspectCode produced no report"
+            echo "::error::InspectCode produced no usable report"
             problems=-1
           fi
 
