@@ -129,6 +129,7 @@ public static class Program
         {
             BanchoBot bot = new(
                 serviceProvider.GetRequiredService<ILogger<BanchoBot>>(),
+                serviceProvider.GetRequiredService<ConfigManager>(),
                 serviceProvider.GetRequiredService<IServiceScopeFactory>(),
                 serviceProvider.GetRequiredService<INotificationServer>(),
                 serviceProvider.GetRequiredService<PlayerManager>());

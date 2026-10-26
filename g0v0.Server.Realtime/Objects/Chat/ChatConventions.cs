@@ -1,5 +1,6 @@
 ﻿// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using System.Text;
 using g0v0.Server.Common.Database.Models;
 using osu.Game.Online.Chat;
 
@@ -132,5 +133,86 @@ internal static class ChatConventions
         return content.Length > limit
             ? string.Concat(content.AsSpan(0, limit - ellipsis.Length), ellipsis)
             : content;
+    }
+
+    /// <summary>
+    /// Splits a message into the parts needed to stay within a channel's message
+    /// length limit, so long bot replies are delivered instead of rejected.
+    /// </summary>
+    /// <param name="content">The message content.</param>
+    /// <param name="limit">The maximum length of a single message.</param>
+    /// <returns>
+    /// The parts to send, in order, each no longer than <paramref name="limit"/>.
+    /// Line breaks are preferred as split points, then spaces.
+    /// </returns>
+    /// <remarks>
+    /// Lengths are counted in <see cref="char"/>s, which never exceeds the rune
+    /// count <c>SendMessage</c> validates against, so every part is accepted.
+    /// </remarks>
+    internal static IReadOnlyList<string> SplitMessage(string content, int limit)
+    {
+        if (limit <= 0 || content.Length <= limit)
+        {
+            return [content];
+        }
+
+        List<string> parts = [];
+        StringBuilder current = new();
+
+        foreach (string rawLine in content.Split('\n'))
+        {
+            foreach (string piece in SplitLine(rawLine.Trim(), limit))
+            {
+                if (current.Length == 0)
+                {
+                    current.Append(piece);
+                }
+                else if (current.Length + 1 + piece.Length <= limit)
+                {
+                    current.Append(' ').Append(piece);
+                }
+                else
+                {
+                    parts.Add(current.ToString());
+                    current.Clear();
+                    current.Append(piece);
+                }
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            parts.Add(current.ToString());
+        }
+
+        return parts.Count == 0 ? [content] : parts;
+    }
+
+    /// <summary>
+    /// Cuts one line into pieces that fit the limit, preferring spaces and never
+    /// separating the two halves of a surrogate pair.
+    /// </summary>
+    /// <param name="line">The line to cut.</param>
+    /// <param name="limit">The maximum length of a single piece.</param>
+    /// <returns>The pieces of the line.</returns>
+    private static IEnumerable<string> SplitLine(string line, int limit)
+    {
+        while (line.Length > limit)
+        {
+            int cut = line.LastIndexOf(' ', limit - 1);
+
+            if (cut <= 0)
+            {
+                cut = char.IsHighSurrogate(line[limit - 1]) ? limit - 1 : limit;
+            }
+
+            yield return line[..cut].TrimEnd();
+            line = line[cut..].TrimStart();
+        }
+
+        if (line.Length > 0)
+        {
+            yield return line;
+        }
     }
 }

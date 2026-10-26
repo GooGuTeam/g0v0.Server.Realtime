@@ -2,10 +2,12 @@
 
 using System.Collections.Concurrent;
 using System.Reflection;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications.Bot.Commands;
+using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Players;
 using osu.Game.Online.Chat;
 
@@ -27,6 +29,7 @@ namespace g0v0.Server.Realtime.Notifications.Bot;
 /// </remarks>
 public class BanchoBot(
     ILogger<BanchoBot> logger,
+    ConfigManager configManager,
     IServiceScopeFactory scopeFactory,
     INotificationServer notificationServer,
     PlayerManager playerManager) : IBanchoBot
@@ -132,14 +135,30 @@ public class BanchoBot(
             return;
         }
 
-        await SendReplyAsync(senderId, channelId, reply, UsesPmReply(channelType));
+        // Delivering the reply must never fail the request that carried the
+        // command: the message has already been persisted by the time the bot
+        // runs, so a rejection here would only turn a successful send into an
+        // error response.
+        try
+        {
+            await SendReplyAsync(senderId, channelId, reply, UsesPmReply(channelType));
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to deliver the BanchoBot reply to !{Command} for user {UserId} in channel {ChannelId}.",
+                command,
+                senderId,
+                channelId);
+        }
     }
 
     private async Task SendReplyAsync(int senderId, int channelId, string content, bool isPublicChannel)
     {
         if (!isPublicChannel)
         {
-            await SendToChannelAsync(channelId, content);
+            await SendPartsAsync(channelId, content);
             return;
         }
 
@@ -155,7 +174,24 @@ public class BanchoBot(
             LazerPlayer.GetOrCreate(playerManager, senderId),
             pmChannel.ChannelId);
 
-        await SendToChannelAsync(pmChannel.ChannelId, content);
+        await SendPartsAsync(pmChannel.ChannelId, content);
+    }
+
+    /// <summary>
+    /// Sends the reply, split into as many messages as the configured message
+    /// length limit requires. Some replies (<c>!mp help</c>, <c>!mp settings</c>)
+    /// are longer than a single chat message allows.
+    /// </summary>
+    /// <param name="channelId">The channel to reply in.</param>
+    /// <param name="content">The reply text.</param>
+    private async Task SendPartsAsync(int channelId, string content)
+    {
+        int limit = configManager.TryGet<ChatConfig>()?.MessageLengthLimit ?? ChatConfig.DefaultMessageLengthLimit;
+
+        foreach (string part in ChatConventions.SplitMessage(content, limit))
+        {
+            await SendToChannelAsync(channelId, part);
+        }
     }
 
     private Task<ChatMessage> SendToChannelAsync(int channelId, string content)

@@ -8,6 +8,7 @@ using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
+using g0v0.Server.Realtime.Notifications.Bot;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Notifications;
 using g0v0.Server.Realtime.Objects.Players;
@@ -457,6 +458,14 @@ public class NotificationServer(
 
     private async Task ThrottleAsync(int userId, bool isPrivate)
     {
+        // The bot's output is server-driven and already bounded by the caller's
+        // own rate limit, so throttling it would only drop the trailing parts of
+        // a split reply.
+        if (userId == IBanchoBot.BanchoBotId)
+        {
+            return;
+        }
+
         ChatConfig chatConfig = GetChatConfig();
         int limit = isPrivate ? chatConfig.PrivateMessageLimit : chatConfig.PublicMessageLimit;
         int window = isPrivate ? chatConfig.PrivateMessageWindowSeconds : chatConfig.PublicMessageWindowSeconds;

@@ -264,7 +264,8 @@ host-only.
 
 `makeprivate` and `clearhost` are rejected, as they are not modelled by this server. `!mp help` lists everything.
 Rooms created with `!mp make` start empty: join the room from the multiplayer lobby before using `map` / `mods`, which
-edit the room's playlist.
+edit the room's playlist. Replies longer than `MessageLengthLimit` (`config/chat.json`) are delivered as several
+messages instead of being truncated.
 
 ### Run and connect to the server.
 

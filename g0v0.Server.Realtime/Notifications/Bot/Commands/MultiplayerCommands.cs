@@ -96,16 +96,15 @@ public sealed class MultiplayerCommands(
     /// The help text. Kept on a single line because chat messages have their line
     /// breaks normalised away.
     /// </summary>
-    private const string HelpText = "Available !mp commands: "
-                                    + "!mp make <name>, !mp close, !mp settings, "
-                                    + "!mp name <title>, !mp password [password], !mp size <size>, !mp set <0|2>, "
-                                    + "!mp lock, !mp unlock, !mp host <username>, !mp invite <username>, "
-                                    + "!mp kick <username>, !mp ban <username>, "
-                                    + "!mp addref <username>, !mp removeref <username>, !mp listrefs, "
-                                    + "!mp map <beatmap_id> [ruleset_id], !mp mods [acronym ...], "
-                                    + "!mp move <username> <slot>, !mp team <username> <red|blue>, "
-                                    + "!mp start [seconds], !mp abort, !mp timer [seconds], !mp aborttimer. "
-                                    + "Subcommands marked with <username> also accept #<user_id>.";
+    private const string HelpText = "Available !mp commands:\n"
+                                    + "Room: !mp make <name>, !mp close, !mp settings\n"
+                                    + "Settings: !mp name <title>, !mp password [password], !mp size <size>, !mp set <0|2>\n"
+                                    + "Slots: !mp lock, !mp unlock, !mp move <username> <slot>, !mp team <username> <red|blue>\n"
+                                    + "Players: !mp host <username>, !mp invite <username>, !mp kick <username>, !mp ban <username>\n"
+                                    + "Referees: !mp addref <username>, !mp removeref <username>, !mp listrefs\n"
+                                    + "Beatmap: !mp map <beatmap_id> [ruleset_id], !mp mods [acronym ...]\n"
+                                    + "Match: !mp start [seconds], !mp abort, !mp timer [seconds], !mp aborttimer\n"
+                                    + "Commands taking <username> also accept #<user_id>.";
 
     /// <summary>
     /// Handles <c>!mp &lt;subcommand&gt; [args]</c>.
@@ -312,7 +311,7 @@ public sealed class MultiplayerCommands(
 
         string participants = users.Count == 0
             ? "None"
-            : string.Join(", ", users.Select(user =>
+            : string.Join("\n", users.Select(user =>
             {
                 string name = usernames.GetValueOrDefault(user.UserID, $"#{user.UserID.ToString(CultureInfo.InvariantCulture)}");
                 string role = user.Role == MultiplayerRoomUserRole.Referee
@@ -323,10 +322,12 @@ public sealed class MultiplayerCommands(
                 return $"{name} ({role}, {user.State})";
             }));
 
-        return $"Room name: {room.Settings.Name} | Room ID: {room.RoomId} | Host: {host} | "
-               + $"Team mode: {GetMatchTypeName(room.Settings.MatchType)} | Size: {room.Settings.MaxParticipants?.ToString(CultureInfo.InvariantCulture) ?? "unlimited"} | "
-               + $"Password: {(string.IsNullOrEmpty(room.Settings.Password) ? "none" : room.Settings.Password)} | "
-               + $"Beatmap: {beatmap} | Players ({users.Count.ToString(CultureInfo.InvariantCulture)}): {participants}";
+        return $"Room name: {room.Settings.Name} (ID {room.RoomId.ToString(CultureInfo.InvariantCulture)})\n"
+               + $"Host: {host} | Team mode: {GetMatchTypeName(room.Settings.MatchType)}\n"
+               + $"Size: {room.Settings.MaxParticipants?.ToString(CultureInfo.InvariantCulture) ?? "unlimited"} | "
+               + $"Password: {(string.IsNullOrEmpty(room.Settings.Password) ? "none" : room.Settings.Password)}\n"
+               + $"Beatmap: {beatmap}\n"
+               + $"Players ({users.Count.ToString(CultureInfo.InvariantCulture)}): {participants}";
     }
 
     /// <summary>
