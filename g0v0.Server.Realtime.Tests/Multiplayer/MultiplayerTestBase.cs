@@ -480,7 +480,7 @@ internal sealed class FakeBeatmapRepository : IBeatmapRepository
         string? version = BeatmapFilename.ExtractVersion(filename);
         IReadOnlyList<Beatmap> matches = version is null
             ? []
-            : Beatmaps.Where(beatmap => beatmap.Version == version).ToArray();
+            : Beatmaps.Where(beatmap => string.Equals(beatmap.Version, version, StringComparison.Ordinal)).ToArray();
         return Task.FromResult(matches);
     }
 

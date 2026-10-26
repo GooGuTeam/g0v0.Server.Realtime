@@ -899,7 +899,7 @@ public class SpectatorHubTests
             string? version = g0v0.Server.Common.Database.Repository.BeatmapFilename.ExtractVersion(filename);
             IReadOnlyList<DbBeatmap> matches = version is null
                 ? []
-                : _beatmapsById.Values.Where(beatmap => beatmap.Version == version).ToArray();
+                : _beatmapsById.Values.Where(beatmap => string.Equals(beatmap.Version, version, StringComparison.Ordinal)).ToArray();
             return Task.FromResult(matches);
         }
 

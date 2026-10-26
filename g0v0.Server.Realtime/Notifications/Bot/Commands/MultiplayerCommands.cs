@@ -68,12 +68,6 @@ public sealed class MultiplayerCommands(
     private const int DefaultRoomSize = 8;
 
     /// <summary>
-    /// The number of active tournament rooms a user may own when the
-    /// configuration does not override it.
-    /// </summary>
-    private const int DefaultMaxActiveTournamentRooms = 4;
-
-    /// <summary>
     /// The countdown duration used by <c>!mp timer</c> when no argument is given.
     /// </summary>
     private const int DefaultTimerSeconds = 30;
@@ -306,9 +300,9 @@ public sealed class MultiplayerCommands(
         List<MultiplayerRoomUser> users = room.Users.ToList();
         Dictionary<int, string> usernames = await GetUsernamesAsync(users.Select(user => user.UserID).Append(room.HostUserId ?? 0));
 
-        string host = room.Host?.UserID is int hostId && usernames.TryGetValue(hostId, out string? hostName)
+        string host = room.Host?.UserID is { } hostId && usernames.TryGetValue(hostId, out string? hostName)
             ? hostName
-            : room.HostUserId is int hostUserId && usernames.TryGetValue(hostUserId, out string? ownerName)
+            : room.HostUserId is { } hostUserId && usernames.TryGetValue(hostUserId, out string? ownerName)
                 ? ownerName
                 : "None";
 
@@ -720,8 +714,8 @@ public sealed class MultiplayerCommands(
         // Slots are 0-based in the room state but 1-based for tournament users,
         // matching the wording of the osu! wiki.
         int slotId = slot - 1;
-        if (room.MatchState is StandardMatchRoomState matchState
-            && matchState.Slots != null
+
+        if (room.MatchState is StandardMatchRoomState { Slots: not null } matchState
             && Array.IndexOf(matchState.Slots, target.Id) == slotId)
         {
             return $"{target.Username} is already in slot #{slot.ToString(CultureInfo.InvariantCulture)}.";
