@@ -12,7 +12,7 @@ public interface IBanchoBot
     /// <summary>
     /// The user ID of the bot account.
     /// </summary>
-    public const int BanchoBotId = 2;
+    public const int BanchoBotId = 3;
 
     /// <summary>
     /// Attempts to parse and handle a message as a bot command.
