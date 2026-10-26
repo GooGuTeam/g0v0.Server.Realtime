@@ -2,10 +2,12 @@
 
 using System.Collections.Concurrent;
 using System.Reflection;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications.Bot.Commands;
+using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Players;
 using osu.Game.Online.Chat;
 
@@ -18,7 +20,8 @@ namespace g0v0.Server.Realtime.Notifications.Bot;
 /// <remarks>
 /// Commands are registered declaratively with the <see cref="BotCommandAttribute"/>
 /// on methods of <see cref="BanchoBotCommandSet"/> subclasses (see
-/// <see cref="UtilityCommands"/> and <see cref="ScoreCommands"/>).
+/// <see cref="UtilityCommands"/>, <see cref="ScoreCommands"/> and
+/// <see cref="MultiplayerCommands"/>).
 /// Only replies to <see cref="ChannelType.Public"/> channels are delivered
 /// through a PM channel with the bot; replies in every other channel type are
 /// delivered in the channel the command was sent in, as in the reference
@@ -26,6 +29,7 @@ namespace g0v0.Server.Realtime.Notifications.Bot;
 /// </remarks>
 public class BanchoBot(
     ILogger<BanchoBot> logger,
+    ConfigManager configManager,
     IServiceScopeFactory scopeFactory,
     INotificationServer notificationServer,
     PlayerManager playerManager) : IBanchoBot
@@ -65,12 +69,15 @@ public class BanchoBot(
     }
 
     /// <summary>
-    /// Discovers and registers all commands from the built-in command sets.
+    /// Discovers and registers all commands from the given command sets.
     /// </summary>
-    public void Initialize()
+    /// <param name="commandSets">The command sets to register.</param>
+    public void Initialize(IEnumerable<BanchoBotCommandSet> commandSets)
     {
-        RegisterCommandSet(new UtilityCommands(scopeFactory));
-        RegisterCommandSet(new ScoreCommands(scopeFactory));
+        foreach (BanchoBotCommandSet commandSet in commandSets)
+        {
+            RegisterCommandSet(commandSet);
+        }
     }
 
     /// <summary>
@@ -105,10 +112,12 @@ public class BanchoBot(
             return;
         }
 
+        BotCommandContext context = new(senderId, channelId, channelType, args);
+
         string? reply;
         try
         {
-            reply = await handler.InvokeAsync(senderId, args, _handlers.Keys.ToArray());
+            reply = await handler.InvokeAsync(context, _handlers.Keys.ToArray());
         }
         catch (Exception exception)
         {
@@ -126,14 +135,30 @@ public class BanchoBot(
             return;
         }
 
-        await SendReplyAsync(senderId, channelId, reply, UsesPmReply(channelType));
+        // Delivering the reply must never fail the request that carried the
+        // command: the message has already been persisted by the time the bot
+        // runs, so a rejection here would only turn a successful send into an
+        // error response.
+        try
+        {
+            await SendReplyAsync(senderId, channelId, reply, UsesPmReply(channelType));
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(
+                exception,
+                "Failed to deliver the BanchoBot reply to !{Command} for user {UserId} in channel {ChannelId}.",
+                command,
+                senderId,
+                channelId);
+        }
     }
 
     private async Task SendReplyAsync(int senderId, int channelId, string content, bool isPublicChannel)
     {
         if (!isPublicChannel)
         {
-            await SendToChannelAsync(channelId, content);
+            await SendPartsAsync(channelId, content);
             return;
         }
 
@@ -149,7 +174,24 @@ public class BanchoBot(
             LazerPlayer.GetOrCreate(playerManager, senderId),
             pmChannel.ChannelId);
 
-        await SendToChannelAsync(pmChannel.ChannelId, content);
+        await SendPartsAsync(pmChannel.ChannelId, content);
+    }
+
+    /// <summary>
+    /// Sends the reply, split into as many messages as the configured message
+    /// length limit requires. Some replies (<c>!mp help</c>, <c>!mp settings</c>)
+    /// are longer than a single chat message allows.
+    /// </summary>
+    /// <param name="channelId">The channel to reply in.</param>
+    /// <param name="content">The reply text.</param>
+    private async Task SendPartsAsync(int channelId, string content)
+    {
+        int limit = configManager.TryGet<ChatConfig>()?.MessageLengthLimit ?? ChatConfig.DefaultMessageLengthLimit;
+
+        foreach (string part in ChatConventions.SplitMessage(content, limit))
+        {
+            await SendToChannelAsync(channelId, part);
+        }
     }
 
     private Task<ChatMessage> SendToChannelAsync(int channelId, string content)
@@ -159,7 +201,7 @@ public class BanchoBot(
 
     private sealed class CommandHandler(BanchoBotCommandSet commandSet, MethodInfo method)
     {
-        public async Task<string?> InvokeAsync(int senderId, List<string> args, IReadOnlyCollection<string> availableCommands)
+        public async Task<string?> InvokeAsync(BotCommandContext context, IReadOnlyCollection<string> availableCommands)
         {
             ParameterInfo[] parameters = method.GetParameters();
             object?[] arguments = new object?[parameters.Length];
@@ -168,8 +210,9 @@ public class BanchoBot(
             {
                 arguments[i] = parameters[i].ParameterType switch
                 {
-                    _ when parameters[i].ParameterType == typeof(int) => senderId,
-                    _ when parameters[i].ParameterType == typeof(string[]) => args.ToArray(),
+                    _ when parameters[i].ParameterType == typeof(BotCommandContext) => context,
+                    _ when parameters[i].ParameterType == typeof(int) => context.SenderId,
+                    _ when parameters[i].ParameterType == typeof(string[]) => context.Arguments.ToArray(),
                     _ when parameters[i].ParameterType == typeof(IReadOnlyCollection<string>) => availableCommands,
                     _ => null,
                 };

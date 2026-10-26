@@ -1,4 +1,4 @@
-# g0v0.Server.Realtime
+﻿# g0v0.Server.Realtime
 
 This project is a part of g0v0 server v2. It is the realtime server for g0v0 server series which provides realtime
 services like spectating, chatting, multiplaying, online status and so on.
@@ -13,6 +13,7 @@ each feature.
     - [x] Spectating (SpectatorHub)
     - [ ] Multiplay (MultiplayerHub)
         - [x] Standard Play
+        - [x] Tournament management commands (`!mp`)
         - [ ] Ranked Play
     - [ ] RefereeHub
 - [x] Chatting (NotificationServer)
@@ -155,6 +156,7 @@ All configurations are hot-reloadable at runtime.
 | `GuestPlaylistLimit`               | int      | `3`        | Max playlist items a guest may enqueue (restart required)                                                  |
 | `MultiplayerDisconnectGracePeriod` | TimeSpan | `00:00:30` | How long a disconnected user is kept in their room before removal (hot-reloadable)                         |
 | `TournamentRoomRetentionPeriod`    | TimeSpan | `00:30:00` | How long an empty tournament room is retained before being destroyed (hot-reloadable)                      |
+| `MaxActiveTournamentRooms`         | int      | `4`        | Max number of tournament rooms a single user may own through `!mp make` (hot-reloadable)                    |
 | `Sentry.Dsn`                       | string   | `""`       | Sentry DSN; Sentry is enabled automatically when this is non-empty (secret, git-ignored; restart required) |
 | `Sentry.Environment`               | string   | `""`       | Sentry environment tag; empty falls back to `ASPNETCORE_ENVIRONMENT` (restart required)                    |
 | `Sentry.TracesSampleRate`          | double   | `0.1`      | Performance-trace sampling rate 0.0–1.0 (restart required)                                                 |
@@ -244,6 +246,26 @@ The `Options` object matches the v1 `STORAGE_SETTINGS` for each provider:
   }
 }
 ```
+
+### Tournament management commands (`!mp`)
+
+Because the rooms live in this server, the osu!wiki
+[tournament management commands](https://osu.ppy.sh/wiki/osu%21_tournament_client/osu%21tourney/Tournament_management_commands)
+are handled here instead of being relayed to another process. BanchoBot answers in the room channel, and commands are
+authorised like the equivalent hub calls: the room host or a referee may use them, while `addref` / `removeref` are
+host-only.
+
+| Group | Commands |
+| ----- | -------- |
+| Room | `make <name>`, `close`, `settings`, `name <title>`, `password [password]`, `size <size>`, `set <0\|2>` |
+| Players | `host`, `invite`, `kick`, `ban`, `addref`, `removeref`, `listrefs`, `move <user> <slot>`, `team <user> <red\|blue>` |
+| Beatmap | `map <beatmap_id> [ruleset_id]`, `mods [acronym ...]` |
+| Match | `start [seconds]`, `abort`, `timer [seconds]`, `aborttimer`, `lock`, `unlock` |
+
+`makeprivate` and `clearhost` are rejected, as they are not modelled by this server. `!mp help` lists everything.
+Rooms created with `!mp make` start empty: join the room from the multiplayer lobby before using `map` / `mods`, which
+edit the room's playlist. Replies longer than `MessageLengthLimit` (`config/chat.json`) are delivered as several
+messages instead of being truncated.
 
 ### Run and connect to the server.
 

@@ -1,4 +1,4 @@
-// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
+﻿// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Common.Caching;
 using g0v0.Server.Common.Communication;
@@ -8,6 +8,8 @@ using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Notifications.Bot;
+using g0v0.Server.Realtime.Notifications.Bot.Commands;
+using g0v0.Server.Realtime.Objects.Chat;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
@@ -21,6 +23,7 @@ public class BanchoBotTests
     private FakeChatRepository _chatRepository = null!;
     private PlayerManager _playerManager = null!;
     private ConfigManager _configManager = null!;
+    private IServiceScopeFactory _scopeFactory = null!;
     private RecordingNotificationServer _notificationServer = null!;
     private BanchoBot _bot = null!;
 
@@ -42,19 +45,25 @@ public class BanchoBotTests
         string basePath = Path.Combine(Path.GetTempPath(), "g0v0-bancho-bot-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(basePath);
         _configManager = new ConfigManager(basePath);
+        _scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
 
         _notificationServer = new RecordingNotificationServer(
             new FakeRankedCache(),
             _playerManager,
             _configManager,
-            serviceProvider.GetRequiredService<IServiceScopeFactory>());
+            _scopeFactory);
 
         _bot = new BanchoBot(
             NullLogger<BanchoBot>.Instance,
-            serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            _configManager,
+            _scopeFactory,
             _notificationServer,
             _playerManager);
-        _bot.Initialize();
+        _bot.Initialize(
+        [
+            new UtilityCommands(serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+            new ScoreCommands(serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+        ]);
     }
 
     [Test]
@@ -92,6 +101,35 @@ public class BanchoBotTests
         await _bot.TryHandleAsync(1, 100, "just a normal message", ChannelType.Public);
 
         Assert.That(_notificationServer.SentMessages, Is.Empty);
+    }
+
+    [Test]
+    public async Task LongReply_ShouldBeSplitIntoMessagesThatFitTheLimit()
+    {
+        _bot.RegisterCommandSet(new LongReplyCommands(_scopeFactory));
+
+        await _bot.TryHandleAsync(1, 100, "!long", ChannelType.Public);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_notificationServer.SentMessages, Has.Count.GreaterThan(1));
+            Assert.That(
+                _notificationServer.SentMessages.Select(message => message.Content.Length),
+                Is.All.LessThanOrEqualTo(ChatConfig.DefaultMessageLengthLimit));
+            Assert.That(
+                string.Join(' ', _notificationServer.SentMessages.Select(message => message.Content)),
+                Is.EqualTo(LongReplyCommands.Reply.Replace('\n', ' ')));
+        });
+    }
+
+    [Test]
+    public async Task ReplyRejection_ShouldNotFailTheCommandSender()
+    {
+        _notificationServer.FailSends = true;
+
+        Assert.That(
+            async () => await _bot.TryHandleAsync(1, 100, "!roll 10", ChannelType.Public),
+            Throws.Nothing);
     }
 
     [Test]
@@ -262,12 +300,30 @@ public class BanchoBotTests
     {
         public List<ChatMessage> SentMessages { get; } = new();
 
+        public bool FailSends { get; set; }
+
         public override async Task<ChatMessage> SendMessage(int channelId, int senderId, string content, bool isAction, string? uuid = null)
         {
+            if (FailSends)
+            {
+                throw new ChatMessageRejectedException(
+                    ChatMessageRejectedException.RejectionReason.TooLong,
+                    "The message you are trying to send is too long.");
+            }
+
             ChatMessage message = await base.SendMessage(channelId, senderId, content, isAction, uuid);
             SentMessages.Add(message);
             return message;
         }
+    }
+
+    private sealed class LongReplyCommands(IServiceScopeFactory scopeFactory) : BanchoBotCommandSet(scopeFactory)
+    {
+        public static string Reply { get; } =
+            string.Join('\n', Enumerable.Range(0, 200).Select(index => $"line {index}"));
+
+        [BotCommand("long")]
+        public string Long() => Reply;
     }
 
     private sealed class NoOpTransport : IInterProcessCommunicationTransport

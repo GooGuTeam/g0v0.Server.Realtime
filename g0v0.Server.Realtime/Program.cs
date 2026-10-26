@@ -12,6 +12,7 @@ using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Notifications.Bot;
+using g0v0.Server.Realtime.Notifications.Bot.Commands;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Objects.Rooms;
 using g0v0.Server.Realtime.Services;
@@ -121,14 +122,18 @@ public static class Program
             PlayerManager = serviceProvider.GetRequiredService<PlayerManager>(),
         });
         builder.Services.AddSingleton<RoomManager>();
+        builder.Services.AddSingleton<BanchoBotCommandSet, UtilityCommands>();
+        builder.Services.AddSingleton<BanchoBotCommandSet, ScoreCommands>();
+        builder.Services.AddSingleton<BanchoBotCommandSet, MultiplayerCommands>();
         builder.Services.AddSingleton<IBanchoBot>(serviceProvider =>
         {
             BanchoBot bot = new(
                 serviceProvider.GetRequiredService<ILogger<BanchoBot>>(),
+                serviceProvider.GetRequiredService<ConfigManager>(),
                 serviceProvider.GetRequiredService<IServiceScopeFactory>(),
                 serviceProvider.GetRequiredService<INotificationServer>(),
                 serviceProvider.GetRequiredService<PlayerManager>());
-            bot.Initialize();
+            bot.Initialize(serviceProvider.GetServices<BanchoBotCommandSet>());
             return bot;
         });
         builder.Services.AddSingleton<LazerWebSocketListener>();

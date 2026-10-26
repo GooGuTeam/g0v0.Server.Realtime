@@ -67,6 +67,13 @@ public class RealtimeConfig
     public TimeSpan TournamentRoomRetentionPeriod { get; set; } = TimeSpan.FromMinutes(30);
 
     /// <summary>
+    /// Gets or sets the number of tournament rooms a single user may own at the
+    /// same time through <c>!mp make</c>.
+    /// </summary>
+    [Reloadable]
+    public int MaxActiveTournamentRooms { get; set; } = 4;
+
+    /// <summary>
     /// Gets or sets the Sentry error-monitoring settings.
     /// </summary>
     public SentryOptions Sentry { get; set; } = new();

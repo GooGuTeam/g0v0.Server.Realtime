@@ -83,6 +83,17 @@ public interface IRoom
     MultiplayerPlaylistItem CurrentItem { get; }
 
     /// <summary>
+    /// Gets the user ID of the persisted room host, or <see langword="null"/> when
+    /// the room has no host.
+    /// </summary>
+    /// <remarks>
+    /// This mirrors the persisted host rather than <see cref="Host"/>, which is
+    /// only populated once a user actually joins the room. It is therefore the
+    /// authoritative owner of a room which was created but not joined yet.
+    /// </remarks>
+    int? HostUserId { get; }
+
+    /// <summary>
     /// Disbands the room: persists an immediate end date, closes it and removes
     /// it from the room manager.
     /// </summary>
@@ -153,6 +164,18 @@ public interface IRoom
     Task SetHost(int userId);
 
     /// <summary>
+    /// Changes the role of a user in the room.
+    /// </summary>
+    /// <param name="userId">The user whose role is changing.</param>
+    /// <param name="role">The new role.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// The updated user is re-broadcast as a join event, which is how clients
+    /// learn about role changes.
+    /// </remarks>
+    Task ChangeUserRole(int userId, MultiplayerRoomUserRole role);
+
+    /// <summary>
     /// Changes the room settings.
     /// </summary>
     /// <param name="newSettings">The new settings.</param>
@@ -205,6 +228,20 @@ public interface IRoom
     /// <param name="countdownId">The countdown ID.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     Task StopCountdown(int countdownId);
+
+    /// <summary>
+    /// Starts the given countdown.
+    /// </summary>
+    /// <param name="countdown">The countdown to start.</param>
+    /// <param name="onComplete">The callback invoked when the countdown finishes, if any.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StartCountdown(MultiplayerCountdown countdown, Func<Task>? onComplete = null);
+
+    /// <summary>
+    /// Stops every active countdown except the server-managed gameplay-load one.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task StopAllCountdowns();
 
     /// <summary>
     /// Starts the match.
