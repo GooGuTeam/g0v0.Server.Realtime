@@ -24,15 +24,28 @@ Run from the repo root:
 - Test all: `dotnet test`
 - Single fixture: `dotnet test --filter "FullyQualifiedName~SpectatorHubTests"`
 - Run server: `dotnet run --project g0v0.Server.Realtime/g0v0.Server.Realtime.csproj`
-- Format check (CI gate): `dotnet format --verify-no-changes --verbosity diagnostic`
-- Apply formatting: `dotnet format`
+- Format check (CI gate): `dotnet format --verify-no-changes --exclude ../g0v0.Server.Common`
+- Apply formatting: `dotnet format --exclude ../g0v0.Server.Common`
 - Install InspectCode: `dotnet tool install --global JetBrains.ReSharper.GlobalTools --version 2026.2.1`
-- InspectCode: `jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --output=artifacts/inspectcode.sarif`
-- Strict CI-equivalent build: `dotnet build --configuration Release /warnaserror`
+- InspectCode: `dotnet build --configuration Debug` first, then `jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --swea --output=artifacts/inspectcode.sarif`
+- Strict CI-equivalent build: `CI=true dotnet build` (warnings become errors, see below)
 
-CI runs the `code-style` job: `dotnet format --verify-no-changes`, a `/warnaserror` build, and warning-level JetBrains
-InspectCode. It prints every warning/error and uploads the SARIF report. There is **no test job in CI** — tests must
-be run locally. Format drift or any analyzer/InspectCode warning fails CI.
+CI (`.github/workflows/ci.yml`) is two jobs:
+
+- `code-quality`: `dotnet format --verify-no-changes`, a **Debug** build with warnings as errors, then warning-level
+  JetBrains InspectCode. The SARIF report goes to GitHub code scanning (`Security` → `Code scanning`, category
+  `resharper-inspectcode`), and any remaining warning/error fails the job.
+- `test`: `dotnet test --configuration Release`.
+
+Everything is scoped to **this repository**, because `g0v0.Server.Common` is a sibling checkout that must never fail
+this repo's CI: `dotnet format --exclude ../g0v0.Server.Common` (`--include` is *not* usable — it silently turns
+`--verify-no-changes` into a no-op), `TreatWarningsAsErrors` set from `Directory.Build.props` on `$(CI)` only (Common
+has its own props file and never inherits it), and a `jq` pass that drops any InspectCode result whose path escapes
+the solution directory.
+
+Two details that are easy to break: the InspectCode step builds **Debug** because that is the configuration
+`--no-build` evaluates, and the SARIF upload needs `checkout_path` because the checkout steps put the repository one
+level down (`path: g0v0.Server.Realtime`) — without it every result is dropped as out-of-repository.
 
 `global.json` pins SDK `10.0.0` (`rollForward: latestMinor`). `Directory.Build.props` injects StyleCop.Analyzers, Meziantou.Analyzer, Roslynator, `EnforceCodeStyleInBuild`, and `GenerateDocumentationFile` into every project — do not duplicate those in `.csproj`.
 
@@ -55,7 +68,8 @@ Enforced by `.editorconfig`, `.globalconfig`, `stylecop.json`, and the shared `D
 - `using` directives **outside** the namespace, `System.*` first, no blank lines between groups; file-scoped namespaces; LF; 4 spaces; no trailing newline.
 - SA1124 (regions) and SA1309 (`_underscore` fields) are intentionally disabled. `PlayerFacade`/`IPlayerFacade` even use **public `_underscore` properties** as a dependency-injection facade — preserve this pattern; don't rename them.
 - XML doc comments are required on public/exposed members (`documentExposedElements: true`); the test project sets `<NoWarn>SA0001;SA1600;SA1602;CS1591;CS0618;MA0048</NoWarn>` so tests deliberately skip them.
-- `IDE0005` (unused usings) and `IDE0055` (formatting) are warnings, promoted to errors in CI via `/warnaserror`.
+- `IDE0005` (unused usings) and `IDE0055` (formatting) are warnings, promoted to errors in CI (`CI=true`, mapped to
+  `TreatWarningsAsErrors` in `Directory.Build.props`).
 
 ## Architecture
 
