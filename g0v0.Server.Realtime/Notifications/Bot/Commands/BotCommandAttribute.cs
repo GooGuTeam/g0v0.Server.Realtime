@@ -1,11 +1,14 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
+using JetBrains.Annotations;
+
 namespace g0v0.Server.Realtime.Notifications.Bot.Commands;
 
 /// <summary>
 /// Marks a method as a BanchoBot chat command.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
+[MeansImplicitUse(ImplicitUseTargetFlags.WithMembers)]
 public sealed class BotCommandAttribute(string name) : Attribute
 {
     /// <summary>
