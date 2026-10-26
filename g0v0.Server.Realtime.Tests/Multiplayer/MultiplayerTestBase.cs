@@ -59,6 +59,11 @@ public abstract class MultiplayerTestBase
     internal FakeChatRepository ChatRepository { get; private set; } = null!;
 
     /// <summary>
+    /// Gets the ruleset manager shared by the test room facade.
+    /// </summary>
+    internal RulesetManager RulesetManager { get; private set; } = null!;
+
+    /// <summary>
     /// Gets the service scope factory backing the test room facade.
     /// </summary>
     internal IServiceScopeFactory ScopeFactory { get; private set; } = null!;
@@ -125,6 +130,7 @@ public abstract class MultiplayerTestBase
         ScopeFactory = scopeFactory;
 
         RulesetManager rulesetManager = new(Path.GetTempPath());
+        RulesetManager = rulesetManager;
         NoOpMultiplayerTransport ipcTransport = new();
         InterProcessCommunicationClient ipcClient = new(ipcTransport, "realtime-tests");
         InterProcessCommunicationClient lazerIpcClient = new(ipcTransport, "lazer");

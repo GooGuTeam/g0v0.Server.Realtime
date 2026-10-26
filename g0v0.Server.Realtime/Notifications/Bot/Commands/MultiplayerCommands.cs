@@ -9,6 +9,7 @@ using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Common.Fetching;
+using g0v0.Server.Common.Rulesets;
 using g0v0.Server.Realtime.Hubs;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Objects.Rooms;
@@ -18,6 +19,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.Countdown;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
+using osu.Game.Rulesets;
 using OsuMatchType = osu.Game.Online.Rooms.MatchType;
 
 namespace g0v0.Server.Realtime.Notifications.Bot.Commands;
@@ -47,10 +49,12 @@ namespace g0v0.Server.Realtime.Notifications.Bot.Commands;
 /// <param name="scopeFactory">The service scope factory used to resolve repositories.</param>
 /// <param name="roomManager">The room registry.</param>
 /// <param name="eventDispatcher">The room event dispatcher.</param>
+/// <param name="rulesetManager">The ruleset manager used to name the rulesets reported by the commands.</param>
 public sealed class MultiplayerCommands(
     IServiceScopeFactory scopeFactory,
     RoomManager roomManager,
-    MultiplayerEventDispatcher eventDispatcher) : BanchoBotCommandSet(scopeFactory)
+    MultiplayerEventDispatcher eventDispatcher,
+    RulesetManager rulesetManager) : BanchoBotCommandSet(scopeFactory)
 {
     /// <summary>
     /// The smallest room size accepted by <c>!mp size</c>.
@@ -613,6 +617,13 @@ public sealed class MultiplayerCommands(
                 return "Usage: !mp map <beatmap_id> [<ruleset_id>]";
             }
 
+            // Reject unknown rulesets before touching the room: the room only
+            // accepts the IDs registered with the ruleset manager anyway.
+            if (FindRulesetInfo(rulesetId) == null)
+            {
+                return $"Unsupported ruleset: {rulesetId.ToString(CultureInfo.InvariantCulture)}.";
+            }
+
             requestedRuleset = rulesetId;
         }
 
@@ -1026,19 +1037,30 @@ public sealed class MultiplayerCommands(
     }
 
     /// <summary>
-    /// Gets the display name of a ruleset.
+    /// Gets the display name of a ruleset from the metadata of the ruleset
+    /// registered with <see cref="RulesetManager"/>.
     /// </summary>
     /// <param name="rulesetId">The ruleset ID.</param>
-    /// <returns>The display name.</returns>
-    private static string GetRulesetName(int rulesetId)
+    /// <returns>The display name, or a placeholder when the ID is not registered.</returns>
+    private string GetRulesetName(int rulesetId)
     {
-        return rulesetId switch
-        {
-            0 => "osu!",
-            1 => "osu!taiko",
-            2 => "osu!catch",
-            3 => "osu!mania",
-            _ => $"ruleset {rulesetId.ToString(CultureInfo.InvariantCulture)}",
-        };
+        RulesetInfo? rulesetInfo = FindRulesetInfo(rulesetId);
+
+        return rulesetInfo?.Name ?? $"ruleset {rulesetId.ToString(CultureInfo.InvariantCulture)}";
+    }
+
+    /// <summary>
+    /// Finds the metadata of a registered ruleset.
+    /// </summary>
+    /// <param name="rulesetId">The ruleset ID.</param>
+    /// <returns>The metadata, or <see langword="null"/> when the ID is not registered.</returns>
+    private RulesetInfo? FindRulesetInfo(int rulesetId)
+    {
+        // Resolved by online ID because that is what the rooms use to decide
+        // which ruleset IDs are selectable, and it also covers custom rulesets
+        // which are registered by short name only.
+        return rulesetManager.GetAllRulesets()
+            .Select(static ruleset => ruleset.RulesetInfo)
+            .FirstOrDefault(info => info.OnlineID == rulesetId);
     }
 }

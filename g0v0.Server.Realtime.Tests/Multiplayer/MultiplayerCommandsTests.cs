@@ -44,7 +44,7 @@ public class MultiplayerCommandsTests : MultiplayerTestBase
     {
         _beatmaps = new FakeBeatmapRepository();
         FakeMultiplayerScopeFactory scopeFactory = new(RoomRepository, _beatmaps, RelationshipRepository, UserRepository, ChatRepository);
-        _commands = new MultiplayerCommands(scopeFactory, RoomManager, EventDispatcher);
+        _commands = new MultiplayerCommands(scopeFactory, RoomManager, EventDispatcher, RulesetManager);
         UserRepository!.AddUser(new User { Id = UserId, Username = "Host" });
         UserRepository.AddUser(new User { Id = UserId2, Username = "Guest" });
     }
@@ -193,6 +193,27 @@ public class MultiplayerCommandsTests : MultiplayerTestBase
         _beatmaps.MissingBeatmapIds.Add(9999);
 
         Assert.That(await RunAsync(room, UserId, "map", "9999"), Is.EqualTo("Failed to fetch beatmap."));
+    }
+
+    [Test]
+    public async Task BeatmapRulesetName_IsTakenFromTheRulesetManager()
+    {
+        IRoom room = await CreateRoomAsync();
+
+        string? reply = await RunAsync(room, UserId, "map", "100", "1");
+
+        // The name comes from the ruleset metadata ("taiko") rather than a local
+        // table, so custom rulesets are named by the ruleset itself.
+        Assert.That(reply, Does.EndWith(", taiko)."));
+        Assert.That(room.CurrentItem.RulesetID, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task UnknownRuleset_IsRejected()
+    {
+        IRoom room = await CreateRoomAsync();
+
+        Assert.That(await RunAsync(room, UserId, "map", "4444", "7"), Is.EqualTo("Unsupported ruleset: 7."));
     }
 
     [Test]
