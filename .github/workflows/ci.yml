@@ -18,18 +18,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: g0v0.Server.Realtime
 
       - name: Checkout CommonLib
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: GooGuTeam/g0v0.Server.Common
           path: g0v0.Server.Common
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -53,18 +53,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: g0v0.Server.Realtime
 
       - name: Checkout CommonLib
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: GooGuTeam/g0v0.Server.Common
           path: g0v0.Server.Common
 
       - name: Setup .NET runtime for InspectCode
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -94,7 +94,7 @@ jobs:
           test "$warnings" -eq 0
 
       - name: Upload InspectCode report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: jetbrains-inspectcode-realtime
@@ -106,18 +106,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: g0v0.Server.Realtime
 
       - name: Checkout CommonLib
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: GooGuTeam/g0v0.Server.Common
           path: g0v0.Server.Common
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -137,7 +137,7 @@ jobs:
           dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
