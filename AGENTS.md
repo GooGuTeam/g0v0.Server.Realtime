@@ -35,7 +35,7 @@ CI (`.github/workflows/ci.yml`) is two jobs:
 - `code-quality`: `dotnet format --verify-no-changes`, a **Debug** build with warnings as errors, then warning-level
   JetBrains InspectCode. The SARIF report goes to GitHub code scanning (`Security` → `Code scanning`, category
   `resharper-inspectcode`), and any remaining warning/error fails the job.
-- `test`: `dotnet test --configuration Release`.
+- `test`: `dotnet test --configuration Release -p:TreatWarningsAsErrors=false`.
 
 The three `code-quality` inspections are deliberately **independent**: each one is `continue-on-error: true` with
 `if: ${{ !cancelled() }}`, so one failing step does not hide the other two's findings, and the final

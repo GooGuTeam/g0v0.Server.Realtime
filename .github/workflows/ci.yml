@@ -219,10 +219,14 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props', '**/global.json') }}
           restore-keys: nuget-${{ runner.os }}-
 
+      # Warnings-as-errors is `code-quality`'s gate and must not leak in here. GitHub exports CI=true,
+      # which turns it on in Directory.Build.props, so without this property a formatting slip or an
+      # analyzer warning fails this job too.
       - name: Test
         working-directory: g0v0.Server.Realtime
         run: >
           dotnet test --configuration Release
+          -p:TreatWarningsAsErrors=false
           --logger "trx;LogFileName=test-results.trx"
           --collect:"XPlat Code Coverage"
 
