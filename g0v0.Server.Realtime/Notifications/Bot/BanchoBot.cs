@@ -18,7 +18,8 @@ namespace g0v0.Server.Realtime.Notifications.Bot;
 /// <remarks>
 /// Commands are registered declaratively with the <see cref="BotCommandAttribute"/>
 /// on methods of <see cref="BanchoBotCommandSet"/> subclasses (see
-/// <see cref="UtilityCommands"/> and <see cref="ScoreCommands"/>).
+/// <see cref="UtilityCommands"/>, <see cref="ScoreCommands"/> and
+/// <see cref="MultiplayerCommands"/>).
 /// Only replies to <see cref="ChannelType.Public"/> channels are delivered
 /// through a PM channel with the bot; replies in every other channel type are
 /// delivered in the channel the command was sent in, as in the reference
@@ -65,12 +66,15 @@ public class BanchoBot(
     }
 
     /// <summary>
-    /// Discovers and registers all commands from the built-in command sets.
+    /// Discovers and registers all commands from the given command sets.
     /// </summary>
-    public void Initialize()
+    /// <param name="commandSets">The command sets to register.</param>
+    public void Initialize(IEnumerable<BanchoBotCommandSet> commandSets)
     {
-        RegisterCommandSet(new UtilityCommands(scopeFactory));
-        RegisterCommandSet(new ScoreCommands(scopeFactory));
+        foreach (BanchoBotCommandSet commandSet in commandSets)
+        {
+            RegisterCommandSet(commandSet);
+        }
     }
 
     /// <summary>
@@ -105,10 +109,12 @@ public class BanchoBot(
             return;
         }
 
+        BotCommandContext context = new(senderId, channelId, channelType, args);
+
         string? reply;
         try
         {
-            reply = await handler.InvokeAsync(senderId, args, _handlers.Keys.ToArray());
+            reply = await handler.InvokeAsync(context, _handlers.Keys.ToArray());
         }
         catch (Exception exception)
         {
@@ -159,7 +165,7 @@ public class BanchoBot(
 
     private sealed class CommandHandler(BanchoBotCommandSet commandSet, MethodInfo method)
     {
-        public async Task<string?> InvokeAsync(int senderId, List<string> args, IReadOnlyCollection<string> availableCommands)
+        public async Task<string?> InvokeAsync(BotCommandContext context, IReadOnlyCollection<string> availableCommands)
         {
             ParameterInfo[] parameters = method.GetParameters();
             object?[] arguments = new object?[parameters.Length];
@@ -168,8 +174,9 @@ public class BanchoBot(
             {
                 arguments[i] = parameters[i].ParameterType switch
                 {
-                    _ when parameters[i].ParameterType == typeof(int) => senderId,
-                    _ when parameters[i].ParameterType == typeof(string[]) => args.ToArray(),
+                    _ when parameters[i].ParameterType == typeof(BotCommandContext) => context,
+                    _ when parameters[i].ParameterType == typeof(int) => context.SenderId,
+                    _ when parameters[i].ParameterType == typeof(string[]) => context.Arguments.ToArray(),
                     _ when parameters[i].ParameterType == typeof(IReadOnlyCollection<string>) => availableCommands,
                     _ => null,
                 };

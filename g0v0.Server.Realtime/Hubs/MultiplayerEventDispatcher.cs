@@ -126,6 +126,19 @@ public class MultiplayerEventDispatcher(
     }
 
     /// <summary>
+    /// Sends a user-role change to all members.
+    /// </summary>
+    /// <param name="roomId">The room ID.</param>
+    /// <param name="userId">The user whose role changed.</param>
+    /// <param name="newRole">The new role.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public Task PostUserRoleChangedAsync(long roomId, int userId, MultiplayerRoomUserRole newRole)
+    {
+        logger.LogDebug("User {UserId} in room {RoomId} changed role to {Role}.", userId, roomId, newRole);
+        return hubContext.Clients.Group(GetGroupId(roomId)).UserRoleChanged(userId, newRole);
+    }
+
+    /// <summary>
     /// Sends a user-state change to all members.
     /// </summary>
     /// <param name="roomId">The room ID.</param>

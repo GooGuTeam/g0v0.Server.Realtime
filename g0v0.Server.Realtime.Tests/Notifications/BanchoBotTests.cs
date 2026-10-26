@@ -1,4 +1,4 @@
-// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
+﻿// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Common.Caching;
 using g0v0.Server.Common.Communication;
@@ -8,6 +8,7 @@ using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Notifications.Bot;
+using g0v0.Server.Realtime.Notifications.Bot.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
@@ -54,7 +55,11 @@ public class BanchoBotTests
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             _notificationServer,
             _playerManager);
-        _bot.Initialize();
+        _bot.Initialize(
+        [
+            new UtilityCommands(serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+            new ScoreCommands(serviceProvider.GetRequiredService<IServiceScopeFactory>()),
+        ]);
     }
 
     [Test]

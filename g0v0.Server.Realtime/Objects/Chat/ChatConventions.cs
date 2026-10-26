@@ -1,4 +1,4 @@
-// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
+﻿// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Common.Database.Models;
 using osu.Game.Online.Chat;
@@ -31,6 +31,28 @@ internal static class ChatConventions
 
     internal static bool IsUserCommand(string content) =>
         content.Length > 1 && content[0] == '!' && content[1] != ' ' && content[1] != '!';
+
+    /// <summary>
+    /// Determines whether the message is a tournament management (<c>!mp</c>) command.
+    /// </summary>
+    /// <param name="content">The message content.</param>
+    /// <returns><see langword="true"/> when the message is an <c>!mp</c> command.</returns>
+    /// <remarks>
+    /// Unlike other bot commands, <c>!mp</c> commands are part of the room
+    /// conversation: they are delivered to every member of the channel so all
+    /// participants see what the referee did.
+    /// </remarks>
+    internal static bool IsMultiplayerCommand(string content)
+    {
+        if (!IsUserCommand(content))
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> command = content.AsSpan(1);
+        return command.Equals("mp", StringComparison.OrdinalIgnoreCase)
+               || command.StartsWith("mp ", StringComparison.OrdinalIgnoreCase);
+    }
 
     internal static string GetChannelTypeName(ChannelType type)
     {

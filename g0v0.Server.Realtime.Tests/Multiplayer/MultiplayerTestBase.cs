@@ -1,4 +1,4 @@
-// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
+﻿// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 // This file intentionally hosts the multiplayer test base and a test hub helper.
 #pragma warning disable MA0048 // File name must match type name
@@ -59,6 +59,16 @@ public abstract class MultiplayerTestBase
     internal FakeChatRepository ChatRepository { get; private set; } = null!;
 
     /// <summary>
+    /// Gets the service scope factory backing the test room facade.
+    /// </summary>
+    internal IServiceScopeFactory ScopeFactory { get; private set; } = null!;
+
+    /// <summary>
+    /// Gets the dispatcher broadcasting room events to the mocked clients.
+    /// </summary>
+    internal MultiplayerEventDispatcher EventDispatcher { get; private set; } = null!;
+
+    /// <summary>
     /// Gets a value indicating whether gets whether beatmap validation should be enabled for this test fixture
     /// (registers a fake beatmap repository). Defaults to <see langword="false"/>
     /// so tests which add arbitrary beatmap IDs are unaffected.
@@ -112,6 +122,7 @@ public abstract class MultiplayerTestBase
         UserRepository = EnableRelationshipValidation ? new FakeUserRepository() : null;
         ChatRepository = new FakeChatRepository();
         FakeMultiplayerScopeFactory scopeFactory = new(RoomRepository, BeatmapRepository, RelationshipRepository, UserRepository, ChatRepository);
+        ScopeFactory = scopeFactory;
 
         RulesetManager rulesetManager = new(Path.GetTempPath());
         NoOpMultiplayerTransport ipcTransport = new();
@@ -190,6 +201,7 @@ public abstract class MultiplayerTestBase
 
         MultiplayerEventDispatcher eventDispatcher = new(hubContext.Object, NullLogger<MultiplayerEventDispatcher>.Instance);
         roomFacade.EventDispatcher = eventDispatcher;
+        EventDispatcher = eventDispatcher;
 
         Hub = new TestMultiplayerHub(
             PlayerManager,

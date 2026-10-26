@@ -1,4 +1,4 @@
-// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
+﻿// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Collections.Concurrent;
 using System.Globalization;
@@ -582,7 +582,10 @@ public class NotificationServer(
     private async Task<int[]> GetMessageReceiverIdsAsync(ChatChannel? channel, ChatMessage message)
     {
         ChatConfig chatConfig = GetChatConfig();
-        if (ChatConventions.IsUserCommand(message.Content))
+
+        // Bot commands are only echoed back to their sender, except for !mp
+        // commands which are part of the room conversation.
+        if (ChatConventions.IsUserCommand(message.Content) && !ChatConventions.IsMultiplayerCommand(message.Content))
         {
             return [message.SenderId];
         }

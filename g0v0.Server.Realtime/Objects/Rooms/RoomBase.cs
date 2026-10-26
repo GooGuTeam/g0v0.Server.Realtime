@@ -96,6 +96,9 @@ public abstract class RoomBase : IRoom
     /// </summary>
     public IReadOnlySet<int> BannedUsers => _bannedUsers;
 
+    /// <inheritdoc />
+    public int? HostUserId { get; private set; }
+
     private readonly HashSet<int> _bannedUsers = new();
 
     private readonly ConcurrentDictionary<MultiplayerCountdown, CountdownInfo> _trackedCountdowns = new();
@@ -217,6 +220,7 @@ public abstract class RoomBase : IRoom
         RoomId = room.Id;
         ChannelId = room.ChannelId;
         TournamentMode = room.TournamentMode;
+        HostUserId = room.HostId;
         Settings = new MultiplayerRoomSettings
         {
             Name = room.Name,
@@ -453,8 +457,26 @@ public abstract class RoomBase : IRoom
                                       ?? throw new InvalidStateException("User is not in the room.");
 
         Host = newHost;
+        HostUserId = newHost.UserID;
         await Facade.EventDispatcher.PostHostChangedAsync(RoomId, newHost.UserID);
         await WithRepository(repo => repo.UpdateRoomHost(RoomId, newHost.UserID));
+    }
+
+    /// <inheritdoc />
+    public async Task ChangeUserRole(int userId, MultiplayerRoomUserRole role)
+    {
+        MultiplayerRoomUser user = Users.FirstOrDefault(u => u.UserID == userId)
+                                   ?? throw new InvalidStateException("User is not in the room.");
+
+        if (user.Role == role)
+        {
+            return;
+        }
+
+        user.Role = role;
+
+        // Clients learn about role changes from a dedicated event.
+        await Facade.EventDispatcher.PostUserRoleChangedAsync(RoomId, user.UserID, role);
     }
 
     /// <inheritdoc />
@@ -1912,16 +1934,14 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Starts a countdown which invokes <paramref name="onComplete"/> when it finishes.
     /// </summary>
-    /// <typeparam name="T">The countdown type.</typeparam>
     /// <param name="countdown">The countdown to start.</param>
     /// <param name="onComplete">The callback invoked when the countdown completes.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task StartCountdown<T>(T countdown, Func<Task>? onComplete = null)
-        where T : MultiplayerCountdown
+    public async Task StartCountdown(MultiplayerCountdown countdown, Func<Task>? onComplete = null)
     {
         if (countdown.IsExclusive)
         {
-            await StopAllCountdowns<T>();
+            await StopAllCountdowns(countdown.GetType());
         }
 
         countdown.ID = Interlocked.Increment(ref _nextCountdownId);
@@ -1972,10 +1992,31 @@ public abstract class RoomBase : IRoom
     /// <summary>
     /// Stops all countdowns of the given type.
     /// </summary>
-    private async Task StopAllCountdowns<T>()
+    /// <typeparam name="T">The countdown type to stop.</typeparam>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private Task StopAllCountdowns<T>()
         where T : MultiplayerCountdown
+        => StopAllCountdowns(typeof(T));
+
+    /// <inheritdoc />
+    public async Task StopAllCountdowns()
     {
-        foreach (T? countdown in ActiveCountdowns.OfType<T>().ToArray())
+        // The gameplay-load countdown is server-managed: stopping it would leave
+        // the room waiting for players which will never be able to start.
+        foreach (MultiplayerCountdown countdown in ActiveCountdowns.ToArray().Where(static countdown => countdown is not ForceGameplayStartCountdown))
+        {
+            await StopCountdown(countdown);
+        }
+    }
+
+    /// <summary>
+    /// Stops all countdowns assignable to the given type.
+    /// </summary>
+    /// <param name="countdownType">The countdown type to stop.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    private async Task StopAllCountdowns(Type countdownType)
+    {
+        foreach (MultiplayerCountdown countdown in ActiveCountdowns.Where(countdownType.IsInstanceOfType).ToArray())
         {
             await StopCountdown(countdown);
         }

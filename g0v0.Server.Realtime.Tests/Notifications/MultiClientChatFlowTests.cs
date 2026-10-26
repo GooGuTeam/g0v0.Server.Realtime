@@ -1,4 +1,4 @@
-// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
+﻿// Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
@@ -18,6 +18,7 @@ using g0v0.Server.Realtime.Json;
 using g0v0.Server.Realtime.Manager;
 using g0v0.Server.Realtime.Notifications;
 using g0v0.Server.Realtime.Notifications.Bot;
+using g0v0.Server.Realtime.Notifications.Bot.Commands;
 using g0v0.Server.Realtime.Objects.Chat;
 using g0v0.Server.Realtime.Services;
 using g0v0.Server.Realtime.Tests.Multiplayer;
@@ -110,10 +111,12 @@ public class MultiClientChatFlowTests
         builder.Services.AddScoped<ChatChannelDtoFactory>();
         builder.Services.AddSingleton<INotificationServer, NotificationServer>();
         builder.Services.AddSingleton<BanchoBot>();
+        builder.Services.AddSingleton<BanchoBotCommandSet, UtilityCommands>();
+        builder.Services.AddSingleton<BanchoBotCommandSet, ScoreCommands>();
         builder.Services.AddSingleton<IBanchoBot>(serviceProvider =>
         {
             BanchoBot bot = serviceProvider.GetRequiredService<BanchoBot>();
-            bot.Initialize();
+            bot.Initialize(serviceProvider.GetServices<BanchoBotCommandSet>());
             return bot;
         });
         builder.Services.AddSingleton<LazerWebSocketListener>();
