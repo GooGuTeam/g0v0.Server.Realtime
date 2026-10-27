@@ -27,8 +27,8 @@ Run from the repo root:
 - Format check (CI gate): `dotnet format --verify-no-changes --verbosity diagnostic`
 - Apply formatting: `dotnet format`
 - Install InspectCode: `dotnet tool install --global JetBrains.ReSharper.GlobalTools --version 2026.2.1`
-- InspectCode: `jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --output=artifacts/inspectcode.sarif`
-- Strict CI-equivalent build: `dotnet build --configuration Release /warnaserror`
+- InspectCode: `jb inspectcode g0v0.Server.Realtime.sln --no-build --no-updates --severity=WARNING --swea --output=artifacts/inspectcode.sarif`
+- Strict CI-equivalent build: `dotnet build --no-restore --configuration Release /warnaserror`
 
 CI runs the `code-style` job: `dotnet format --verify-no-changes`, a `/warnaserror` build, and warning-level JetBrains
 InspectCode. It prints every warning/error and uploads the SARIF report. There is **no test job in CI** — tests must
