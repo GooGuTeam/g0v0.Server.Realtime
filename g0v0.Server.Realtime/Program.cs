@@ -27,6 +27,8 @@ namespace g0v0.Server.Realtime;
 /// </summary>
 public static class Program
 {
+    private const string CorsPolicyName = "RealtimeCors";
+
     private static readonly Action<HubOptions> ConfigureClientHubOptions = options =>
     {
         // JSON hub protocol is enabled by default, but we use MessagePack.
@@ -64,6 +66,11 @@ public static class Program
         ConfigManager configManager = new(builder.Environment.ContentRootPath);
         GeneralConfig generalConfig = configManager.Get<GeneralConfig>();
         builder.Services.AddSingleton(configManager);
+        builder.Services.AddCors(options => options.AddPolicy(CorsPolicyName, policy => policy
+            .WithOrigins(generalConfig.GetCorsAllowUrls())
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()));
 
         RealtimeConfig realtimeConfig = configManager.Get<RealtimeConfig>();
         if (realtimeConfig.Sentry.Enabled)
@@ -186,6 +193,7 @@ public static class Program
         }
 
         app.UseHttpsRedirection();
+        app.UseCors(CorsPolicyName);
 
         app.UseAuthentication();
         app.UseAuthorization();
