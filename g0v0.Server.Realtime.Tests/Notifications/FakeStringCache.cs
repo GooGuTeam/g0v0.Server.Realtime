@@ -32,6 +32,18 @@ internal sealed class FakeStringCache : IStringCache
         return Task.CompletedTask;
     }
 
+    public Task<bool> TrySetAsync(string key, string value, TimeSpan expiry)
+    {
+        if (_values.TryGetValue(key, out (string Value, DateTimeOffset Expiry) entry) && entry.Expiry > DateTimeOffset.UtcNow)
+        {
+            return Task.FromResult(false);
+        }
+
+        SetCount++;
+        _values[key] = (value, DateTimeOffset.UtcNow.Add(expiry));
+        return Task.FromResult(true);
+    }
+
     public Task DeleteAsync(string key)
     {
         DeleteCount++;
