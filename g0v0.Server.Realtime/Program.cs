@@ -132,6 +132,7 @@ public static class Program
         builder.Services.AddSingleton<BanchoBotCommandSet, UtilityCommands>();
         builder.Services.AddSingleton<BanchoBotCommandSet, ScoreCommands>();
         builder.Services.AddSingleton<BanchoBotCommandSet, MultiplayerCommands>();
+        builder.Services.AddSingleton<BanchoBotCommandSet, FaqCommands>();
         builder.Services.AddSingleton<IBanchoBot>(serviceProvider =>
         {
             BanchoBot bot = new(
