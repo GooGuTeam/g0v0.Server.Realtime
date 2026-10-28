@@ -200,6 +200,37 @@ listed below. All configurations are hot-reloadable at runtime.
 
 These chat limits are v2-only and have no v1 `.env` equivalent.
 
+#### `config/faq.json` — FAQ Entries
+
+This file is **optional**. When `config/faq.json` is absent, `!faq` reports that no entries are available
+instead of failing. Changing the file requires a restart, as no reload trigger calls
+`ConfigManager.Reload<FaqConfig>()` yet.
+
+```json
+{
+  "DefaultLanguage": "en",
+  "Entries": [
+    {
+      "Id": "contribution",
+      "Translations": {
+        "en": "You can also make a contribution to g0v0! if you wish. See our contribution guide for details.",
+        "zh": "你也可以为 g0v0! 出一份力，只要你愿意！想了解更多，不妨看看我们的贡献指南。"
+      }
+    }
+  ]
+}
+```
+
+| Key                       | Type   | Default | Description                                                                                     |
+|---------------------------|--------|---------|-------------------------------------------------------------------------------------------------|
+| `DefaultLanguage`         | string | `en`    | Language returned when an entry has no translation for the requested one                        |
+| `Entries[].Id`            | string | —       | Identifier used by `!faq <entry>`; matched case-insensitively, cannot contain spaces (`list` is reserved) |
+| `Entries[].Translations`  | object | —       | Answer text per language code; keys are matched by their primary subtag, so `zh-CN` answers `zh:` |
+
+Entries without an identifier or without a single non-blank translation are skipped: they are neither
+listed by `!faq list` nor resolvable. Duplicate identifiers keep the first occurrence. Answers longer than
+`MessageLengthLimit` are delivered as several messages, so a chat client never truncates them.
+
 #### `config/storage.json` — Storage Backend
 
 ```json
@@ -266,6 +297,28 @@ host-only.
 Rooms created with `!mp make` start empty: join the room from the multiplayer lobby before using `map` / `mods`, which
 edit the room's playlist. Replies longer than `MessageLengthLimit` (`config/chat.json`) are delivered as several
 messages instead of being truncated.
+
+### FAQ command (`!faq`)
+
+BanchoBot answers the short tips stored in `config/faq.json` (see the configuration section above), so the
+answers can be changed without rebuilding the server.
+
+| Input                                              | Reply                                                                  |
+|----------------------------------------------------|------------------------------------------------------------------------|
+| `!faq`                                             | `Usage: !faq [lang:]<entry>. Try !faq list to see all entries.`        |
+| `!faq list`                                        | `Available entries: <id>, <id>.` in configuration order                |
+| `!faq <entry>`                                     | The entry text in `DefaultLanguage`                                    |
+| `!faq <lang>:<entry>`                              | The entry text in `<lang>`, a case-insensitive two letter code         |
+| `!faq <lang>:<entry>` when that language is missing| The `DefaultLanguage` text, without any marker                         |
+| An unknown entry                                   | `Entry not found!`                                                     |
+| `!faq list` without any usable entry               | `No FAQ entries available.`                                            |
+| An unreadable `config/faq.json`                    | `The FAQ is currently unavailable. Please try again later.`            |
+
+Language codes are matched by their primary subtag, so a `zh-CN` translation answers both `zh:` and `zh-CN:`.
+When the entry has no `DefaultLanguage` version either, any non-blank translation is returned, so every entry
+shown by `!faq list` can be resolved. `list` is reserved and cannot be used as an identifier. Replies in
+public channels go through the BanchoBot PM channel, like every other bot command; replies in room channels
+stay in the room.
 
 ### Run and connect to the server.
 
