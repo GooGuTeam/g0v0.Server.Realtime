@@ -44,6 +44,7 @@ be run locally. Format drift or any analyzer/InspectCode warning fails CI.
 - `game.json` — feature flags.
 - `realtime.json` — `SaveReplays` (`[Reloadable]`), `ReplayUploaderConcurrency` (read once at startup; see `Services/ScoreUploader.cs`), `MaxStartedScores` (`[Reloadable]`; read per begin-play call in `PlayerBase.BeingPlaying`).
 - `storage.json` — `Local`/`S3`/`R2`.
+- `faq.json` — chat `!faq` entries (`FaqConfig`: `DefaultLanguage`, `Entries[].Id`, `Entries[].Translations`). Optional: `FaqCommands` reads it through `TryGet<FaqConfig>()`, so a missing file only means "no entries".
 
 Config classes use **Newtonsoft.Json**; default file name is the snake_case of the class name (override with `[ConfigurationFile("...")]`). Only properties annotated `[Reloadable]` are refreshed by `Reload<T>()`. See README for full schema and v1→v2 env-var mapping.
 
