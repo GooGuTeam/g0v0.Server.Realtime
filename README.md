@@ -298,28 +298,6 @@ Rooms created with `!mp make` start empty: join the room from the multiplayer lo
 edit the room's playlist. Replies longer than `MessageLengthLimit` (`config/chat.json`) are delivered as several
 messages instead of being truncated.
 
-### FAQ command (`!faq`)
-
-BanchoBot answers the short tips stored in `config/faq.json` (see the configuration section above), so the
-answers can be changed without rebuilding the server.
-
-| Input                                              | Reply                                                                  |
-|----------------------------------------------------|------------------------------------------------------------------------|
-| `!faq`                                             | `Usage: !faq [lang:]<entry>. Try !faq list to see all entries.`        |
-| `!faq list`                                        | `Available entries: <id>, <id>.` in configuration order                |
-| `!faq <entry>`                                     | The entry text in `DefaultLanguage`                                    |
-| `!faq <lang>:<entry>`                              | The entry text in `<lang>`, a case-insensitive two letter code         |
-| `!faq <lang>:<entry>` when that language is missing| The `DefaultLanguage` text, without any marker                         |
-| An unknown entry                                   | `Entry not found!`                                                     |
-| `!faq list` without any usable entry               | `No FAQ entries available.`                                            |
-| An unreadable `config/faq.json`                    | `The FAQ is currently unavailable. Please try again later.`            |
-
-Language codes are matched by their primary subtag, so a `zh-CN` translation answers both `zh:` and `zh-CN:`.
-When the entry has no `DefaultLanguage` version either, any non-blank translation is returned, so every entry
-shown by `!faq list` can be resolved. `list` is reserved and cannot be used as an identifier. Replies in
-public channels go through the BanchoBot PM channel, like every other bot command; replies in room channels
-stay in the room.
-
 ### Run and connect to the server.
 
 ```bash
