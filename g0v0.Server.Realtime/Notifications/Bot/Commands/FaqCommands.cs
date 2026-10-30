@@ -38,7 +38,7 @@ public sealed class FaqCommands(
         {
             // The file is handwritten by maintainers, so a syntax error is a realistic
             // outcome. Report it without failing the chat message that carried the command.
-            logger.LogWarning(exception, "Failed to load the FAQ configuration from {File}.", FaqCatalog.ConfigFilePath);
+            logger.LogWarning(exception, "Failed to load the FAQ configuration.");
             return FaqCatalog.UnavailableReply;
         }
     }

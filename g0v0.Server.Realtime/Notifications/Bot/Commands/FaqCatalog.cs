@@ -34,11 +34,6 @@ internal static class FaqCatalog
     /// </summary>
     internal const string UnavailableReply = "The FAQ is currently unavailable. Please try again later.";
 
-    /// <summary>
-    /// The configuration file path, used in diagnostics.
-    /// </summary>
-    internal const string ConfigFilePath = "config/faq.json";
-
     private const string ListCommand = "list";
 
     private const string ListPrefix = "Available entries: ";
