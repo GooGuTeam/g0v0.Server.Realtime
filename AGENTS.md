@@ -42,7 +42,7 @@ be run locally. Format drift or any analyzer/InspectCode warning fails CI.
 
 - `general.json` — DB + JWT + Redis (`UseLegacyDatabase: true` → MySQL v1 schema, `false` → PostgreSQL v2). Loaded from `Common`.
 - `game.json` — feature flags.
-- `realtime.json` — `SaveReplays` (`[Reloadable]`), `ReplayUploaderConcurrency` (read once at startup; see `Services/ScoreUploader.cs`), `MaxStartedScores` (`[Reloadable]`; read per begin-play call in `PlayerBase.BeingPlaying`).
+- `realtime.json` — `SaveReplays` (`[Reloadable]`), `ReplayUploaderConcurrency` (read once at startup; see `Services/ScoreUploader.cs`), `MaxStartedScores` (`[Reloadable]`; read per begin-play call in `PlayerBase.BeingPlaying`), and the `Sentry` section (`SentryOptions` from Common's `Configuration`; a non-empty DSN enables Sentry at startup).
 - `storage.json` — `Local`/`S3`/`R2`.
 
 Config classes use **Newtonsoft.Json**; default file name is the snake_case of the class name (override with `[ConfigurationFile("...")]`). Only properties annotated `[Reloadable]` are refreshed by `Reload<T>()`. See README for full schema and v1→v2 env-var mapping.

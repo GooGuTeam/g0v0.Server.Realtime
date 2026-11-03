@@ -1,6 +1,7 @@
 // Copyright (c) GooGuTeam. License under MIT License. See LICENSE in the project root for license information.
 
 using g0v0.Server.Common.Configuration.Attributes;
+using SentryOptions = g0v0.Server.Common.Configuration.SentryOptions;
 
 namespace g0v0.Server.Realtime;
 
