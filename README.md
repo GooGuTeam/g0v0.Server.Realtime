@@ -200,6 +200,37 @@ listed below. All configurations are hot-reloadable at runtime.
 
 These chat limits are v2-only and have no v1 `.env` equivalent.
 
+#### `config/faq.json` — FAQ Entries
+
+This file is **optional**. When `config/faq.json` is absent, `!faq` reports that no entries are available
+instead of failing. Changing the file requires a restart, as no reload trigger calls
+`ConfigManager.Reload<FaqConfig>()` yet.
+
+```json
+{
+  "DefaultLanguage": "en",
+  "Entries": [
+    {
+      "Id": "contribution",
+      "Translations": {
+        "en": "You can also make a contribution to g0v0! if you wish. See our contribution guide for details.",
+        "zh": "你也可以为 g0v0! 出一份力，只要你愿意！想了解更多，不妨看看我们的贡献指南。"
+      }
+    }
+  ]
+}
+```
+
+| Key                       | Type   | Default | Description                                                                                     |
+|---------------------------|--------|---------|-------------------------------------------------------------------------------------------------|
+| `DefaultLanguage`         | string | `en`    | Language returned when an entry has no translation for the requested one                        |
+| `Entries[].Id`            | string | —       | Identifier used by `!faq <entry>`; matched case-insensitively, cannot contain spaces (`list` is reserved) |
+| `Entries[].Translations`  | object | —       | Answer text per language code; keys are matched by their primary subtag, so `zh-CN` answers `zh:` |
+
+Entries without an identifier or without a single non-blank translation are skipped: they are neither
+listed by `!faq list` nor resolvable. Duplicate identifiers keep the first occurrence. Answers longer than
+`MessageLengthLimit` are delivered as several messages, so a chat client never truncates them.
+
 #### `config/storage.json` — Storage Backend
 
 ```json
