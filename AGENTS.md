@@ -72,6 +72,9 @@ SignalR specifics:
   use the same verified user claim.
 - Endpoints: `/signalr/spectator` (`SpectatorHub`), `/signalr/metadata` (`MetadataHub`) and `/signalr/multiplayer`
   (`MultiplayerHub`). All inherit `LazerRealtimeHub<TClient>`.
+- `GET /health` (`HealthController`) is anonymous and reports `identify` (`realtime`), `players_online`
+  (registered players), `multiplayer_rooms` (live rooms) and `websocket_connections` (live `/notification-server`
+  sockets, exposed as `INotificationServer.ConnectionCount`).
 - `SpectatorHub` exposes both the legacy V1 API (`BeginPlaySession`, `SendFrameData`, `EndPlaySession` — marked `[Obsolete]`, removal date 20270102) and the V2 API (`BeginPlaySessionV2`, `SendFrameDataV2`, `EndPlaySessionV2`) with explicit per-score tokens. Both routes share one player-side implementation (`IPlayer.BeingPlaying`/`SendFrames`/`FinishPlaying`): `PlayerState.ScoreTokens` tracks up to the configured `RealtimeConfig.MaxStartedScores` concurrent started scores (oldest is evicted and processed on overflow), the ambient `ScoreToken` mirrors the most recently started score, and only ending the latest score (or with a null token) broadcasts `UserFinishedPlaying`. V1 hub methods pass the ambient token; V2 methods pass the explicit one.
 
 ### Multiplayer (rooms & match flow)

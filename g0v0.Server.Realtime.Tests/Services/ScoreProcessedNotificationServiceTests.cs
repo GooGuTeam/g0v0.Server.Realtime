@@ -241,6 +241,8 @@ public class ScoreProcessedNotificationServiceTests
 
         public Task<IReadOnlyList<g0v0.Server.Common.Database.Models.Score>> GetUnprocessedScoresAsync(long afterId, int limit, string? type = null) => throw new NotSupportedException();
 
+        public Task<int> CountUnprocessedScoresAsync(string? type = null) => throw new NotSupportedException();
+
         public Task CompleteProcessingAsync(g0v0.Server.Common.Database.Models.Score score, int playTime = 0) => throw new NotSupportedException();
 
         public void SetScoreByToken(long token, DbScore score)

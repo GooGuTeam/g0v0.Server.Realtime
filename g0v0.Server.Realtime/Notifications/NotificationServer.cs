@@ -42,6 +42,27 @@ public class NotificationServer(
     private readonly ConcurrentDictionary<int, Dictionary<IPlayer, int>> _connections = new();
 
     /// <inheritdoc />
+    public int ConnectionCount
+    {
+        get
+        {
+            int count = 0;
+            foreach (Dictionary<IPlayer, int> userConnections in _connections.Values)
+            {
+                lock (userConnections)
+                {
+                    foreach (int connections in userConnections.Values)
+                    {
+                        count += connections;
+                    }
+                }
+            }
+
+            return count;
+        }
+    }
+
+    /// <inheritdoc />
     public Task Connect(IPlayer player)
     {
         Dictionary<IPlayer, int> userConnections = _connections.GetOrAdd(player.PlayerId, static _ => []);

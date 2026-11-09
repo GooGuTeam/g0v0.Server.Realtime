@@ -15,6 +15,15 @@ namespace g0v0.Server.Realtime.Notifications;
 public interface INotificationServer
 {
     /// <summary>
+    /// Gets the number of live notification WebSocket connections.
+    /// </summary>
+    /// <remarks>
+    /// Counts every <c>/notification-server</c> socket, so a user with several
+    /// tabs or devices contributes one connection each.
+    /// </remarks>
+    int ConnectionCount { get; }
+
+    /// <summary>
     /// Registers a player's connection with the server.
     /// </summary>
     /// <param name="player">The player that connected.</param>
