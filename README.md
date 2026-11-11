@@ -1,5 +1,14 @@
 ﻿# g0v0.Server.Realtime
 
+> [!IMPORTANT]
+> **This is an unofficial osu! realtime server emulation project.**
+>
+> - We (GooGuTeam) are not affiliated with ppy Pty Ltd, peppy, or team osu!. This project is neither supported nor endorsed by them.
+> - **osu!** and **ppy** are registered trademarks of **ppy Pty Ltd**.
+> - Please support the original project: play on the [official servers](https://osu.ppy.sh) and consider becoming a [supporter](https://osu.ppy.sh/home/support) to help fund upstream development.
+> - For upstream issues and improvements, file issues / PRs on [upstream spectator server repository](https://github.com/ppy/osu-server-spectator) or use the [upstream feedback forum](https://osu.ppy.sh/community/forums/5), rather than contacting the upstream team about g0v0-server-specific problems. Report those to the relevant GooGuTeam repository instead.
+> - If you have not played the original game, please [download and play the official client](https://osu.ppy.sh/home/download) first. This project is not a replacement for the original.
+
 This project is a part of g0v0 server v2. It is the realtime server for g0v0 server series which provides realtime
 services like spectating, chatting, multiplaying, online status and so on.
 
@@ -9,18 +18,18 @@ This project is under development. Some features are already implemented. You ca
 each feature.
 
 - [ ] Lazer
-    - [x] Online status (MetadataHub)
-    - [x] Spectating (SpectatorHub)
-    - [ ] Multiplay (MultiplayerHub)
-        - [x] Standard Play
-        - [x] Tournament management commands (`!mp`)
-        - [ ] Ranked Play
-    - [ ] RefereeHub
+  - [x] Online status (MetadataHub)
+  - [x] Spectating (SpectatorHub)
+  - [ ] Multiplay (MultiplayerHub)
+    - [x] Standard Play
+    - [x] Tournament management commands (`!mp`)
+    - [ ] Ranked Play
+  - [ ] RefereeHub
 - [x] Chatting (NotificationServer)
-    - [x] Channels, messages and silences (REST API)
-    - [x] Real-time chat and notification events (`/notification-server` WebSocket)
-    - [x] BanchoBot commands
-    - [x] Private notifications (IPC + WebSocket)
+  - [x] Channels, messages and silences (REST API)
+  - [x] Real-time chat and notification events (`/notification-server` WebSocket)
+  - [x] BanchoBot commands
+  - [x] Private notifications (IPC + WebSocket)
 - [ ] g0v0 Hub for other servers
 
 Multiplayer room creation, loading and metadata queries use `source = Realtime`; Stable rooms are
@@ -85,7 +94,7 @@ files and fill in the values according to your environment from g0v0-server v1.
 Mapping from v1 `.env`:
 
 | v1 `.env`                    | v2 `general.json`                   | Description                                                                     |
-|------------------------------|-------------------------------------|---------------------------------------------------------------------------------|
+| ---------------------------- | ----------------------------------- | ------------------------------------------------------------------------------- |
 | `MYSQL_HOST`                 | `MySqlHost`                         | MySQL server address                                                            |
 | `MYSQL_PORT`                 | `MySqlPort`                         | MySQL server port (kept as a string)                                            |
 | `MYSQL_DATABASE`             | `MySqlDatabase`                     | MySQL database name                                                             |
@@ -97,14 +106,14 @@ Mapping from v1 `.env`:
 | `JWT_ALGORITHM`              | `JwtAlgorithm`                      | JWT algorithm                                                                   |
 | `JWT_AUDIENCE`               | `JwtAudience`                       | JWT audience                                                                    |
 | `JWT_ISSUER`                 | `JwtIssuer`                         | JWT issuer                                                                      |
-| `OSU_CLIENT_ID`              | `OsuClientId`                       | osu! (lazer) OAuth client ID                                                    |
-| `OSU_CLIENT_SECRET`          | `OsuClientSecret`                   | osu! (lazer) OAuth client secret                                                |
-| `OSU_WEB_CLIENT_ID`          | `OsuWebClientId`                    | osu! web OAuth client ID                                                        |
-| `OSU_WEB_CLIENT_SECRET`      | `OsuWebClientSecret`                | osu! web OAuth client secret                                                    |
+| `OSU_CLIENT_ID`              | `OsuClientId`                       | lazer OAuth client ID                                                           |
+| `OSU_CLIENT_SECRET`          | `OsuClientSecret`                   | lazer OAuth client secret                                                       |
+| `OSU_WEB_CLIENT_ID`          | `OsuWebClientId`                    | upstream web OAuth client ID                                                    |
+| `OSU_WEB_CLIENT_SECRET`      | `OsuWebClientSecret`                | upstream web OAuth client secret                                                |
 | `SERVER_URL`                 | `ServerUrl`                         | Public server URL                                                               |
 | —                            | `UseLegacyDatabase`                 | `true` for MySQL (v1 compatible), `false` for PostgreSQL (v2)                   |
-| `FETCHER_CLIENT_ID`          | `FetcherClientId`                   | osu! API client ID used by the Fetcher service                                  |
-| `FETCHER_CLIENT_SECRET`      | `FetcherClientSecret`               | osu! API client secret used by the Fetcher service                              |
+| `FETCHER_CLIENT_ID`          | `FetcherClientId`                   | upstream API client ID used by the Fetcher service                              |
+| `FETCHER_CLIENT_SECRET`      | `FetcherClientSecret`               | upstream API client secret used by the Fetcher service                          |
 | `BEATMAP_CACHE_EXPIRE_HOURS` | `FetcherBeatmapRawCacheExpireHours` | Raw beatmap cache duration in hours (default `24`)                              |
 
 All configurations are restart required when changed.
@@ -120,7 +129,7 @@ All configurations are restart required when changed.
 ```
 
 | v1 `.env`                        | v2 `game.json`                | Default | Description                         |
-|----------------------------------|-------------------------------|---------|-------------------------------------|
+| -------------------------------- | ----------------------------- | ------- | ----------------------------------- |
 | `ENABLE_RX` / `ENABLE_OSU_RX`    | `EnableRelax`                 | `false` | Enable Relax mod statistics         |
 | `ENABLE_AP` / `ENABLE_OSU_AP`    | `EnableAutopilot`             | `false` | Enable Autopilot mod statistics     |
 | `ENABLE_ALL_BEATMAP_LEADERBOARD` | `EnableAllBeatmapLeaderboard` | `false` | Enable leaderboard for all beatmaps |
@@ -148,7 +157,7 @@ All configurations are hot-reloadable at runtime.
 ```
 
 | Key                                | Type     | Default    | Description                                                                                                |
-|------------------------------------|----------|------------|------------------------------------------------------------------------------------------------------------|
+| ---------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------------------------------- |
 | `SaveReplays`                      | bool     | `true`     | Whether to persist spectator replays (hot-reloadable)                                                      |
 | `ReplayUploaderConcurrency`        | int      | `4`        | Number of concurrent replay upload workers (read once at startup; restart required)                        |
 | `MaxStartedScores`                 | int      | `2`        | Max concurrent started scores per spectator play session (hot-reloadable)                                  |
@@ -156,7 +165,7 @@ All configurations are hot-reloadable at runtime.
 | `GuestPlaylistLimit`               | int      | `3`        | Max playlist items a guest may enqueue (restart required)                                                  |
 | `MultiplayerDisconnectGracePeriod` | TimeSpan | `00:00:30` | How long a disconnected user is kept in their room before removal (hot-reloadable)                         |
 | `TournamentRoomRetentionPeriod`    | TimeSpan | `00:30:00` | How long an empty tournament room is retained before being destroyed (hot-reloadable)                      |
-| `MaxActiveTournamentRooms`         | int      | `4`        | Max number of tournament rooms a single user may own through `!mp make` (hot-reloadable)                    |
+| `MaxActiveTournamentRooms`         | int      | `4`        | Max number of tournament rooms a single user may own through `!mp make` (hot-reloadable)                   |
 | `Sentry.Dsn`                       | string   | `""`       | Sentry DSN; Sentry is enabled automatically when this is non-empty (secret, git-ignored; restart required) |
 | `Sentry.Environment`               | string   | `""`       | Sentry environment tag; empty falls back to `ASPNETCORE_ENVIRONMENT` (restart required)                    |
 | `Sentry.TracesSampleRate`          | double   | `0.1`      | Performance-trace sampling rate 0.0–1.0 (restart required)                                                 |
@@ -186,7 +195,7 @@ listed below. All configurations are hot-reloadable at runtime.
 ```
 
 | Key                           | Type | Default | Description                                                                              |
-|-------------------------------|------|---------|------------------------------------------------------------------------------------------|
+| ----------------------------- | ---- | ------- | ---------------------------------------------------------------------------------------- |
 | `ChannelLimit`                | int  | `10000` | Maximum number of channels listed for a single user                                      |
 | `MessageLengthLimit`          | int  | `450`   | Maximum length of a chat message                                                         |
 | `AnnounceMessageLengthLimit`  | int  | `1024`  | Maximum length of an announcement message                                                |
@@ -221,11 +230,11 @@ instead of failing. Changing the file requires a restart, as no reload trigger c
 }
 ```
 
-| Key                       | Type   | Default | Description                                                                                     |
-|---------------------------|--------|---------|-------------------------------------------------------------------------------------------------|
-| `DefaultLanguage`         | string | `en`    | Language returned when an entry has no translation for the requested one                        |
-| `Entries[].Id`            | string | —       | Identifier used by `!faq <entry>`; matched case-insensitively, cannot contain spaces (`list` is reserved) |
-| `Entries[].Translations`  | object | —       | Answer text per language code; keys are matched by their primary subtag, so `zh-CN` answers `zh:` |
+| Key                      | Type   | Default | Description                                                                                               |
+| ------------------------ | ------ | ------- | --------------------------------------------------------------------------------------------------------- |
+| `DefaultLanguage`        | string | `en`    | Language returned when an entry has no translation for the requested one                                  |
+| `Entries[].Id`           | string | —       | Identifier used by `!faq <entry>`; matched case-insensitively, cannot contain spaces (`list` is reserved) |
+| `Entries[].Translations` | object | —       | Answer text per language code; keys are matched by their primary subtag, so `zh-CN` answers `zh:`         |
 
 Entries without an identifier or without a single non-blank translation are skipped: they are neither
 listed by `!faq list` nor resolvable. Duplicate identifiers keep the first occurrence. Answers longer than
@@ -243,7 +252,7 @@ listed by `!faq list` nor resolvable. Duplicate identifiers keep the first occur
 ```
 
 | v1 `.env`          | v2 `storage.json` | Description                              |
-|--------------------|-------------------|------------------------------------------|
+| ------------------ | ----------------- | ---------------------------------------- |
 | `STORAGE_SERVICE`  | `Type`            | Storage type: `Local`, `S3`, or `R2`     |
 | `STORAGE_SETTINGS` | `Options`         | Provider-specific settings (JSON object) |
 
@@ -280,18 +289,18 @@ The `Options` object matches the v1 `STORAGE_SETTINGS` for each provider:
 
 ### Tournament management commands (`!mp`)
 
-Because the rooms live in this server, the osu!wiki
+Because the rooms live in this server, the upstream wiki
 [tournament management commands](https://osu.ppy.sh/wiki/osu%21_tournament_client/osu%21tourney/Tournament_management_commands)
 are handled here instead of being relayed to another process. BanchoBot answers in the room channel, and commands are
 authorised like the equivalent hub calls: the room host or a referee may use them, while `addref` / `removeref` are
 host-only.
 
-| Group | Commands |
-| ----- | -------- |
-| Room | `make <name>`, `close`, `settings`, `name <title>`, `password [password]`, `size <size>`, `set <0\|2>` |
+| Group   | Commands                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------------------- |
+| Room    | `make <name>`, `close`, `settings`, `name <title>`, `password [password]`, `size <size>`, `set <0\|2>`              |
 | Players | `host`, `invite`, `kick`, `ban`, `addref`, `removeref`, `listrefs`, `move <user> <slot>`, `team <user> <red\|blue>` |
-| Beatmap | `map <beatmap_id> [ruleset_id]`, `mods [acronym ...]` |
-| Match | `start [seconds]`, `abort`, `timer [seconds]`, `aborttimer`, `lock`, `unlock` |
+| Beatmap | `map <beatmap_id> [ruleset_id]`, `mods [acronym ...]`                                                               |
+| Match   | `start [seconds]`, `abort`, `timer [seconds]`, `aborttimer`, `lock`, `unlock`                                       |
 
 `makeprivate` and `clearhost` are rejected, as they are not modelled by this server. `!mp help` lists everything.
 Rooms created with `!mp make` start empty: join the room from the multiplayer lobby before using `map` / `mods`, which
@@ -335,9 +344,9 @@ docker buildx build \
 The image runs as a non-root user (`$APP_UID`) on port `8080`. Runtime data lives in three volumes that must be mounted:
 
 | Volume          | Purpose                                                                                                                       |
-|-----------------|-------------------------------------------------------------------------------------------------------------------------------|
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `/app/config`   | JSON configuration files (`general.json`, `game.json`, `realtime.json`, `chat.json`, `storage.json`; `chat.json` is optional) |
-| `/app/rulesets` | Custom osu! ruleset DLLs (loaded at startup; optional)                                                                        |
+| `/app/rulesets` | Custom ruleset DLLs (loaded at startup; optional)                                                                             |
 | `/app/storage`  | Local file storage (spectator replays etc.)                                                                                   |
 
 ```bash
@@ -358,5 +367,3 @@ g0v0 server v2 series is licensed under the [MIT licence](https://opensource.org
 see [the licence file](LICENCE) for more information.
 [tl;dr](https://tldrlegal.com/license/mit-license) you can do whatever you want as long as you **include the original
 copyright and license notice in any copy of the software/source**.
-
-"osu!" or "ppy" is a registered trademark of ppy Pty Ltd and is not affiliated with g0v0 server.
