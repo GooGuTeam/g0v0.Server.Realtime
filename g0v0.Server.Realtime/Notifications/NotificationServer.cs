@@ -47,6 +47,9 @@ public class NotificationServer(
         get
         {
             int count = 0;
+
+            // The inner lock makes a LINQ rewrite unsafe; keep the explicit loops.
+            // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
             foreach (Dictionary<IPlayer, int> userConnections in _connections.Values)
             {
                 lock (userConnections)
