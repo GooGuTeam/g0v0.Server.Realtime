@@ -356,7 +356,11 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOnline(IPlayer player)
     {
-        await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
+        // Persist presence on the lazer API (is_online + last_visit).
+        await ipcClient.SendNoticeAsync(
+            ServerIdentify.Lazer,
+            "user_online_status_changed",
+            new { user_id = player.PlayerId, is_online = true });
 
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
@@ -377,7 +381,11 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOffline(IPlayer player, bool isKicked = false)
     {
-        await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
+        // Persist presence on the lazer API (is_online + last_visit).
+        await ipcClient.SendNoticeAsync(
+            ServerIdentify.Lazer,
+            "user_online_status_changed",
+            new { user_id = player.PlayerId, is_online = false });
 
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
