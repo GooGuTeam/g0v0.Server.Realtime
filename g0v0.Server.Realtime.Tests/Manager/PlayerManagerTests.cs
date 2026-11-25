@@ -6,6 +6,8 @@ using g0v0.Server.Realtime.Objects.Players;
 using g0v0.Server.Realtime.Objects.States;
 using g0v0.Server.Realtime.Objects.States.Activity;
 using Microsoft.Extensions.Logging.Abstractions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using osu.Game.Online.Spectator;
 using osu.Game.Users;
@@ -164,10 +166,69 @@ public class PlayerManagerTests
         Assert.That(target.WatchedStoppedNotifications, Is.EqualTo([2]));
     }
 
-    private static PlayerManager CreateManager() =>
+    [Test]
+    public async Task PresenceNotices_WhenReplacementConnectsDuringOfflinePublish_LastNoticeStaysOnline()
+    {
+        TaskCompletionSource offlinePublishStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource releaseOfflinePublish = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        RecordingTransport transport = new()
+        {
+            BeforePublishAsync = async index =>
+            {
+                // 1: initial AddPlayer online notice
+                // 2: RemovePlayer offline notice (held so a replacement can register mid-publish)
+                if (index == 2)
+                {
+                    offlinePublishStarted.TrySetResult();
+                    await releaseOfflinePublish.Task;
+                }
+            },
+        };
+
+        PlayerManager manager = CreateManager(transport);
+        TestPlayer first = new(1, "test", manager, UserStatus.Online);
+        TestPlayer replacement = new(1, "test", manager, UserStatus.Online);
+
+        await first.Online();
+
+        Task offlineTask = first.Offline();
+        await offlinePublishStarted.Task;
+
+        Task onlineTask = replacement.Online();
+        Assert.That(manager.GetPlayer<TestPlayer>(1, "test"), Is.SameAs(replacement));
+
+        releaseOfflinePublish.TrySetResult();
+        await Task.WhenAll(offlineTask, onlineTask);
+
+        List<bool> presence = GetPresenceNotices(transport.Payloads);
+        Assert.Multiple(() =>
+        {
+            Assert.That(presence, Is.Not.Empty);
+            Assert.That(presence[^1], Is.True);
+            Assert.That(manager.GetPlayer<TestPlayer>(1, "test"), Is.SameAs(replacement));
+        });
+    }
+
+    private static PlayerManager CreateManager() => CreateManager(new NoOpTransport());
+
+    private static PlayerManager CreateManager(IInterProcessCommunicationTransport transport) =>
         new(
             NullLogger<PlayerManager>.Instance,
-            new InterProcessCommunicationClient(new NoOpTransport(), "realtime-tests"));
+            new InterProcessCommunicationClient(transport, "realtime-tests"));
+
+    private static List<bool> GetPresenceNotices(IEnumerable<string> payloads)
+    {
+        return
+        [
+            .. from payload in payloads
+               let message = JsonConvert.DeserializeObject<IpcMessage>(payload)
+               where message is { Name: "user_online_status_changed", Data: JObject }
+               let data = (JObject)message.Data!
+               where data.TryGetValue("is_online", out _)
+               select data["is_online"]!.Value<bool>()
+        ];
+    }
 
     private sealed class TestPlayer : PlayerBase
     {
@@ -251,6 +312,44 @@ public class PlayerManagerTests
     private sealed class NoOpTransport : IInterProcessCommunicationTransport
     {
         public Task PublishAsync(string channel, string payload) => Task.CompletedTask;
+
+        public void Subscribe(string channel, Func<string, Task> handler)
+        {
+        }
+    }
+
+    private sealed class RecordingTransport : IInterProcessCommunicationTransport
+    {
+        private readonly List<string> _payloads = [];
+        private readonly Lock _sync = new();
+        private int _publishCount;
+
+        public Func<int, Task>? BeforePublishAsync { get; init; }
+
+        public IReadOnlyList<string> Payloads
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return [.. _payloads];
+                }
+            }
+        }
+
+        public async Task PublishAsync(string channel, string payload)
+        {
+            int index = Interlocked.Increment(ref _publishCount);
+            if (BeforePublishAsync is not null)
+            {
+                await BeforePublishAsync(index);
+            }
+
+            lock (_sync)
+            {
+                _payloads.Add(payload);
+            }
+        }
 
         public void Subscribe(string channel, Func<string, Task> handler)
         {
