@@ -381,11 +381,22 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOffline(IPlayer player, bool isKicked = false)
     {
-        // Persist presence on the lazer API (is_online + last_visit).
-        await ipcClient.SendNoticeAsync(
-            ServerIdentify.Lazer,
-            "user_online_status_changed",
-            new { user_id = player.PlayerId, is_online = false });
+        bool replacementRegistered;
+        lock (_lock)
+        {
+            replacementRegistered = _players.ContainsKey(PlayerIdentity(player));
+        }
+
+        // Skip the persistence notice when a replacement connection is already
+        // registered, so a delayed offline event cannot overwrite is_online=true.
+        if (!replacementRegistered)
+        {
+            // Persist presence on the lazer API (is_online + last_visit).
+            await ipcClient.SendNoticeAsync(
+                ServerIdentify.Lazer,
+                "user_online_status_changed",
+                new { user_id = player.PlayerId, is_online = false });
+        }
 
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
