@@ -46,15 +46,9 @@
     <ItemGroup>
         <!-- AutoMapper 13.0.1 reaches us transitively via g0v0.osu.Game / ppy.osu.Game, which still pin that version
              at their latest release, and AutoMapper 15+ is commercially licensed so it cannot simply be force-upgraded.
-             Suppress known AutoMapper 13.0.1 advisories (including CVE-2026-32933 / GHSA-rvv3-g6hj-g44x);
-             AutoMapper 15+ is commercially licensed so it cannot simply be force-upgraded. -->
+             Suppress only this one advisory (CVE-2026-32933 / GHSA-rvv3-g6hj-g44x, DoS via uncontrolled recursion);
+             every other transitive package stays audited. -->
         <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x"/>
-        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-6vhm-j9h7-f9gh"/>
-        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gpwp-5797-mjff"/>
-
-        <!-- MySqlConnector 2.4.0 is pinned by g0v0.Server.Common. Suppress this advisory until Common
-             can move to a fixed version; keep other package audits enabled. -->
-        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-473q-m89c-ghf8"/>
 
         <!-- SixLabors.ImageSharp 3.1.11 is transitive through g0v0.osu.Game. Suppress only its known advisories
              until the upstream dependency moves to a fixed version; keep other package audits enabled. -->

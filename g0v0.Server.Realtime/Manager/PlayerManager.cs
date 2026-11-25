@@ -36,8 +36,6 @@ public class PlayerManager(
 
     private readonly Dictionary<(int, string), IPlayer> _pendingPlayers = new();
 
-    private readonly Dictionary<(int, string), SemaphoreSlim> _presencePublishLocks = new();
-
     // source (watcher) -> target (watched)
     private readonly Dictionary<IPlayer, HashSet<IPlayer>> _playerWatching = new();
 
@@ -358,8 +356,7 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOnline(IPlayer player)
     {
-        // Persist presence on the lazer API (is_online + last_visit).
-        await PublishCurrentPresenceAsync(player);
+        await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
 
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
@@ -380,11 +377,7 @@ public class PlayerManager(
     /// <returns>A task representing the asynchronous operation.</returns>
     public async Task BroadcastPlayerOffline(IPlayer player, bool isKicked = false)
     {
-        // Persist presence on the lazer API (is_online + last_visit).
-        // Notices for the same identity are serialized and the payload is read
-        // from the registry at send time, so a delayed offline event cannot
-        // overwrite a replacement connection's online status.
-        await PublishCurrentPresenceAsync(player);
+        await ipcClient.SendNoticeAsync(ServerIdentify.Lazer, "user_online_status_changed", new { user_id = player.PlayerId });
 
         // Follow osu!'s hiding online status policy.
         if (player.State.UserStatus == UserStatus.Offline)
@@ -665,50 +658,4 @@ public class PlayerManager(
 
     private static (int PlayerId, string PlayerServer) PlayerIdentity(IPlayer player) =>
         (player.PlayerId, player.Server);
-
-    private SemaphoreSlim GetPresencePublishLock((int PlayerId, string PlayerServer) identity)
-    {
-        lock (_lock)
-        {
-            if (_presencePublishLocks.TryGetValue(identity, out SemaphoreSlim? gate))
-            {
-                return gate;
-            }
-
-            gate = new SemaphoreSlim(1, 1);
-            _presencePublishLocks[identity] = gate;
-            return gate;
-        }
-    }
-
-    /// <summary>
-    /// Publishes the current registry presence for the player to the lazer API.
-    /// Notices for the same identity are serialized, and the payload is read from
-    /// the registry at send time so a delayed offline event cannot overwrite a live session.
-    /// </summary>
-    /// <param name="player">The player whose current presence should be published.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    private async Task PublishCurrentPresenceAsync(IPlayer player)
-    {
-        (int PlayerId, string PlayerServer) identity = PlayerIdentity(player);
-        SemaphoreSlim gate = GetPresencePublishLock(identity);
-        await gate.WaitAsync();
-        try
-        {
-            bool isOnline;
-            lock (_lock)
-            {
-                isOnline = _players.ContainsKey(identity);
-            }
-
-            await ipcClient.SendNoticeAsync(
-                ServerIdentify.Lazer,
-                "user_online_status_changed",
-                new { user_id = player.PlayerId, is_online = isOnline });
-        }
-        finally
-        {
-            gate.Release();
-        }
-    }
 }
