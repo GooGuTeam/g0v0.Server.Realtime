@@ -670,12 +670,13 @@ public class PlayerManager(
     {
         lock (_lock)
         {
-            if (!_presencePublishLocks.TryGetValue(identity, out SemaphoreSlim? gate))
+            if (_presencePublishLocks.TryGetValue(identity, out SemaphoreSlim? gate))
             {
-                gate = new SemaphoreSlim(1, 1);
-                _presencePublishLocks[identity] = gate;
+                return gate;
             }
 
+            gate = new SemaphoreSlim(1, 1);
+            _presencePublishLocks[identity] = gate;
             return gate;
         }
     }

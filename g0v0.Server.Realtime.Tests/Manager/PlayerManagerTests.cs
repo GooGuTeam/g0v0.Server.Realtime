@@ -219,22 +219,15 @@ public class PlayerManagerTests
 
     private static List<bool> GetPresenceNotices(IEnumerable<string> payloads)
     {
-        List<bool> notices = [];
-        foreach (string payload in payloads)
-        {
-            IpcMessage? message = JsonConvert.DeserializeObject<IpcMessage>(payload);
-            if (message is not { Name: "user_online_status_changed", Data: JObject data })
-            {
-                continue;
-            }
-
-            if (data.TryGetValue("is_online", out JToken? isOnline))
-            {
-                notices.Add(isOnline.Value<bool>());
-            }
-        }
-
-        return notices;
+        return
+        [
+            .. from payload in payloads
+               let message = JsonConvert.DeserializeObject<IpcMessage>(payload)
+               where message is { Name: "user_online_status_changed", Data: JObject }
+               let data = (JObject)message.Data!
+               where data.TryGetValue("is_online", out _)
+               select data["is_online"]!.Value<bool>()
+        ];
     }
 
     private sealed class TestPlayer : PlayerBase
