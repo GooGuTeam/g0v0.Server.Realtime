@@ -128,6 +128,23 @@ public class ChatChannelDtoFactoryTests
     }
 
     [Test]
+    public async Task CreatePublicChannelListAsync_ShouldReportTheConfiguredMessageLengthLimit()
+    {
+        ChatChannel channel = await _chatRepository.CreateChannelAsync("#osu", "The official osu! channel.", ChannelType.Public);
+
+        IReadOnlyList<ChatChannelDto> channels = await _factory.CreatePublicChannelListAsync(1);
+
+        ChatChannelDto listed = channels.Single(candidate => candidate.ChannelId == channel.ChannelId);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(listed.MessageLengthLimit, Is.EqualTo(ChatConfig.DefaultMessageLengthLimit));
+            Assert.That(listed.CurrentUserAttributes, Is.Null);
+            Assert.That(listed.LastReadId, Is.Null);
+        });
+    }
+
+    [Test]
     public async Task CreateChannelAsync_ShouldReadMarkersFromMembershipAndChannel()
     {
         ChatChannel channel = await _chatRepository.CreateChannelAsync("#osu", "The official osu! channel.", ChannelType.Public);

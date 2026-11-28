@@ -67,12 +67,23 @@ public sealed class ChatChannelDtoFactory(
     /// </summary>
     /// <param name="requestingUserId">The user the response is built for.</param>
     /// <returns>The public channels.</returns>
+    /// <remarks>
+    /// <c>message_length_limit</c> is the configured limit of a public channel, as in
+    /// osu-web's <c>Channel::messageLengthLimit</c>: the DTO default of 1000 would let a
+    /// client accept input the server then rejects.
+    /// </remarks>
     public async Task<IReadOnlyList<ChatChannelDto>> CreatePublicChannelListAsync(int requestingUserId)
     {
+        ChatConfig chatConfig = GetChatConfig();
         IReadOnlyList<ChatChannel> channels = await chatRepository.GetPublicChannelsAsync();
 
         return channels
-            .Select(channel => ChatChannelDto.FromDb(channel, requestingUserId))
+            .Select(channel =>
+            {
+                ChatChannelDto dto = ChatChannelDto.FromDb(channel, requestingUserId);
+                dto.MessageLengthLimit = chatConfig.MessageLengthLimit;
+                return dto;
+            })
             .ToList();
     }
 
