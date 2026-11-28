@@ -48,12 +48,14 @@ public class NotificationWebSocketIntegrationTests
     private readonly FakeOAuthTokenRepository _tokenRepository = new();
     private TestServer _server = null!;
     private FakeChatRepository _chatRepository = null!;
+    private FakeRankedCache _rankedCache = null!;
     private PlayerManager _playerManager = null!;
 
     [SetUp]
     public void SetUp()
     {
         _chatRepository = new FakeChatRepository();
+        _rankedCache = new FakeRankedCache();
 
         // The shared test channel: join events carry the channel object, so the
         // channel has to exist in the repository.
@@ -70,7 +72,7 @@ public class NotificationWebSocketIntegrationTests
         builder.Services.AddLogging();
         builder.Services.AddSingleton<IChatRepository>(_chatRepository);
         builder.Services.AddSingleton<IStringCache, FakeStringCache>();
-        builder.Services.AddSingleton<IRankedCache, FakeRankedCache>();
+        builder.Services.AddSingleton<IRankedCache>(_rankedCache);
         string chatConfigBasePath = Path.Combine(Path.GetTempPath(), "g0v0-notification-ws-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(chatConfigBasePath, "config"));
         File.WriteAllText(
@@ -163,6 +165,29 @@ public class NotificationWebSocketIntegrationTests
         await notificationServer.LeaveChannel(secondPlayer, 100);
         SocketEvent part = await second.WaitForEventAsync("chat.channel.part", data => GetChannelId(data) == 100);
         Assert.That(GetChannelId(part.Data), Is.EqualTo(100));
+    }
+
+    [Test]
+    public async Task PublicChannelMessage_ShouldReachClientThatOnlyStartsChat()
+    {
+        await _chatRepository.AddUserChannelAsync(100, 1);
+
+        await using NotificationSocket receiver = await ConnectAsync(1);
+        INotificationServer notificationServer = GetNotificationServer();
+        await WaitUntilRegisteredAsync(receiver, 1);
+
+        // Messages won't be pushed until `chat.start` is declared.
+        await notificationServer.SendMessage(100, 2, "before start", isAction: false);
+        await Task.Delay(300);
+        Assert.That(receiver.CountEvents("chat.message.new"), Is.Zero);
+
+        await receiver.SendEventAsync("chat.start");
+        await WaitUntilAcknowledgedAsync(1, 100);
+
+        await notificationServer.SendMessage(100, 2, "after start", isAction: false);
+
+        SocketEvent message = await receiver.WaitForEventAsync("chat.message.new");
+        Assert.That(MessageContent(message), Is.EqualTo("after start"));
     }
 
     [Test]
@@ -428,6 +453,26 @@ public class NotificationWebSocketIntegrationTests
         }
 
         throw new TimeoutException($"User {userId} was not registered by the notification server.");
+    }
+
+    private async Task WaitUntilAcknowledgedAsync(int userId, int channelId)
+    {
+        string member = userId.ToString(CultureInfo.InvariantCulture);
+        DateTimeOffset deadline = DateTimeOffset.UtcNow.AddSeconds(10);
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            IReadOnlyList<string> members = await _rankedCache.GetByScoreAsync(
+                $"chat:channel:{channelId}",
+                double.NegativeInfinity);
+            if (members.Contains(member, StringComparer.Ordinal))
+            {
+                return;
+            }
+
+            await Task.Delay(20);
+        }
+
+        throw new TimeoutException($"User {userId} was not acknowledged in channel {channelId}.");
     }
 
     private static string GetTitle(JsonElement data)
