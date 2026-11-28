@@ -3,6 +3,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using g0v0.Server.Common.Authentication;
+using g0v0.Server.Common.Configuration;
 using g0v0.Server.Common.Database.Models;
 using g0v0.Server.Common.Database.Repository;
 using g0v0.Server.Realtime.Json;
@@ -27,11 +28,15 @@ namespace g0v0.Server.Realtime.Notifications;
 /// <see cref="LazerPlayer"/> chat and notification <c>On...</c> callbacks to
 /// WebSocket JSON events (<c>chat.channel.join</c>, <c>chat.channel.part</c>,
 /// <c>chat.message.new</c>, <c>new</c>) and pushes them to the connected client.
+/// While a connection has chat active it also refreshes the public-channel
+/// activity markers the delivery depends on, so a client that never calls
+/// <c>POST /chat/ack</c> still keeps receiving public channel messages.
 /// </remarks>
 public class LazerWebSocketListener(
     PlayerManager playerManager,
     INotificationServer notificationServer,
     IServiceScopeFactory scopeFactory,
+    ConfigManager configManager,
     ILogger<LazerWebSocketListener> logger)
 {
     /// <summary>
@@ -129,6 +134,8 @@ public class LazerWebSocketListener(
     private async Task RunConnectionAsync(NotificationConnection connection, LazerPlayer player)
     {
         bool chatActive = false;
+        CancellationTokenSource? activityRefreshCancellation = null;
+        Task? activityRefreshTask = null;
 
         Func<ChatMessage, Task> messageHandler = async message =>
         {
@@ -171,10 +178,11 @@ public class LazerWebSocketListener(
 
         try
         {
-            await connection.ReadLoopAsync(() => chatActive = true, () => chatActive = false);
+            await connection.ReadLoopAsync(StartChatAsync, StopChatAsync);
         }
         finally
         {
+            await StopChatAsync();
             player.ChatMessageReceivedHandlers = WithoutHandler(player.ChatMessageReceivedHandlers, messageHandler);
             player.ChatChannelJoinedHandlers = WithoutHandler(player.ChatChannelJoinedHandlers, channelJoinedHandler);
             player.ChatChannelLeftHandlers = WithoutHandler(player.ChatChannelLeftHandlers, channelLeftHandler);
@@ -183,6 +191,123 @@ public class LazerWebSocketListener(
             await notificationServer.Disconnect(player);
             await player.ChatDisconnected();
         }
+
+        return;
+
+        async Task AcknowledgeChannelsAsync()
+        {
+            try
+            {
+                await notificationServer.Ack(player);
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "Failed to acknowledge chat channels of user {UserId}.", player.PlayerId);
+            }
+        }
+
+        async Task StartChatAsync()
+        {
+            if (chatActive)
+            {
+                return;
+            }
+
+            chatActive = true;
+
+            // Public channels are delivered to the users whose activity marker is
+            // within the timeout window (osu-web's ChatMessageEvent).
+            // Some clients (e.g. the web frontend) won't send ACK requests. Then
+            // the server should do this for them.
+            await AcknowledgeChannelsAsync();
+
+            if (activityRefreshTask == null)
+            {
+                activityRefreshCancellation = new CancellationTokenSource();
+                activityRefreshTask = KeepChannelsAcknowledgedAsync(player, activityRefreshCancellation.Token);
+            }
+        }
+
+        async Task StopChatAsync()
+        {
+            chatActive = false;
+
+            if (activityRefreshCancellation == null || activityRefreshTask == null)
+            {
+                return;
+            }
+
+            // Cancel first, then wait for the loop to leave its tick: disposing the
+            // source earlier would race with the token the next tick registers.
+            await activityRefreshCancellation.CancelAsync();
+
+            try
+            {
+                await activityRefreshTask;
+            }
+            catch (Exception exception)
+            {
+                logger.LogWarning(exception, "Chat activity refresh of user {UserId} ended unexpectedly.", player.PlayerId);
+            }
+
+            activityRefreshCancellation.Dispose();
+            activityRefreshCancellation = null;
+            activityRefreshTask = null;
+        }
+    }
+
+    /// <summary>
+    /// Re-acknowledges the public channels of a connected player at
+    /// <see cref="GetActivityRefreshInterval"/> until the connection stops asking
+    /// for chat events.
+    /// </summary>
+    /// <param name="player">The player whose channels are kept active.</param>
+    /// <param name="cancellationToken">Cancelled when the connection stops or closes.</param>
+    /// <returns>A task that completes when the refresh loop is cancelled.</returns>
+    private async Task KeepChannelsAcknowledgedAsync(LazerPlayer player, CancellationToken cancellationToken)
+    {
+        using PeriodicTimer timer = new(GetActivityRefreshInterval());
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                try
+                {
+                    await notificationServer.Ack(player);
+                }
+                catch (Exception exception)
+                {
+                    // A failed refresh only shrinks the delivery window; the next
+                    // tick retries, so the loop must keep running.
+                    logger.LogWarning(
+                        exception,
+                        "Failed to refresh the chat activity of user {UserId}.",
+                        player.PlayerId);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The client stopped receiving chat events or disconnected.
+        }
+    }
+
+    /// <summary>
+    /// Gets the interval of the server-side activity refresh: a third of the
+    /// configured window, clamped to a sane range so a misconfigured
+    /// <c>chat.json</c> cannot turn it into a request storm or let the marker
+    /// expire between two ticks.
+    /// </summary>
+    /// <returns>The refresh interval.</returns>
+    private TimeSpan GetActivityRefreshInterval()
+    {
+        ChatConfig chatConfig = configManager.TryGet<ChatConfig>() ?? new ChatConfig();
+        double window = chatConfig.ActivityTimeoutSeconds > 0
+            ? chatConfig.ActivityTimeoutSeconds
+            : ChatConfig.DefaultActivityTimeoutSeconds;
+
+        return TimeSpan.FromSeconds(Math.Clamp(window / 3d, 5d, 60d));
     }
 
     /// <summary>
@@ -221,10 +346,10 @@ public class LazerWebSocketListener(
         /// <summary>
         /// Reads client frames until the socket closes.
         /// </summary>
-        /// <param name="startChat">Invoked when the client sends <c>chat.start</c>.</param>
-        /// <param name="stopChat">Invoked when the client sends <c>chat.end</c>.</param>
+        /// <param name="startChat">Invoked when the client sends <c>chat.start</c>; awaited before the next frame is read.</param>
+        /// <param name="stopChat">Invoked when the client sends <c>chat.end</c>; awaited before the next frame is read.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task ReadLoopAsync(Action startChat, Action stopChat)
+        public async Task ReadLoopAsync(Func<Task> startChat, Func<Task> stopChat)
         {
             byte[] buffer = new byte[4096];
             try
@@ -255,7 +380,7 @@ public class LazerWebSocketListener(
         /// <param name="startChat">Invoked when the client sends <c>chat.start</c>.</param>
         /// <param name="stopChat">Invoked when the client sends <c>chat.end</c>.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        private async Task ReadFramesAsync(byte[] buffer, Action startChat, Action stopChat)
+        private async Task ReadFramesAsync(byte[] buffer, Func<Task> startChat, Func<Task> stopChat)
         {
             while (webSocket.State == WebSocketState.Open)
             {
@@ -308,10 +433,10 @@ public class LazerWebSocketListener(
                 switch (message?.Event)
                 {
                     case "chat.start":
-                        startChat();
+                        await startChat();
                         break;
                     case "chat.end":
-                        stopChat();
+                        await stopChat();
                         break;
                 }
             }
